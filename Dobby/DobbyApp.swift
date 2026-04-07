@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct DobbyApp: App {
+    private let deps = AppDependencies.live()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView(deps: deps)
         }
     }
 }

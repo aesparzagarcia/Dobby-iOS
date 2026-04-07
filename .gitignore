@@ -1,0 +1,69 @@
+# Xcode — preferencias por usuario (no compartir)
+**/xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+
+# Compilación y derivados
+build/
+DerivedData/
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.app
+
+# Archivos de proyecto backup
+*~.nib
+*.swp
+*.orig
+
+# Swift Package Manager
+.build/
+.swiftpm/configuration/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+
+# CocoaPods (si lo usas más adelante; deja `Podfile.lock` versionado para builds reproducibles)
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Accio dependency manager
+Dependencies/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+fastlane/readme.md
+
+# Resultados de tests / informes
+*.xcresult
+*.profdata
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Entornos locales (API keys, URLs de desarrollo)
+.env
+.env.*
+*.xcconfig.local
+
+# Editores / herramientas
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Inyección de código (herramientas de desarrollo)
+iOSInjectionProject/
