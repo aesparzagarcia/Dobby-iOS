@@ -9,6 +9,7 @@ import SwiftUI
 struct RootView: View {
     let deps: AppDependencies
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var route: AppRoute = .splash
 
     var body: some View {
@@ -45,6 +46,11 @@ struct RootView: View {
                         await deps.authRepository.logout()
                         await MainActor.run { route = .phone }
                     }
+                }
+                .task(id: scenePhase) {
+                    guard scenePhase == .active else { return }
+                    await deps.tokenRefresh.refreshAccessTokenOnForeground()
+                    await DobbyPushSync.sync(api: deps.httpClient, sessionStore: deps.sessionStore)
                 }
             }
         }

@@ -45,6 +45,7 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
                 return .error("Respuesta de sesión inválida")
             }
             sessionStore.saveSession(accessToken: access, refreshToken: refresh, userId: r.user?.id)
+            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
             return .success(.loggedIn)
         case .failure(let e):
             return .error(api.userFacingMessage(from: e))
@@ -62,6 +63,7 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
                 return .error("Respuesta de sesión inválida")
             }
             sessionStore.saveSession(accessToken: r.token, refreshToken: refresh, userId: r.user?.id)
+            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
             return .success(())
         case .failure(let e):
             return .error(api.userFacingMessage(from: e))
@@ -69,6 +71,8 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
     }
 
     func logout() async {
+        let bearer = sessionStore.accessToken()
+        _ = await api.unregisterPushDevice(bearerToken: bearer)
         sessionStore.clearSession()
     }
 

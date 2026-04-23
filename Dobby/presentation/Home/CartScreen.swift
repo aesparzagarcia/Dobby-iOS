@@ -116,6 +116,17 @@ struct CartScreen: View {
                 .accessibilityLabel("Atrás")
             }
         }
+        .alert(
+            "No se pudo completar el pedido",
+            isPresented: Binding(
+                get: { viewModel.cartPayError != nil },
+                set: { if !$0 { viewModel.cartPayError = nil } }
+            )
+        ) {
+            Button("Entendido") { viewModel.cartPayError = nil }
+        } message: {
+            Text(viewModel.cartPayError ?? "")
+        }
     }
 
     private func cartLineRow(_ line: CartLineItem) -> some View {

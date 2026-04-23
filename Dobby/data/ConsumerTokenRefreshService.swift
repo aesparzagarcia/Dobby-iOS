@@ -124,6 +124,32 @@ final class ConsumerTokenRefreshService: @unchecked Sendable {
         await coordinator.refreshStoredSession(sessionStore: sessionStore)
     }
 
+    /// Call when the app returns to the foreground so the first API calls don’t hit 401 with an expired access token.
+    /// Refreshes when access is missing, JWT `exp` is unreadable, already expired, or within [thresholdSeconds] of expiring.
+    func refreshAccessTokenOnForeground(
+        thresholdSeconds: Int64 = 10 * 60,
+        now: () -> Int64 = { Int64(Date().timeIntervalSince1970) }
+    ) async {
+        guard sessionStore.isLoggedIn else { return }
+        guard let refresh = sessionStore.refreshTokenValue(), !refresh.isEmpty else { return }
+
+        let access = sessionStore.accessToken() ?? ""
+        let needsRefresh: Bool
+        if access.isEmpty {
+            needsRefresh = true
+        } else if let exp = AccessTokenJwtParser.expiryEpochSeconds(access) {
+            needsRefresh = (exp - now()) <= thresholdSeconds
+        } else {
+            needsRefresh = true
+        }
+        guard needsRefresh else { return }
+
+        let outcome = await refreshStoredSession()
+        if case .sessionDead = outcome {
+            NotificationCenter.default.post(name: .dobbySessionExpired, object: nil)
+        }
+    }
+
     /// While app is active: refresh if access JWT expires within [threshold] seconds (parity with Android `ProactiveAccessTokenRefresh`).
     func refreshIfAccessTokenExpiringSoon(
         thresholdSeconds: Int64 = 10 * 60,
@@ -131,9 +157,13 @@ final class ConsumerTokenRefreshService: @unchecked Sendable {
     ) async {
         guard sessionStore.isLoggedIn else { return }
         guard let access = sessionStore.accessToken(), !access.isEmpty else { return }
-        guard let exp = AccessTokenJwtParser.expiryEpochSeconds(access) else { return }
-        let secondsLeft = exp - now()
-        if secondsLeft > thresholdSeconds { return }
+        let needsRefresh: Bool
+        if let exp = AccessTokenJwtParser.expiryEpochSeconds(access) {
+            needsRefresh = (exp - now()) <= thresholdSeconds
+        } else {
+            needsRefresh = true
+        }
+        guard needsRefresh else { return }
         guard sessionStore.refreshTokenValue() != nil else { return }
         let outcome = await refreshStoredSession()
         if case .sessionDead = outcome {

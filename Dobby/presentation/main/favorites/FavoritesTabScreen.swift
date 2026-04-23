@@ -22,6 +22,7 @@ struct FavoritesTabScreen: View {
     @Bindable var favoritesStore: FavoritesStore
     @Bindable var homeViewModel: HomeTabViewModel
     @Binding var mainTabBarHidden: Bool
+    let onCheckoutSuccess: () -> Void
 
     @State private var navigationPath: [FavoritesStackRoute] = []
 
@@ -47,7 +48,19 @@ struct FavoritesTabScreen: View {
                             }
                         )
                     case .cart:
-                        CartScreen(viewModel: homeViewModel, onBack: { popNavigation() }, onPay: {})
+                        CartScreen(
+                            viewModel: homeViewModel,
+                            onBack: { popNavigation() },
+                            onPay: {
+                                Task {
+                                    let ok = await homeViewModel.runCheckoutFlow()
+                                    if ok {
+                                        navigationPath.removeAll()
+                                        onCheckoutSuccess()
+                                    }
+                                }
+                            }
+                        )
                     }
                 }
         }

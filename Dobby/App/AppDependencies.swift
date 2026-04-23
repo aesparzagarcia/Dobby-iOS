@@ -15,6 +15,7 @@ struct AppDependencies: Sendable {
     let userAddressRepository: UserAddressRepository
     let placesAutocompleteRepository: PlacesAutocompleteRepository
     let profileRepository: ProfileRepository
+    let orderRepository: OrderRepository
 
     static func live() -> AppDependencies {
         let baseURL = AppConfiguration.apiBaseURL
@@ -34,6 +35,7 @@ struct AppDependencies: Sendable {
         let userAddressRepository = UserAddressRepositoryImpl(api: http, sessionStore: sessionStore)
         let placesAutocompleteRepository = PlacesAutocompleteRepositoryImpl(apiKey: AppConfiguration.placesAPIKey)
         let profileRepository = ProfileRepositoryImpl(api: http, sessionStore: sessionStore)
+        let orderRepository = OrderRepositoryImpl(api: http, sessionStore: sessionStore)
         return AppDependencies(
             authRepository: authRepository,
             httpClient: http,
@@ -43,7 +45,8 @@ struct AppDependencies: Sendable {
             adsRepository: adsRepository,
             userAddressRepository: userAddressRepository,
             placesAutocompleteRepository: placesAutocompleteRepository,
-            profileRepository: profileRepository
+            profileRepository: profileRepository,
+            orderRepository: orderRepository
         )
     }
 

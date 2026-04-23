@@ -9,11 +9,16 @@ import SwiftUI
 
 @main
 struct DobbyApp: App {
-    private let deps = AppDependencies.live()
+    @UIApplicationDelegateAdaptor(DobbyAppDelegate.self) private var appDelegate
+
+    init() {
+        let live = AppDependencies.live()
+        AppGraph.deps = live
+    }
 
     var body: some Scene {
         WindowGroup {
-            RootView(deps: deps)
+            RootView(deps: AppGraph.deps)
         }
     }
 }

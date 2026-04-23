@@ -11,6 +11,7 @@ final class HomeTabViewModel {
     private let placesRepository: PlacesRepository
     private let adsRepository: AdsRepository
     private let userAddressRepository: UserAddressRepository
+    private let orderRepository: OrderRepository
     private let http: DobbyHTTPClient
     private let cartLocalStore: CartLocalStore
 
@@ -20,11 +21,19 @@ final class HomeTabViewModel {
     var searchQuery = ""
     var addressLabel: String?
     var address: String?
+    /// Default delivery address id for `POST orders` (parity with Android `CartViewModel.addressId`).
+    var defaultAddressId: String?
+    /// Active order for home tracking strip (`GET orders/active`).
+    var activeOrder: ActiveOrder?
     var isLoading = false
     var isRefreshing = false
     var errorMessage: String?
     var warningMessage: String?
-    /// Local cart lines (placeholder until cart API exists on iOS).
+    /// Full-screen “creando tu pedido…” while checkout runs + extra animation time.
+    var isCheckoutLoading = false
+    /// Shown from cart when pay fails (non-suppressed errors).
+    var cartPayError: String?
+    /// Local cart lines (SwiftData).
     var cartLines: [CartLineItem] = []
 
     var cartItemCount: Int {
@@ -70,15 +79,64 @@ final class HomeTabViewModel {
         placesRepository: PlacesRepository,
         adsRepository: AdsRepository,
         userAddressRepository: UserAddressRepository,
+        orderRepository: OrderRepository,
         http: DobbyHTTPClient,
         cartLocalStore: CartLocalStore
     ) {
         self.placesRepository = placesRepository
         self.adsRepository = adsRepository
         self.userAddressRepository = userAddressRepository
+        self.orderRepository = orderRepository
         self.http = http
         self.cartLocalStore = cartLocalStore
         cartLines = cartLocalStore.loadLines()
+    }
+
+    /// After tap “Pagar”: create order (Android `placeOrder`), wait API + 5s animation, then caller should pop navigation. Returns whether navigation should pop.
+    func runCheckoutFlow() async -> Bool {
+        cartPayError = nil
+        guard let addressId = defaultAddressId, !addressId.isEmpty else {
+            cartPayError = "Selecciona una dirección de entrega en Inicio."
+            return false
+        }
+        guard !cartLines.isEmpty else {
+            cartPayError = "Tu carrito está vacío."
+            return false
+        }
+        isCheckoutLoading = true
+        switch await orderRepository.createOrder(addressId: addressId, items: cartLines) {
+        case .success:
+            cartLines = []
+            cartLocalStore.persist(lines: [])
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            isCheckoutLoading = false
+            await loadActiveOrder()
+            return true
+        case .failure(let e):
+            isCheckoutLoading = false
+            if !e.shouldSuppressUserMessage {
+                cartPayError = message(for: e)
+            }
+            return false
+        }
+    }
+
+    private func message(for error: OrderRepositoryError) -> String {
+        switch error {
+        case .notAuthenticated:
+            return "Sesión no válida. Vuelve a iniciar sesión."
+        case .http(let he):
+            return http.userFacingMessage(from: he)
+        }
+    }
+
+    func loadActiveOrder() async {
+        switch await orderRepository.getActiveOrder() {
+        case .success(let order):
+            activeOrder = order
+        case .failure:
+            activeOrder = nil
+        }
     }
 
     func onSearchQueryChange(_ q: String) {
@@ -107,6 +165,7 @@ final class HomeTabViewModel {
                 }
             }
             await loadAds()
+            await loadActiveOrder()
         }
     }
 
@@ -134,6 +193,7 @@ final class HomeTabViewModel {
             switch await userAddressRepository.getAddresses() {
             case .success(let list):
                 let chosen = list.first(where: \.isDefault) ?? list.first
+                defaultAddressId = chosen?.id
                 addressLabel = chosen?.label ?? "Casa"
                 if let raw = chosen?.address {
                     address = raw.addressWithColonyOnly()
@@ -141,6 +201,7 @@ final class HomeTabViewModel {
                     address = nil
                 }
             case .failure(let e):
+                defaultAddressId = nil
                 addressLabel = "Casa"
                 address = nil
                 guard !e.shouldSuppressUserMessage else { return }
@@ -172,7 +233,8 @@ final class HomeTabViewModel {
         async let homeTask: Void = refreshHome()
         async let addrTask: Void = refreshAddresses()
         async let adsTask: Void = refreshAds()
-        _ = await (homeTask, addrTask, adsTask)
+        async let orderTask: Void = loadActiveOrder()
+        _ = await (homeTask, addrTask, adsTask, orderTask)
         isRefreshing = false
     }
 
@@ -193,6 +255,7 @@ final class HomeTabViewModel {
         switch await userAddressRepository.getAddresses() {
         case .success(let list):
             let chosen = list.first(where: \.isDefault) ?? list.first
+            defaultAddressId = chosen?.id
             addressLabel = chosen?.label ?? "Casa"
             if let raw = chosen?.address {
                 address = raw.addressWithColonyOnly()
@@ -200,6 +263,7 @@ final class HomeTabViewModel {
                 address = nil
             }
         case .failure(let e):
+            defaultAddressId = nil
             addressLabel = "Casa"
             address = nil
             guard !e.shouldSuppressUserMessage else { return }

@@ -65,6 +65,17 @@
 		G2G2G2G2G2G2G443893848901 /* ProfileRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */; };
 		G3G3G3G3G3G3G443893848901 /* ProfileTabViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */; };
 		G4G4G4G4G4G4G443893848901 /* ProfileTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */; };
+		K1K1K1K1K1K144389384901 /* OrderDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = K1K1K1K1K1K144389384902 /* OrderDTOs.swift */; };
+		K2K2K2K2K2K244389384901 /* OrderRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = K2K2K2K2K2K244389384902 /* OrderRepositories.swift */; };
+		K3K3K3K3K3K344389384901 /* ActiveOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3K3K3K3K3K344389384902 /* ActiveOrder.swift */; };
+		K4K4K4K4K4K444389384901 /* HomeOrderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */; };
+		K5K5K5K5K5K544389384901 /* OrderTracking.swift in Sources */ = {isa = PBXBuildFile; fileRef = K5K5K5K5K5K544389384902 /* OrderTracking.swift */; };
+		K6K6K6K6K6K644389384901 /* OrderTrackingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */; };
+		K7K7K7K7K7K744389384901 /* OrderTrackingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */; };
+		4CF8A200000100000000000A /* AppGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000100000000000A /* AppGraph.swift */; };
+		4CF8A200000200000000000A /* DobbyAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000200000000000A /* DobbyAppDelegate.swift */; };
+		4CF8A200000300000000000A /* DobbyPushSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000300000000000A /* DobbyPushSync.swift */; };
+		4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000400000000000A /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -141,12 +152,23 @@
 		G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepositories.swift; sourceTree = "<group>"; };
 		G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabViewModel.swift; sourceTree = "<group>"; };
 		G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabScreen.swift; sourceTree = "<group>"; };
+		K1K1K1K1K1K144389384902 /* OrderDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderDTOs.swift; sourceTree = "<group>"; };
+		K2K2K2K2K2K244389384902 /* OrderRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderRepositories.swift; sourceTree = "<group>"; };
+		K3K3K3K3K3K344389384902 /* ActiveOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveOrder.swift; sourceTree = "<group>"; };
+		K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeOrderViews.swift; sourceTree = "<group>"; };
+		K5K5K5K5K5K544389384902 /* OrderTracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTracking.swift; sourceTree = "<group>"; };
+		K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTrackingViewModel.swift; sourceTree = "<group>"; };
+		K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTrackingScreen.swift; sourceTree = "<group>"; };
 		E50810FB3FDE4E649C683C80 /* DobbyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyApp.swift; sourceTree = "<group>"; };
 		E63673892F7F0C7300140ABA /* Dobby.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dobby.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E63673962F7F0C7400140ABA /* DobbyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DobbyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E63673A02F7F0C7400140ABA /* DobbyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DobbyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED0E8BB8D68E4989B8B13BFD /* RegisterUserScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterUserScreen.swift; sourceTree = "<group>"; };
 		EDC4AD8D09194711BE5804E2 /* RegisterUserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterUserViewModel.swift; sourceTree = "<group>"; };
+		4CF8A100000100000000000A /* AppGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGraph.swift; sourceTree = "<group>"; };
+		4CF8A100000200000000000A /* DobbyAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyAppDelegate.swift; sourceTree = "<group>"; };
+		4CF8A100000300000000000A /* DobbyPushSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyPushSync.swift; sourceTree = "<group>"; };
+		4CF8A100000400000000000A /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -191,6 +213,9 @@
 			isa = PBXGroup;
 			children = (
 				4CC6123784AE4799BC497D43 /* AppDependencies.swift */,
+				4CF8A100000100000000000A /* AppGraph.swift */,
+				4CF8A100000200000000000A /* DobbyAppDelegate.swift */,
+				4CF8A100000300000000000A /* DobbyPushSync.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -222,6 +247,8 @@
 				G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */,
 				2A2A2A2A2B9D443893848902 /* HomeDTOs.swift */,
 				3A3A3A3A3B9D443893848902 /* HomeRepositories.swift */,
+				K1K1K1K1K1K144389384902 /* OrderDTOs.swift */,
+				K2K2K2K2K2K244389384902 /* OrderRepositories.swift */,
 				E3E3E3E3E3E3E443893848902 /* GooglePlacesClient.swift */,
 				E2E2E2E2E2E2E443893848902 /* PlacesAutocompleteDTOs.swift */,
 				E4E4E4E4E4E4E443893848902 /* PlacesAutocompleteRepository.swift */,
@@ -238,6 +265,8 @@
 				BDE6F0200624494F9A87CF10 /* AuthRepository.swift */,
 				91A0AD75A14047648AE48F34 /* AuthResult.swift */,
 				1161CEE73B9D443893848921 /* HomeModels.swift */,
+				K3K3K3K3K3K344389384902 /* ActiveOrder.swift */,
+				K5K5K5K5K5K544389384902 /* OrderTracking.swift */,
 				A8A8A8A88B9D443893848902 /* UserAddress.swift */,
 			);
 			path = domain;
@@ -326,6 +355,9 @@
 				F1F1F1F1F1F1F443893848902 /* ChosenAddressScreen.swift */,
 				7C7C7C7C7C9D443893848902 /* CurrentAddressScreen.swift */,
 				5A5A5A5A5B9D443893848902 /* HomeTabScreen.swift */,
+				K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */,
+				K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */,
+				K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */,
 				D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */,
 				4A4A4A4A4B9D443893848902 /* HomeTabViewModel.swift */,
 				D2D2D2D2D2D2D443893848902 /* CartScreen.swift */,
@@ -397,6 +429,7 @@
 				AAAA00000000000000000005 /* presentation */,
 				222222222222222222222222 /* Assets.xcassets */,
 				444444444444444444444444 /* Info.plist */,
+				4CF8A100000400000000000A /* GoogleService-Info.plist */,
 			);
 			path = Dobby;
 			sourceTree = "<group>";
@@ -418,6 +451,8 @@
 			);
 			name = Dobby;
 			packageProductDependencies = (
+				4CF8A400000100000000000A /* FirebaseCore */,
+				4CF8A400000200000000000A /* FirebaseMessaging */,
 			);
 			productName = Dobby;
 			productReference = E63673892F7F0C7300140ABA /* Dobby.app */;
@@ -513,12 +548,37 @@
 		};
 /* End PBXProject section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4CF8A400000100000000000A /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		4CF8A400000200000000000A /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXResourcesBuildPhase section */
 		E63673872F7F0C7300140ABA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				333333333333333333333333 /* Assets.xcassets in Resources */,
+				4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,6 +605,9 @@
 			files = (
 				C121DDCF362F4382A049EA99 /* DobbyApp.swift in Sources */,
 				91BDFB69EACE4630B7D0AC0D /* AppDependencies.swift in Sources */,
+				4CF8A200000100000000000A /* AppGraph.swift in Sources */,
+				4CF8A200000200000000000A /* DobbyAppDelegate.swift in Sources */,
+				4CF8A200000300000000000A /* DobbyPushSync.swift in Sources */,
 				B1B1B1B1B1B1B443893848901 /* CartPersistedEntity.swift in Sources */,
 				B2B2B2B2B2B2B443893848901 /* CartLocalStore.swift in Sources */,
 				102582FF06724F87AB4EBD2A /* AppConfiguration.swift in Sources */,
@@ -568,6 +631,13 @@
 				1A1A1A1A1B9D443893848901 /* AddressDisplay.swift in Sources */,
 				2A2A2A2A2B9D443893848901 /* HomeDTOs.swift in Sources */,
 				3A3A3A3A3B9D443893848901 /* HomeRepositories.swift in Sources */,
+				K1K1K1K1K1K144389384901 /* OrderDTOs.swift in Sources */,
+				K2K2K2K2K2K244389384901 /* OrderRepositories.swift in Sources */,
+				K3K3K3K3K3K344389384901 /* ActiveOrder.swift in Sources */,
+				K4K4K4K4K4K444389384901 /* HomeOrderViews.swift in Sources */,
+				K5K5K5K5K5K544389384901 /* OrderTracking.swift in Sources */,
+				K6K6K6K6K6K644389384901 /* OrderTrackingViewModel.swift in Sources */,
+				K7K7K7K7K7K744389384901 /* OrderTrackingScreen.swift in Sources */,
 				4A4A4A4A4B9D443893848901 /* HomeTabViewModel.swift in Sources */,
 				5A5A5A5A5B9D443893848901 /* HomeTabScreen.swift in Sources */,
 				D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */,

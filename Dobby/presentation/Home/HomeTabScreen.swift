@@ -17,6 +17,7 @@ private enum HomeStackRoute: Hashable {
     case shop(ShopDetailRoute)
     case product(ProductDetailRoute)
     case cart
+    case orderTracking(orderId: String)
 }
 
 struct HomeTabScreen: View {
@@ -25,9 +26,12 @@ struct HomeTabScreen: View {
     let favoritesStore: FavoritesStore
     let userAddressRepository: UserAddressRepository
     let placesAutocompleteRepository: PlacesAutocompleteRepository
+    let orderRepository: OrderRepository
     let httpClient: DobbyHTTPClient
     /// When `true`, `MainTabView` hides the bottom floating tab bar (e.g. shop detail is visible).
     @Binding var mainTabBarHidden: Bool
+    /// After a successful `Pagar`, switch to Inicio (no-op if already there) so the user sees order tracking.
+    let onCheckoutSuccess: () -> Void
 
     private let searchHints = ["tacos", "cerveza", "la huerta de vega", "pizza", "café", "restaurantes"]
     @State private var hintIndex = 0
@@ -71,7 +75,26 @@ struct HomeTabScreen: View {
                             }
                         )
                     case .cart:
-                        CartScreen(viewModel: viewModel, onBack: { popNavigation() }, onPay: {})
+                        CartScreen(
+                            viewModel: viewModel,
+                            onBack: { popNavigation() },
+                            onPay: {
+                                Task {
+                                    let ok = await viewModel.runCheckoutFlow()
+                                    if ok {
+                                        navigationPath.removeAll()
+                                        onCheckoutSuccess()
+                                    }
+                                }
+                            }
+                        )
+                    case .orderTracking(let orderId):
+                        OrderTrackingScreen(
+                            orderId: orderId,
+                            orderRepository: orderRepository,
+                            http: httpClient,
+                            onBack: { popNavigation() }
+                        )
                     }
                 }
         }
@@ -162,7 +185,17 @@ struct HomeTabScreen: View {
                         warningBanner(warn)
                     }
 
-                    headerBlock
+                    addressHeaderBlock
+                    homeSearchBar
+
+                    if let order = viewModel.activeOrder {
+                        OrderTrackingSectionView(activeOrder: order) {
+                            navigationPath.append(.orderTracking(orderId: order.id))
+                        }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            .padding(.bottom, 4)
+                    }
 
                     sectionTitle("Destacado")
 
@@ -250,57 +283,56 @@ struct HomeTabScreen: View {
         }
     }
 
-    private var headerBlock: some View {
+    private var addressHeaderBlock: some View {
         VStack(alignment: .leading, spacing: 4) {
-            VStack(alignment: .leading, spacing: 4) {
-                Button {
-                    showCurrentAddress = true
-                } label: {
-                    Text(viewModel.addressLabel ?? "Casa")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(HomePalette.primary)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-
-                Button {
-                    showCurrentAddress = true
-                } label: {
-                    Text(viewModel.address ?? "Añade tu dirección")
-                        .font(.subheadline)
-                        .foregroundStyle(viewModel.address != nil ? Color.primary : Color.secondary)
-                }
-                .padding(.horizontal, 20)
+            Button {
+                showCurrentAddress = true
+            } label: {
+                Text(viewModel.addressLabel ?? "Casa")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(HomePalette.primary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.trailing, 56)
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
 
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField(
-                    "",
-                    text: $viewModel.searchQuery,
-                    prompt: Text("Busca \"\(searchHints[hintIndex])\"")
-                        .foregroundStyle(Color.secondary)
-                )
-                .focused($searchFocused)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.search)
-                .onSubmit { searchFocused = false }
-                .frame(maxWidth: .infinity)
+            Button {
+                showCurrentAddress = true
+            } label: {
+                Text(viewModel.address ?? "Añade tu dirección")
+                    .font(.subheadline)
+                    .foregroundStyle(viewModel.address != nil ? Color.primary : Color.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(HomePalette.searchBackground)
-            .clipShape(Capsule())
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
+            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, 56)
+    }
+
+    private var homeSearchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField(
+                "",
+                text: $viewModel.searchQuery,
+                prompt: Text("Busca \"\(searchHints[hintIndex])\"")
+                    .foregroundStyle(Color.secondary)
+            )
+            .focused($searchFocused)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .submitLabel(.search)
+            .onSubmit { searchFocused = false }
+            .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(HomePalette.searchBackground)
+        .clipShape(Capsule())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
     }
 
     private func sectionTitle(_ text: String) -> some View {

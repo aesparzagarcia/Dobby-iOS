@@ -33,16 +33,6 @@ enum AuthSessionNavigation {
     }
 
     static func shouldSuppressUserMessage(for error: HTTPClientError) -> Bool {
-        switch error {
-        case .statusCode(401, _), .statusCode(403, _):
-            return true
-        case .transport(let e):
-            if let url = e as? URLError, url.code == .cancelled {
-                return true
-            }
-            return false
-        default:
-            return false
-        }
+        error.shouldSuppressUserFacingMessage
     }
 }

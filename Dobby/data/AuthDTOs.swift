@@ -85,3 +85,9 @@ struct AppRefreshResponseDTO: Decodable {
     let token: String?
     let refreshToken: String?
 }
+
+// MARK: - Push device
+
+struct PushOkDTO: Decodable {
+    let ok: Bool?
+}

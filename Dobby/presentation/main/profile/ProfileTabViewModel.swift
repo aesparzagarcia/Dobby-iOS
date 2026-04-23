@@ -95,10 +95,20 @@ final class ProfileTabViewModel {
                     totalOrdersDelivered: g.totalOrdersDelivered,
                     recentEvents: events
                 )
-            case .failure(let e):
+            case .failure(let error):
                 uiState.isLoading = false
-                uiState.error = e.shouldSuppressUserMessage ? nil : message(for: e)
+                uiState.error = profileAuthErrorShouldSuppress(error) ? nil : message(for: error)
             }
+        }
+    }
+
+    /// Local helper (avoids relying on `ProfileRepositoryError` computed members across module/protocol boundaries).
+    private func profileAuthErrorShouldSuppress(_ error: ProfileRepositoryError) -> Bool {
+        switch error {
+        case .notAuthenticated:
+            return true
+        case .http(let he):
+            return he.shouldSuppressUserFacingMessage
         }
     }
 

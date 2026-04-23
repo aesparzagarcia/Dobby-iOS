@@ -22,6 +22,7 @@ struct MainTabView: View {
     private let placesRepository: PlacesRepository
     private let userAddressRepository: UserAddressRepository
     private let placesAutocompleteRepository: PlacesAutocompleteRepository
+    private let orderRepository: OrderRepository
     private let httpClient: DobbyHTTPClient
     private let tokenRefresh: ConsumerTokenRefreshService
 
@@ -45,6 +46,7 @@ struct MainTabView: View {
         self.placesRepository = deps.placesRepository
         self.userAddressRepository = deps.userAddressRepository
         self.placesAutocompleteRepository = deps.placesAutocompleteRepository
+        self.orderRepository = deps.orderRepository
         self.httpClient = deps.httpClient
         self.tokenRefresh = deps.tokenRefresh
         let cartStore = CartLocalStore(container: CartSwiftDataStack.sharedContainer)
@@ -61,6 +63,7 @@ struct MainTabView: View {
                 placesRepository: deps.placesRepository,
                 adsRepository: deps.adsRepository,
                 userAddressRepository: deps.userAddressRepository,
+                orderRepository: deps.orderRepository,
                 http: deps.httpClient,
                 cartLocalStore: cartStore
             )
@@ -74,6 +77,7 @@ struct MainTabView: View {
     }
 
     var body: some View {
+        @Bindable var homeViewModel = homeViewModel
         ZStack(alignment: .bottom) {
             Group {
                 switch tab {
@@ -84,8 +88,10 @@ struct MainTabView: View {
                         favoritesStore: favoritesStore,
                         userAddressRepository: userAddressRepository,
                         placesAutocompleteRepository: placesAutocompleteRepository,
+                        orderRepository: orderRepository,
                         httpClient: httpClient,
-                        mainTabBarHidden: $homeHidesFloatingTabBar
+                        mainTabBarHidden: $homeHidesFloatingTabBar,
+                        onCheckoutSuccess: { tab = .home }
                     )
                 case .promotions:
                     PromotionsTabScreen(
@@ -93,14 +99,16 @@ struct MainTabView: View {
                         favoritesStore: favoritesStore,
                         promotionsViewModel: promotionsViewModel,
                         homeViewModel: homeViewModel,
-                        mainTabBarHidden: $promotionsHidesFloatingTabBar
+                        mainTabBarHidden: $promotionsHidesFloatingTabBar,
+                        onCheckoutSuccess: { tab = .home }
                     )
                 case .favorites:
                     FavoritesTabScreen(
                         placesRepository: placesRepository,
                         favoritesStore: favoritesStore,
                         homeViewModel: homeViewModel,
-                        mainTabBarHidden: $favoritesHidesFloatingTabBar
+                        mainTabBarHidden: $favoritesHidesFloatingTabBar,
+                        onCheckoutSuccess: { tab = .home }
                     )
                 case .profile:
                     ProfileTabScreen(viewModel: profileViewModel, onLogout: onLogout)
@@ -116,12 +124,16 @@ struct MainTabView: View {
             }
         }
         .background(Color.white)
+        .fullScreenCover(isPresented: $homeViewModel.isCheckoutLoading) {
+            PlaceOrderLoadingView()
+        }
         .animation(.easeInOut(duration: 0.2), value: shouldShowFloatingTabBar)
         .onChange(of: scenePhase) { _, phase in
             proactiveRefreshTask?.cancel()
             proactiveRefreshTask = nil
             guard phase == .active else { return }
             proactiveRefreshTask = Task {
+                await tokenRefresh.refreshAccessTokenOnForeground()
                 while !Task.isCancelled {
                     await tokenRefresh.refreshIfAccessTokenExpiringSoon()
                     try? await Task.sleep(nanoseconds: 3 * 60 * 1_000_000_000)
