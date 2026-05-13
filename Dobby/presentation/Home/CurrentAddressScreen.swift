@@ -8,9 +8,8 @@
 import SwiftUI
 
 private enum AddressScreenPalette {
-    static let background = Color(red: 248 / 255, green: 244 / 255, blue: 255 / 255)
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let actionFill = Color(red: 0.93, green: 0.90, blue: 0.98)
+    /// #3967FF (ARGB 0xFF3967FF)
+    static let iconBlue = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 0xFF / 255)
     static let border = Color(.systemGray4)
 }
 
@@ -107,6 +106,7 @@ struct CurrentAddressScreen: View {
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
+                        .tint(AddressScreenPalette.iconBlue)
                     Text("Cargando ubicación…")
                         .font(.body)
                         .foregroundStyle(.primary)
@@ -116,7 +116,7 @@ struct CurrentAddressScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(AddressScreenPalette.background)
+        .background(Color.white)
         .navigationTitle("Mi dirección actual")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -126,7 +126,7 @@ struct CurrentAddressScreen: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AddressScreenPalette.iconBlue)
                 }
                 .accessibilityLabel("Atrás")
             }
@@ -147,7 +147,7 @@ struct CurrentAddressScreen: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(Color(red: 243 / 255, green: 240 / 255, blue: 247 / 255))
+            .presentationBackground(Color.white)
         }
         .navigationDestination(item: $chosenAddressRoute) { nav in
             ChosenAddressScreen(
@@ -215,7 +215,7 @@ struct CurrentAddressScreen: View {
     private var searchField: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(AddressScreenPalette.iconBlue)
             TextField(
                 "Buscar dirección",
                 text: Binding(
@@ -228,6 +228,7 @@ struct CurrentAddressScreen: View {
             if addressViewModel.uiState.isLoading {
                 ProgressView()
                     .scaleEffect(0.9)
+                    .tint(AddressScreenPalette.iconBlue)
             }
         }
         .padding(.horizontal, 14)
@@ -236,7 +237,7 @@ struct CurrentAddressScreen: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(AddressScreenPalette.primary.opacity(0.45), lineWidth: 1)
+                .stroke(AddressScreenPalette.iconBlue.opacity(0.45), lineWidth: 1)
         )
     }
 
@@ -245,7 +246,7 @@ struct CurrentAddressScreen: View {
             HStack(spacing: 14) {
                 Image(systemName: systemImage)
                     .font(.title3)
-                    .foregroundStyle(AddressScreenPalette.primary)
+                    .foregroundStyle(AddressScreenPalette.iconBlue)
                     .frame(width: 28, alignment: .center)
                 Text(title)
                     .font(.body.weight(.medium))
@@ -255,8 +256,12 @@ struct CurrentAddressScreen: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AddressScreenPalette.actionFill)
+            .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AddressScreenPalette.border.opacity(0.35), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }

@@ -18,10 +18,13 @@ struct FeaturedPlaceDTO: Decodable {
     let category: String?
     let kind: String
     let rate: Float
+    let lat: Double?
+    let lng: Double?
 }
 
 struct ShopProductDTO: Decodable {
     let id: String
+    let shopId: String?
     let name: String
     let description: String?
     let price: Double
@@ -32,12 +35,14 @@ struct ShopProductDTO: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, price, imageUrl, rate, discount
+        case shopId = "shop_id"
         case hasPromotion = "has_promotion"
     }
 }
 
 struct BestSellerProductDTO: Decodable {
     let id: String
+    let shopId: String?
     let name: String
     let imageUrl: String?
     let price: Double
@@ -47,12 +52,14 @@ struct BestSellerProductDTO: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, imageUrl, price, rate, discount
+        case shopId = "shop_id"
         case hasPromotion = "has_promotion"
     }
 }
 
 struct ProductDetailDTO: Decodable {
     let id: String
+    let shopId: String?
     let name: String
     let description: String?
     let price: Double
@@ -63,8 +70,20 @@ struct ProductDetailDTO: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, price, imageUrls, rate, discount
+        case shopId = "shop_id"
         case hasPromotion = "has_promotion"
     }
+}
+
+/// `GET app/places` — solo usamos tiendas con coordenadas para ETA en carrito.
+struct PlacesResponseDTO: Decodable {
+    let shops: [AppPlaceShopDTO]
+}
+
+struct AppPlaceShopDTO: Decodable {
+    let id: String
+    let lat: Double?
+    let lng: Double?
 }
 
 struct AdDTO: Decodable {

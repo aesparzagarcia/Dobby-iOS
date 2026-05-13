@@ -18,7 +18,7 @@ struct ProductDetailScreen: View {
     /// Pops one level on the home `NavigationStack` (e.g. back to restaurant). Prefer this over `dismiss()` with `navigationPath`.
     let onBack: () -> Void
     let onCartClick: () -> Void
-    let onAddToCart: (Int) -> Void
+    let onAddToCart: (Int, ProductDetail?) -> Void
 
     @State private var quantity = 0
     /// Loaded from `GET app/products/:id` (lists like home/promotions omit description).
@@ -266,7 +266,7 @@ struct ProductDetailScreen: View {
                 }
 
                 Button {
-                    onAddToCart(quantity)
+                    onAddToCart(quantity, loadedDetail)
                     quantity = 0
                 } label: {
                     VStack(spacing: 4) {

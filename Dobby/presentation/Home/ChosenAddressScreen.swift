@@ -2,20 +2,42 @@
 //  ChosenAddressScreen.swift
 //  Dobby
 //
-//  Parity with Android `MapLocationScreen` when opened from search (chosen address): map under fixed pin, reverse geocode on move end, save via API.
+//  Parity with Android `MapLocationScreen`: full-screen map, center pin, blue floating address card,
+//  green confirm button, “Dirección lejana” alert when pin >200m from start, save sheet.
 //
 
 import CoreLocation
 import MapKit
 import SwiftUI
+import UIKit
 
-private enum ChosenAddressPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let cardBackground = Color.white
+// MARK: - Palette (Android `FloatingAddressCardColor` / `ConfirmButtonColor`)
+
+private enum MapLocationLikePalette {
+    static let cardBlue = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 0xFF / 255)
+    static let confirmGreen = Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255)
 }
 
 /// Same order as Android `MapLocationScreen` / `ADDRESS_LABEL_OPTIONS`.
 private let addressLabelOptions = ["Casa", "Apartamento", "Trabajo", "Novia", "Fiesta"]
+
+private func addressCardPreview(_ raw: String) -> String {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty { return "Dirección no disponible" }
+    let segments = trimmed.split(separator: ",")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    if segments.isEmpty { return "Dirección no disponible" }
+    let street = segments[0]
+    let neighborhood = segments.count > 1 ? segments[1] : ""
+    if neighborhood.isEmpty { return street }
+    return "\(street), \(neighborhood)"
+}
+
+private func distanceMeters(from a: CLLocationCoordinate2D, to b: CLLocationCoordinate2D) -> CLLocationDistance {
+    CLLocation(latitude: a.latitude, longitude: a.longitude)
+        .distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude))
+}
 
 @MainActor
 @Observable
@@ -42,7 +64,7 @@ final class ChosenAddressViewModel {
     }
 
     func onMapCameraEnded(latitude: Double, longitude: Double) {
-        Task {
+        Task { @MainActor in
             isReverseGeocoding = true
             errorMessage = nil
             let result = await places.getAddressFromLocation(latitude: latitude, longitude: longitude)
@@ -52,11 +74,14 @@ final class ChosenAddressViewModel {
                 editableAddress = address
             case .failure(let e):
                 errorMessage = message(for: e)
+                let coordFallback = String(format: "%.5f, %.5f", latitude, longitude)
+                if editableAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    editableAddress = coordFallback
+                }
             }
         }
     }
 
-    /// Parity with Android `MapLocationViewModel.saveAddressWithDescription` (`isDefault: true`).
     func saveAddress(
         label: String,
         description: String?,
@@ -64,9 +89,18 @@ final class ChosenAddressViewModel {
         longitude: Double,
         onSuccess: @escaping () -> Void
     ) {
-        Task {
+        Task { @MainActor in
             isSaving = true
             errorMessage = nil
+            guard DeliveryServiceArea.contains(latitude: latitude, longitude: longitude) else {
+                isSaving = false
+                if DeliveryServiceArea.isConfigBlockingSaves {
+                    errorMessage = DeliveryServiceArea.denialMessage()
+                } else {
+                    errorMessage = DeliveryServiceArea.outsideLimitsLabel
+                }
+                return
+            }
             var text = editableAddress.trimmingCharacters(in: .whitespacesAndNewlines)
             if text.isEmpty {
                 switch await places.getAddressFromLocation(latitude: latitude, longitude: longitude) {
@@ -131,12 +165,19 @@ struct ChosenAddressScreen: View {
     @State private var viewModel: ChosenAddressViewModel
     @State private var position: MapCameraPosition
     @State private var lastCenter: CLLocationCoordinate2D
+    /// Fixed start position for Android-parity “>200m” warning (`MapLocationScreen` / `userStartLocation`).
+    private let userStartCoordinate: CLLocationCoordinate2D
+
     @State private var showSaveSheet = false
+    @State private var showFarLocationAlert = false
     @State private var sheetDescription = ""
     @State private var sheetSelectedLabel = "Casa"
+    @State private var isRecentering = false
 
     private let navigateData: NavigateToMapData
     private let onSaveSuccess: () -> Void
+
+    private static let defaultSpan = MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
 
     init(
         initial: NavigateToMapData,
@@ -147,10 +188,9 @@ struct ChosenAddressScreen: View {
     ) {
         navigateData = initial
         let coord = CLLocationCoordinate2D(latitude: initial.latitude, longitude: initial.longitude)
+        userStartCoordinate = coord
         _position = State(
-            initialValue: .region(
-                MKCoordinateRegion(center: coord, span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008))
-            )
+            initialValue: .region(MKCoordinateRegion(center: coord, span: Self.defaultSpan))
         )
         _lastCenter = State(initialValue: coord)
         _viewModel = State(
@@ -164,26 +204,56 @@ struct ChosenAddressScreen: View {
         self.onSaveSuccess = onSaveSuccess
     }
 
+    private func shouldOpenSaveSheetAfterAreaCheck() -> Bool {
+        if DeliveryServiceArea.isConfigBlockingSaves {
+            viewModel.errorMessage = nil
+            return false
+        }
+        if DeliveryServiceArea.hasValidEnforcedPolygon {
+            guard DeliveryServiceArea.contains(latitude: lastCenter.latitude, longitude: lastCenter.longitude) else {
+                viewModel.errorMessage = nil
+                return false
+            }
+        }
+        viewModel.errorMessage = nil
+        return true
+    }
+
     var body: some View {
         ZStack {
-            mapLayer
+            mapAndPinLayer
+
+            addressFloatingCard
 
             VStack {
-                addressCard
+                HStack {
+                    Spacer()
+                    recenterButton
+                }
+                .padding(.top, 8)
+                .padding(.trailing, 12)
+                Spacer()
+            }
+
+            VStack {
                 Spacer()
                 if let err = viewModel.errorMessage, !err.isEmpty, !showSaveSheet {
                     Text(err)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.red)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 24)
                         .padding(.bottom, 8)
                 }
-                saveButton
+                confirmLocationButton
             }
         }
+        .background(Color.white)
         .navigationTitle(navigateData.isDeviceLocation ? "Mi ubicación" : "Dirección elegida")
         .navigationBarTitleDisplayMode(.inline)
+        .background(MinimalBackButtonDisplayModeBridge())
+        .toolbarBackground(Color.white, for: ToolbarPlacement.navigationBar)
+        .toolbarBackground(Visibility.visible, for: ToolbarPlacement.navigationBar)
         .sheet(isPresented: $showSaveSheet) {
             saveAddressSheet
                 .presentationDetents([.medium, .large])
@@ -197,7 +267,164 @@ struct ChosenAddressScreen: View {
                 viewModel.errorMessage = nil
             }
         }
+        .alert("Dirección lejana", isPresented: $showFarLocationAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Sí, continuar") {
+                showFarLocationAlert = false
+                if shouldOpenSaveSheetAfterAreaCheck() {
+                    showSaveSheet = true
+                }
+            }
+        } message: {
+            Text("El pin está a más de 200 metros de tu ubicación actual. ¿Deseas continuar?")
+        }
     }
+
+    // MARK: - Map + pin (Android: GoogleMap + center LocationOn; iOS: SF pin over map center)
+
+    private var mapAndPinLayer: some View {
+        ZStack {
+            Map(position: $position) {
+                UserAnnotation()
+            }
+            .mapStyle(.standard)
+            // `region.center` puede no coincidir con el centro real de la cámara; `camera.centerCoordinate` sí.
+            // Actualizar en continuo para que el botón "dentro/fuera" siga el pin mientras mueves el mapa.
+            .onMapCameraChange(frequency: .continuous) { context in
+                let c = context.camera.centerCoordinate
+                if c.latitude.isFinite && c.longitude.isFinite {
+                    lastCenter = c
+                }
+            }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                let c = context.camera.centerCoordinate
+                if c.latitude.isFinite && c.longitude.isFinite {
+                    lastCenter = c
+                }
+                viewModel.onMapCameraEnded(latitude: c.latitude, longitude: c.longitude)
+            }
+
+            Image(systemName: "pin.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(MapLocationLikePalette.cardBlue)
+                .shadow(color: .black.opacity(0.18), radius: 3, y: 1)
+                .offset(y: -24)
+                .allowsHitTesting(false)
+        }
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    /// Android: Card centered, `AddressCardOffsetFromPin` = −67dp
+    private var addressFloatingCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Ajusta la ubicación de entrega")
+                .font(.body.weight(.medium))
+                .foregroundStyle(.white.opacity(0.95))
+            Text(addressCardPreview(viewModel.editableAddress))
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(MapLocationLikePalette.cardBlue)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
+        .padding(.horizontal, 44)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .offset(y: -67)
+        .allowsHitTesting(false)
+    }
+
+    private var recenterButton: some View {
+        Button {
+            Task { await recenterOnDeviceLocation() }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 44, height: 44)
+                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                if isRecentering {
+                    ProgressView()
+                        .tint(MapLocationLikePalette.cardBlue)
+                } else {
+                    Image(systemName: "location.north.line.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(MapLocationLikePalette.cardBlue)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(isRecentering)
+        .accessibilityLabel("Centrar en mi ubicación")
+    }
+
+    private func recenterOnDeviceLocation() async {
+        isRecentering = true
+        defer { isRecentering = false }
+        viewModel.errorMessage = nil
+        do {
+            let loc = try await OneShotLocationRequest().getLocation()
+            let c = loc.coordinate
+            position = .region(MKCoordinateRegion(center: c, span: Self.defaultSpan))
+            lastCenter = c
+            viewModel.onMapCameraEnded(latitude: c.latitude, longitude: c.longitude)
+        } catch {
+            let msg: String
+            if let le = error as? LocalizedError, let d = le.errorDescription, !d.isEmpty {
+                msg = d
+            } else {
+                msg = error.localizedDescription
+            }
+            viewModel.errorMessage = msg
+        }
+    }
+
+    private var confirmLocationButton: some View {
+        let canConfirmByArea: Bool = {
+            if DeliveryServiceArea.isConfigBlockingSaves { return false }
+            if DeliveryServiceArea.hasValidEnforcedPolygon {
+                return DeliveryServiceArea.contains(latitude: lastCenter.latitude, longitude: lastCenter.longitude)
+            }
+            return true
+        }()
+        let title: String = {
+            if viewModel.isReverseGeocoding { return "Guardando…" }
+            if DeliveryServiceArea.isConfigBlockingSaves { return DeliveryServiceArea.configFixLabel }
+            if DeliveryServiceArea.hasValidEnforcedPolygon,
+               !DeliveryServiceArea.contains(latitude: lastCenter.latitude, longitude: lastCenter.longitude) {
+                return DeliveryServiceArea.outsideLimitsLabel
+            }
+            return "Confirmar ubicación"
+        }()
+        let useGreen = canConfirmByArea && !viewModel.isReverseGeocoding
+        return Button {
+            let meters = distanceMeters(from: userStartCoordinate, to: lastCenter)
+            if meters > 200 {
+                showFarLocationAlert = true
+            } else if shouldOpenSaveSheetAfterAreaCheck() {
+                showSaveSheet = true
+            }
+        } label: {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(useGreen ? MapLocationLikePalette.confirmGreen : Color(.systemGray3))
+                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 20)
+        .disabled(!canConfirmByArea || viewModel.isReverseGeocoding)
+        .opacity(viewModel.isReverseGeocoding ? 0.65 : 1)
+    }
+
+    // MARK: - Save sheet (Android `ModalBottomSheet`)
 
     private var saveAddressSheet: some View {
         ScrollView {
@@ -276,7 +503,7 @@ struct ChosenAddressScreen: View {
                             Text("Guardar")
                         }
                     }
-                    .foregroundStyle(ChosenAddressPalette.primary)
+                    .foregroundStyle(MapLocationLikePalette.cardBlue)
                     .fontWeight(.semibold)
                     .disabled(viewModel.isSaving)
                 }
@@ -295,7 +522,7 @@ struct ChosenAddressScreen: View {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: sheetSelectedLabel == option ? "largecircle.fill.circle" : "circle")
                     .font(.title3)
-                    .foregroundStyle(sheetSelectedLabel == option ? ChosenAddressPalette.primary : Color.secondary)
+                    .foregroundStyle(sheetSelectedLabel == option ? MapLocationLikePalette.cardBlue : Color.secondary)
                 Text(option)
                     .font(.body)
                     .foregroundStyle(.primary)
@@ -306,69 +533,29 @@ struct ChosenAddressScreen: View {
         }
         .buttonStyle(.plain)
     }
+}
 
-    private var mapLayer: some View {
-        ZStack {
-            Map(position: $position) {}
-                .mapStyle(.standard)
-                .onMapCameraChange(frequency: .onEnd) { context in
-                    let c = context.region.center
-                    lastCenter = c
-                    viewModel.onMapCameraEnded(latitude: c.latitude, longitude: c.longitude)
+// MARK: - Back chevron only (SwiftUI may omit `navigationBarBackButtonDisplayMode` on newer SDKs)
+
+/// Sets `UINavigationItem.backButtonDisplayMode` on the hosting controller so only the chevron shows.
+private struct MinimalBackButtonDisplayModeBridge: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        let vc = UIViewController()
+        vc.view.isUserInteractionEnabled = false
+        vc.view.backgroundColor = .clear
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        DispatchQueue.main.async {
+            var walker: UIViewController? = uiViewController
+            while let c = walker {
+                if let nav = c.navigationController {
+                    nav.topViewController?.navigationItem.backButtonDisplayMode = .minimal
+                    return
                 }
-
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(ChosenAddressPalette.primary)
-                .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
-                .offset(y: -22)
-                .allowsHitTesting(false)
+                walker = c.parent
+            }
         }
-        .ignoresSafeArea(edges: .bottom)
-    }
-
-    private var addressCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("¿Es esta tu dirección?")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            TextField(
-                "Dirección",
-                text: Binding(
-                    get: { viewModel.editableAddress },
-                    set: { viewModel.editableAddress = $0 }
-                ),
-                axis: .vertical
-            )
-            .lineLimit(1 ... 4)
-            .textInputAutocapitalization(.words)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ChosenAddressPalette.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-    }
-
-    private var saveButton: some View {
-        Button {
-            showSaveSheet = true
-        } label: {
-            Text("Guardar dirección")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(ChosenAddressPalette.primary)
-                .clipShape(Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 24)
-        .disabled(viewModel.isReverseGeocoding)
-        .opacity(viewModel.isReverseGeocoding ? 0.65 : 1)
     }
 }

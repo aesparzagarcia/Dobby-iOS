@@ -19,6 +19,7 @@ struct DobbyApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(deps: AppGraph.deps)
+                .preferredColorScheme(.light)
         }
     }
 }

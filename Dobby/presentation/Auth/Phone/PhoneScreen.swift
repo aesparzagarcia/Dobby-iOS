@@ -8,12 +8,17 @@ import SwiftUI
 private let brandGreen = Color(red: 0x2E / 255, green: 0xCC / 255, blue: 0x71 / 255)
 private let subtitleBlack = Color(red: 0x11 / 255, green: 0x11 / 255, blue: 0x11 / 255)
 private let backSurface = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
-private let outlinedBorder = Color(red: 0xD9 / 255, green: 0xD9 / 255, blue: 0xD9 / 255)
+/// Placeholder del celular: más oscuro que el gris secundario del sistema.
+private let phoneFieldPlaceholderColor = Color(red: 0x55 / 255, green: 0x55 / 255, blue: 0x55 / 255)
 
 struct PhoneScreen: View {
     @Bindable var viewModel: PhoneViewModel
     var onCodeSent: (String, Bool) -> Void
     var onBack: (() -> Void)?
+
+    @FocusState private var isPhoneFieldFocused: Bool
+    /// Copia local del número: SwiftUI a veces no recorta el TextField si solo se acorta vía el modelo.
+    @State private var phoneFieldText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -51,6 +56,7 @@ struct PhoneScreen: View {
                     Text("🇲🇽")
                     Text("+52")
                         .font(.system(.title3, design: .default, weight: .semibold))
+                        .foregroundStyle(.black)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -58,14 +64,25 @@ struct PhoneScreen: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .shadow(color: .black.opacity(0.12), radius: 3, y: 2)
 
-                TextField("", text: Binding(
-                    get: { viewModel.nationalDigits },
-                    set: { viewModel.onPhoneChange($0) }
-                ))
+                TextField(
+                    "",
+                    text: $phoneFieldText,
+                    prompt: Text("384 1234 567")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(phoneFieldPlaceholderColor)
+                )
                 .keyboardType(.numberPad)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.black)
+                .focused($isPhoneFieldFocused)
                 .disabled(viewModel.isLoading)
+                .onChange(of: phoneFieldText) { _, new in
+                    let capped = String(new.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits))
+                    if capped != new {
+                        phoneFieldText = capped
+                    }
+                    viewModel.onPhoneChange(capped)
+                }
             }
 
             if let err = viewModel.errorMessage {
@@ -96,9 +113,14 @@ struct PhoneScreen: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
+                    .background(brandGreen)
+                    .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 27, style: .continuous)
+                            .stroke(brandGreen, lineWidth: 1)
+                    )
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(brandGreen)
+                .buttonStyle(.plain)
 
                 Spacer().frame(height: 14)
 
@@ -112,15 +134,17 @@ struct PhoneScreen: View {
                         Text("Recibir código por WhatsApp")
                             .font(.system(.subheadline, design: .default, weight: .semibold))
                     }
+                    .foregroundStyle(brandGreen)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 27, style: .continuous)
+                            .stroke(brandGreen, lineWidth: 1)
+                    )
                 }
-                .buttonStyle(.bordered)
-                .tint(brandGreen)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 27, style: .continuous)
-                        .stroke(outlinedBorder, lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)
@@ -128,5 +152,16 @@ struct PhoneScreen: View {
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.white)
+        .onAppear {
+            let synced = String(viewModel.nationalDigits.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits))
+            phoneFieldText = synced
+            if synced != viewModel.nationalDigits {
+                viewModel.onPhoneChange(synced)
+            }
+            // Un ciclo después del layout para que el teclado aparezca al entrar a la pantalla.
+            DispatchQueue.main.async {
+                isPhoneFieldFocused = true
+            }
+        }
     }
 }

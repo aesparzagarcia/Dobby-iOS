@@ -45,7 +45,7 @@ final class RegisterUserViewModel {
                 return
             }
             if lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                errorMessage = "El apellido es obligatorio"
+                errorMessage = "Los apellidos son obligatorios"
                 return
             }
             let em = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -78,6 +78,28 @@ final class RegisterUserViewModel {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    /// Valida el paso actual antes de avanzar (0 = nombre, 1 = apellidos), igual que Android `tryAdvanceFromStep`.
+    func tryAdvanceFromStep(_ step: Int) -> Bool {
+        switch step {
+        case 0:
+            if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                errorMessage = "El nombre es obligatorio"
+                return false
+            }
+            errorMessage = nil
+            return true
+        case 1:
+            if lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                errorMessage = "Los apellidos son obligatorios"
+                return false
+            }
+            errorMessage = nil
+            return true
+        default:
+            return true
+        }
     }
 
     private static func isValidEmail(_ s: String) -> Bool {

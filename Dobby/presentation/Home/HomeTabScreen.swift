@@ -53,7 +53,15 @@ struct HomeTabScreen: View {
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
                             onProductTap: { product in
-                                navigationPath.append(.product(ProductDetailRoute(shopProduct: product)))
+                                navigationPath.append(
+                                    .product(
+                                        ProductDetailRoute(
+                                            shopProduct: product,
+                                            pickupLatitude: r.pickupLatitude,
+                                            pickupLongitude: r.pickupLongitude
+                                        )
+                                    )
+                                )
                             },
                             onCartClick: {
                                 navigationPath.append(.cart)
@@ -69,8 +77,8 @@ struct HomeTabScreen: View {
                             onCartClick: {
                                 navigationPath.append(.cart)
                             },
-                            onAddToCart: { quantity in
-                                viewModel.addProductToCart(r, quantity: quantity)
+                            onAddToCart: { quantity, detail in
+                                viewModel.addProductToCart(r, quantity: quantity, detail: detail)
                                 navigationPath.append(.cart)
                             }
                         )
@@ -164,7 +172,16 @@ struct HomeTabScreen: View {
         if place.isService {
             return
         }
-        navigationPath.append(.shop(ShopDetailRoute(shopId: place.id, shopName: place.name)))
+        navigationPath.append(
+            .shop(
+                ShopDetailRoute(
+                    shopId: place.id,
+                    shopName: place.name,
+                    pickupLatitude: place.latitude,
+                    pickupLongitude: place.longitude
+                )
+            )
+        )
     }
 
     private var content: some View {
@@ -186,6 +203,16 @@ struct HomeTabScreen: View {
                     }
 
                     addressHeaderBlock
+
+                    if viewModel.addressFetchCompleted,
+                       viewModel.needsDeliveryAddressCallout,
+                       viewModel.warningMessage == nil {
+                        DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
+                            .padding(.horizontal, 13)
+                            .padding(.top, 5)
+                            .padding(.bottom, 3)
+                    }
+
                     homeSearchBar
 
                     if let order = viewModel.activeOrder {
@@ -358,6 +385,65 @@ struct HomeTabScreen: View {
         .background(Color.orange.opacity(0.15))
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Add address callout (parity with Android `DeliveryAddressCallout`)
+
+/// Tail on **top**, tip biased to the left (mirror of the previous right layout).
+private struct CalloutTriangleUp: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let tipX = rect.width * 0.22
+        p.move(to: CGPoint(x: tipX, y: 0))
+        p.addLine(to: CGPoint(x: 0, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+private struct DeliveryAddressCalloutView: View {
+    private static let blue = Color(red: 57 / 255, green: 103 / 255, blue: 1)
+    let onTap: () -> Void
+    @State private var bobUp = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                Color.clear.frame(height: 10)
+                CalloutTriangleUp()
+                    .fill(Self.blue)
+                    .frame(width: 22, height: 10)
+                    .padding(.leading, 16)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Añade tu dirección de entrega")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.95))
+                Text("Toca aquí para agregar una dirección y descubrir qué restaurantes pueden entregarte")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 10)
+            .background(Self.blue)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .onTapGesture(perform: onTap)
+        }
+        .offset(y: bobUp ? -7 : 0)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true)) {
+                bobUp = true
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Añade tu dirección de entrega. Toca para abrir el mapa y guardarla.")
     }
 }
 

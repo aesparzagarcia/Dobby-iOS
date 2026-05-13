@@ -506,7 +506,7 @@ extension DobbyHTTPClient {
                 case .notConnectedToInternet, .networkConnectionLost:
                     return "Sin conexión a internet."
                 case .timedOut:
-                    return "Tiempo de espera: no respondió tu Mac. En Info.plist pon la IP real (Terminal: ipconfig getifaddr en0), misma Wi‑Fi, API en 0.0.0.0:3001 y firewall abierto para ese puerto."
+                    return "Tiempo de espera: no respondió tu Mac. En Info.plist (API_BASE_URL) o en el scheme (variable API_BASE_URL) pon http://<IP-de-tu-Mac>:3001/api/ — Terminal: ipconfig getifaddr en0. Misma Wi‑Fi, API escuchando en 0.0.0.0:3001 y firewall abierto al puerto 3001."
                 case .cannotConnectToHost, .cannotFindHost:
                     return "No se pudo conectar: revisa API_BASE_URL, que la API esté en marcha y el puerto."
                 default:

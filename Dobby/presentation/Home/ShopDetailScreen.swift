@@ -16,6 +16,8 @@ private enum ShopDetailPalette {
 struct ShopDetailRoute: Hashable {
     let shopId: String
     let shopName: String
+    var pickupLatitude: Double?
+    var pickupLongitude: Double?
 }
 
 struct ShopDetailScreen: View {

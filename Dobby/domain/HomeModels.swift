@@ -23,6 +23,9 @@ struct FeaturedPlace: Identifiable, Hashable {
     let typeLabel: String
     let isService: Bool
     let rate: Float
+    /// Coordenadas del comercio si el backend las envía (para ETA en carrito).
+    let latitude: Double?
+    let longitude: Double?
 }
 
 struct BestSellerProduct: Identifiable, Hashable {
@@ -33,6 +36,7 @@ struct BestSellerProduct: Identifiable, Hashable {
     let rate: Float
     let hasPromotion: Bool
     let discount: Int
+    let shopId: String?
 }
 
 /// Parity with Android `com.ares.ewe.domain.model.ShopProduct` (`app/shops/{id}/products`).
@@ -45,6 +49,7 @@ struct ShopProduct: Identifiable, Hashable, Sendable {
     let rate: Float
     let hasPromotion: Bool
     let discount: Int
+    let shopId: String?
 }
 
 /// Parity with Android `com.ares.ewe.domain.model.FavoriteProduct`.
@@ -67,7 +72,8 @@ struct FavoriteProduct: Identifiable, Hashable, Sendable {
             price: price,
             rate: rate,
             hasPromotion: hasPromotion,
-            discount: discount
+            discount: discount,
+            shopId: nil
         )
     }
 }
@@ -82,6 +88,7 @@ struct ProductDetail: Sendable {
     let rate: Float
     let hasPromotion: Bool
     let discount: Int
+    let shopId: String?
 }
 
 /// Payload for `NavigationStack` product detail (home best sellers + shop grid).
@@ -94,6 +101,9 @@ struct ProductDetailRoute: Hashable, Sendable {
     let rate: Float
     let hasPromotion: Bool
     let discount: Int
+    let pickupLatitude: Double?
+    let pickupLongitude: Double?
+    let shopId: String?
 
     init(bestSeller: BestSellerProduct) {
         id = bestSeller.id
@@ -104,9 +114,12 @@ struct ProductDetailRoute: Hashable, Sendable {
         rate = bestSeller.rate
         hasPromotion = bestSeller.hasPromotion
         discount = bestSeller.discount
+        pickupLatitude = nil
+        pickupLongitude = nil
+        shopId = bestSeller.shopId
     }
 
-    init(shopProduct: ShopProduct) {
+    init(shopProduct: ShopProduct, pickupLatitude: Double? = nil, pickupLongitude: Double? = nil) {
         id = shopProduct.id
         name = shopProduct.name
         description = shopProduct.description
@@ -115,6 +128,9 @@ struct ProductDetailRoute: Hashable, Sendable {
         rate = shopProduct.rate
         hasPromotion = shopProduct.hasPromotion
         discount = shopProduct.discount
+        self.pickupLatitude = pickupLatitude
+        self.pickupLongitude = pickupLongitude
+        shopId = shopProduct.shopId
     }
 
     init(favorite: FavoriteProduct) {
@@ -126,6 +142,9 @@ struct ProductDetailRoute: Hashable, Sendable {
         rate = favorite.rate
         hasPromotion = favorite.hasPromotion
         discount = favorite.discount
+        pickupLatitude = nil
+        pickupLongitude = nil
+        shopId = nil
     }
 
     /// Single-unit price after promotion discount (matches product detail screen).
@@ -150,6 +169,10 @@ struct CartLineItem: Identifiable, Hashable, Sendable {
     var listUnitPrice: Double
     var hasPromotion: Bool
     var discount: Int
+    /// Tienda de recogida si se añadió desde detalle con coordenadas (ETA en carrito).
+    var pickupLatitude: Double?
+    var pickupLongitude: Double?
+    var shopId: String?
 
     var id: String { productId }
 

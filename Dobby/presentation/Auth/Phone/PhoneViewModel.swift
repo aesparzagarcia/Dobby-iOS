@@ -5,7 +5,10 @@
 
 import Foundation
 
-private let mxNationalLength = 10
+/// Dígitos nacionales (México) sin lada; máximo 10.
+enum PhoneNationalInput {
+    static let maxDigits = 10
+}
 
 @MainActor
 @Observable
@@ -21,7 +24,7 @@ final class PhoneViewModel {
     }
 
     func onPhoneChange(_ raw: String) {
-        let digits = raw.filter { $0.isNumber }.prefix(mxNationalLength)
+        let digits = raw.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits)
         nationalDigits = String(digits)
         errorMessage = nil
     }
@@ -29,7 +32,7 @@ final class PhoneViewModel {
     func sendCode(onResult: @escaping (String, Bool) -> Void) {
         Task { @MainActor in
             let phone = nationalDigits
-            if phone.count < mxNationalLength {
+            if phone.count < PhoneNationalInput.maxDigits {
                 errorMessage = "Introduce un número de 10 dígitos"
                 return
             }

@@ -26,6 +26,8 @@ protocol PlacesRepository: Sendable {
     func getShopProducts(shopId: String) async -> Result<[ShopProduct], HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getProduct` → `GET app/products/:id`.
     func getProduct(id: String) async -> Result<ProductDetail, HomeRepositoryError>
+    /// Tiendas con coordenadas desde `GET app/places` (ETA por `shop_id` en carrito).
+    func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError>
 }
 
 protocol AdsRepository: Sendable {
@@ -80,7 +82,9 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         imageUrl: AppConfiguration.fullImageURL(p.logoUrl),
         typeLabel: typeLabel,
         isService: isService,
-        rate: p.rate
+        rate: p.rate,
+        latitude: p.lat,
+        longitude: p.lng
     )
 }
 
@@ -92,11 +96,12 @@ private func mapBestSeller(_ p: BestSellerProductDTO) -> BestSellerProduct {
         price: p.price,
         rate: p.rate,
         hasPromotion: p.hasPromotion,
-        discount: p.discount
+        discount: p.discount,
+        shopId: p.shopId
     )
 }
 
-private func mapShopProduct(_ p: ShopProductDTO) -> ShopProduct {
+private func mapShopProduct(_ p: ShopProductDTO, fallbackShopId: String) -> ShopProduct {
     ShopProduct(
         id: p.id,
         name: p.name,
@@ -105,7 +110,8 @@ private func mapShopProduct(_ p: ShopProductDTO) -> ShopProduct {
         imageUrl: AppConfiguration.fullImageURL(p.imageUrl),
         rate: p.rate,
         hasPromotion: p.hasPromotion,
-        discount: p.discount
+        discount: p.discount,
+        shopId: p.shopId ?? fallbackShopId
     )
 }
 
@@ -119,7 +125,8 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         imageUrls: urls,
         rate: dto.rate,
         hasPromotion: dto.hasPromotion,
-        discount: dto.discount
+        discount: dto.discount,
+        shopId: dto.shopId
     )
 }
 
@@ -173,7 +180,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         let result: Result<[ShopProductDTO], HTTPClientError> = await api.get(path, bearerToken: token)
         switch result {
         case .success(let list):
-            return .success(list.map(mapShopProduct))
+            return .success(list.map { mapShopProduct($0, fallbackShopId: shopId) })
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))
@@ -190,6 +197,27 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         switch result {
         case .success(let dto):
             return .success(mapProductDetail(dto))
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
+    func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            AuthSessionNavigation.notifyIfMissingAccessToken()
+            return .failure(.notAuthenticated)
+        }
+        let result: Result<PlacesResponseDTO, HTTPClientError> = await api.get("app/places", bearerToken: token)
+        switch result {
+        case .success(let dto):
+            var coords: [String: (Double, Double)] = [:]
+            for s in dto.shops {
+                if let la = s.lat, let lo = s.lng, la.isFinite, lo.isFinite {
+                    coords[s.id] = (la, lo)
+                }
+            }
+            return .success(coords)
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))

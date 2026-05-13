@@ -21,6 +21,9 @@ final class CartPersistedEntity {
     var listPrice: Double
     var hasPromotion: Bool
     var discount: Int
+    var pickupLatitude: Double?
+    var pickupLongitude: Double?
+    var shopId: String?
 
     init(
         productId: String,
@@ -30,7 +33,10 @@ final class CartPersistedEntity {
         imageUrl: String?,
         listPrice: Double,
         hasPromotion: Bool,
-        discount: Int
+        discount: Int,
+        pickupLatitude: Double? = nil,
+        pickupLongitude: Double? = nil,
+        shopId: String? = nil
     ) {
         self.productId = productId
         self.name = name
@@ -40,6 +46,9 @@ final class CartPersistedEntity {
         self.listPrice = listPrice
         self.hasPromotion = hasPromotion
         self.discount = discount
+        self.pickupLatitude = pickupLatitude
+        self.pickupLongitude = pickupLongitude
+        self.shopId = shopId
     }
 
     convenience init(from line: CartLineItem) {
@@ -51,7 +60,10 @@ final class CartPersistedEntity {
             imageUrl: line.imageUrl,
             listPrice: line.listUnitPrice,
             hasPromotion: line.hasPromotion,
-            discount: line.discount
+            discount: line.discount,
+            pickupLatitude: line.pickupLatitude,
+            pickupLongitude: line.pickupLongitude,
+            shopId: line.shopId
         )
     }
 
@@ -64,7 +76,10 @@ final class CartPersistedEntity {
             unitPrice: price,
             listUnitPrice: listPrice,
             hasPromotion: hasPromotion,
-            discount: discount
+            discount: discount,
+            pickupLatitude: pickupLatitude,
+            pickupLongitude: pickupLongitude,
+            shopId: shopId
         )
     }
 }

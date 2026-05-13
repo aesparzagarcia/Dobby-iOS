@@ -38,7 +38,7 @@ struct RootView: View {
                 RegisterUserScreen(
                     viewModel: RegisterUserViewModel(authRepository: deps.authRepository, phone: phone),
                     onComplete: { route = .home },
-                    onBack: { route = .otp(phone: phone, userExists: true) }
+                    onBack: { route = .phone }
                 )
             case .home:
                 MainTabView(deps: deps) {

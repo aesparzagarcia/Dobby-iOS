@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <!--
+    IMPORTANTE: Un KML que solo tiene <NetworkLink> (enlace a My Maps) NO sirve en la app.
+    La app no descarga ese enlace; necesitas coordenadas embebidas en <coordinates>.
+
+    Cómo obtenerlas:
+    1) Abre en el navegador la misma URL que está en <href> del NetworkLink (export KML de My Maps).
+    2) Si el archivo descargado ya trae <Placemark><Polygon>…<coordinates>, copia ese bloque aquí
+       (o sustituye todo este archivo por ese KML, manteniendo al menos un anillo con coordinates).
+    3) En Google My Maps: menú de la capa → “Exportar a KML/KMZ” y revisa que el archivo no sea solo NetworkLink.
+
+    Polígono de EJEMPLO (Monterrey, caja pequeña). Sustituye por tu lista lon,lat,alt separada por espacios.
+  -->
+  <Placemark>
+    <name>Área de entrega</name>
+    <Polygon>
+      <outerBoundaryIs>
+        <LinearRing>
+            <coordinates>
+                            -103.7233661,20.6664525,0
+                            -103.7251685,20.6653282,0
+                            -103.7263701,20.6617143,0
+                            -103.7265418,20.6591443,0
+                            -103.7251685,20.6560122,0
+                            -103.7243102,20.6542453,0
+                            -103.7222503,20.6520768,0
+                            -103.719847,20.6500689,0
+                            -103.7158988,20.6470168,0
+                            -103.7159846,20.6454105,0
+                            -103.7153838,20.6430009,0
+                            -103.7153838,20.6416354,0
+                            -103.716328,20.6393061,0
+                            -103.7178729,20.6387439,0
+                            -103.7189887,20.6379406,0
+                            -103.7189029,20.6360129,0
+                            -103.7179587,20.634808,0
+                            -103.7148688,20.6339245,0
+                            -103.7122939,20.6340048,0
+                            -103.7112639,20.6333622,0
+                            -103.7085174,20.6336835,0
+                            -103.7026809,20.6359326,0
+                            -103.6977885,20.6362539,0
+                            -103.6946128,20.6364948,0
+                            -103.6925529,20.6391455,0
+                            -103.6908362,20.6419567,0
+                            -103.6887763,20.6450089,0
+                            -103.6859439,20.6511933,0
+                            -103.6861156,20.6545665,0
+                            -103.6870597,20.6579397,0
+                            -103.6881755,20.6644448,0
+                            -103.6888621,20.669986,0
+                            -103.6904929,20.6751255,0
+                            -103.6928103,20.67633,0
+                            -103.6965869,20.6766512,0
+                            -103.7007926,20.6769724,0
+                            -103.7038825,20.6758482,0
+                            -103.7074874,20.6751255,0
+                            -103.7131522,20.6719133,0
+                            -103.7166713,20.6707087,0
+                            -103.7184737,20.6720739,0
+                            -103.7191604,20.6717527,0
+                            -103.7202762,20.6712709,0
+                            -103.7211345,20.6705481,0
+                            -103.7218211,20.6698254,0
+                            -103.7225078,20.6691829,0
+                            -103.7231086,20.667898,0
+                            -103.7233661,20.6664525,0
+                          </coordinates>        </LinearRing>
+      </outerBoundaryIs>
+    </Polygon>
+  </Placemark>
+</kml>

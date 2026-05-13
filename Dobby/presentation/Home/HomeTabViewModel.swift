@@ -21,20 +21,31 @@ final class HomeTabViewModel {
     var searchQuery = ""
     var addressLabel: String?
     var address: String?
+    /// Saved address description (Android `CartUiState.addressDetails` / `addr.description`).
+    var addressDetails: String?
     /// Default delivery address id for `POST orders` (parity with Android `CartViewModel.addressId`).
     var defaultAddressId: String?
+    /// Coordenadas de la dirección de entrega (para ETA en carrito).
+    var deliveryLatitude: Double?
+    var deliveryLongitude: Double?
     /// Active order for home tracking strip (`GET orders/active`).
     var activeOrder: ActiveOrder?
     var isLoading = false
     var isRefreshing = false
     var errorMessage: String?
     var warningMessage: String?
+    /// Set after the first successful or failed `getAddresses` in this session.
+    var addressFetchCompleted = false
+    /// True when API returned no saved addresses (empty list).
+    var needsDeliveryAddressCallout = false
     /// Full-screen “creando tu pedido…” while checkout runs + extra animation time.
     var isCheckoutLoading = false
     /// Shown from cart when pay fails (non-suppressed errors).
     var cartPayError: String?
     /// Local cart lines (SwiftData).
     var cartLines: [CartLineItem] = []
+    /// `GET app/places` — tiendas con lat/lng (para ETA por `shop_id` en líneas del carrito).
+    var shopCoordsByShopId: [String: (Double, Double)] = [:]
 
     var cartItemCount: Int {
         cartLines.reduce(0) { $0 + $1.quantity }
@@ -44,15 +55,29 @@ final class HomeTabViewModel {
         cartLines.reduce(0) { $0 + $1.lineTotal }
     }
 
-    func addProductToCart(_ product: ProductDetailRoute, quantity: Int) {
+    /// Entrega estimada según distancia domicilio ↔ tienda(s) en el carrito (fallback si faltan coords).
+    var estimatedDeliveryLabel: String {
+        DeliveryEtaEstimator.estimateLabel(
+            userLatitude: deliveryLatitude,
+            userLongitude: deliveryLongitude,
+            cartLines: cartLines,
+            shopCoordsByShopId: shopCoordsByShopId
+        )
+    }
+
+    func addProductToCart(_ product: ProductDetailRoute, quantity: Int, detail: ProductDetail? = nil) {
         guard quantity > 0 else { return }
         let validDiscount = max(0, min(100, product.discount))
         let showPromotion = product.hasPromotion && validDiscount > 0
         let unitAfterDiscount = product.unitPriceAfterDiscount
         let list = product.price
+        let resolvedShopId = detail?.shopId ?? product.shopId
 
         if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
             cartLines[i].quantity += quantity
+            if cartLines[i].pickupLatitude == nil, let p = product.pickupLatitude { cartLines[i].pickupLatitude = p }
+            if cartLines[i].pickupLongitude == nil, let p = product.pickupLongitude { cartLines[i].pickupLongitude = p }
+            if cartLines[i].shopId == nil, let s = resolvedShopId { cartLines[i].shopId = s }
         } else {
             cartLines.append(
                 CartLineItem(
@@ -63,7 +88,10 @@ final class HomeTabViewModel {
                     unitPrice: unitAfterDiscount,
                     listUnitPrice: list,
                     hasPromotion: showPromotion,
-                    discount: validDiscount
+                    discount: validDiscount,
+                    pickupLatitude: product.pickupLatitude,
+                    pickupLongitude: product.pickupLongitude,
+                    shopId: resolvedShopId
                 )
             )
         }
@@ -153,6 +181,7 @@ final class HomeTabViewModel {
         warningMessage = nil
         loadAddresses()
         Task {
+            await refreshShopCoords()
             switch await placesRepository.getHome() {
             case .success(let data):
                 featuredPlaces = data.featuredPlaces
@@ -200,10 +229,20 @@ final class HomeTabViewModel {
                 } else {
                     address = nil
                 }
+                addressDetails = Self.normalizedAddressDetails(from: chosen?.description)
+                deliveryLatitude = chosen?.lat
+                deliveryLongitude = chosen?.lng
+                addressFetchCompleted = true
+                needsDeliveryAddressCallout = list.isEmpty
             case .failure(let e):
                 defaultAddressId = nil
                 addressLabel = "Casa"
                 address = nil
+                addressDetails = nil
+                deliveryLatitude = nil
+                deliveryLongitude = nil
+                addressFetchCompleted = true
+                needsDeliveryAddressCallout = false
                 guard !e.shouldSuppressUserMessage else { return }
                 if case .http(let he) = e {
                     warningMessage = http.userFacingMessage(from: he)
@@ -212,6 +251,11 @@ final class HomeTabViewModel {
                 }
             }
         }
+    }
+
+    private static func normalizedAddressDetails(from raw: String?) -> String? {
+        guard let t = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty else { return nil }
+        return t
     }
 
     private func loadAds() async {
@@ -234,8 +278,18 @@ final class HomeTabViewModel {
         async let addrTask: Void = refreshAddresses()
         async let adsTask: Void = refreshAds()
         async let orderTask: Void = loadActiveOrder()
-        _ = await (homeTask, addrTask, adsTask, orderTask)
+        async let shopCoordsTask: Void = refreshShopCoords()
+        _ = await (homeTask, addrTask, adsTask, orderTask, shopCoordsTask)
         isRefreshing = false
+    }
+
+    private func refreshShopCoords() async {
+        switch await placesRepository.getShopCoordinatesByShopId() {
+        case .success(let m):
+            shopCoordsByShopId = m
+        case .failure:
+            shopCoordsByShopId = [:]
+        }
     }
 
     private func refreshHome() async {
@@ -262,10 +316,20 @@ final class HomeTabViewModel {
             } else {
                 address = nil
             }
+            addressDetails = Self.normalizedAddressDetails(from: chosen?.description)
+            deliveryLatitude = chosen?.lat
+            deliveryLongitude = chosen?.lng
+            addressFetchCompleted = true
+            needsDeliveryAddressCallout = list.isEmpty
         case .failure(let e):
             defaultAddressId = nil
             addressLabel = "Casa"
             address = nil
+            addressDetails = nil
+            deliveryLatitude = nil
+            deliveryLongitude = nil
+            addressFetchCompleted = true
+            needsDeliveryAddressCallout = false
             guard !e.shouldSuppressUserMessage else { return }
             if case .http(let he) = e {
                 warningMessage = http.userFacingMessage(from: he)

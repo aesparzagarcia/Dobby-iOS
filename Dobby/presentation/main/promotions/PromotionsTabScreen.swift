@@ -44,8 +44,8 @@ struct PromotionsTabScreen: View {
                             onCartClick: {
                                 navigationPath.append(.cart)
                             },
-                            onAddToCart: { quantity in
-                                homeViewModel.addProductToCart(r, quantity: quantity)
+                            onAddToCart: { quantity, detail in
+                                homeViewModel.addProductToCart(r, quantity: quantity, detail: detail)
                                 navigationPath.append(.cart)
                             }
                         )

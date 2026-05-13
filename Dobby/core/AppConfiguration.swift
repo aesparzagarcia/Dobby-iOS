@@ -13,11 +13,14 @@ enum AppConfiguration {
     ///
     /// **Simulator:** `127.0.0.1` is the Mac — default `http://127.0.0.1:3001/api/` when `API_BASE_URL` is unset (matches backend on localhost).
     ///
-    /// **Physical device:** Add `API_BASE_URL` to `Info.plist` with your Mac’s LAN IP (`ipconfig getifaddr en0`).
-    /// Do not use `127.0.0.1` on a real iPhone (that is the phone itself). Backend should listen on `0.0.0.0`.
+    /// **Physical device:** Set `API_BASE_URL` to your Mac’s LAN IP (Terminal: `ipconfig getifaddr en0`, often `en0` = Wi‑Fi).
+    /// Use `Info.plist` or the Xcode scheme **Environment Variable** `API_BASE_URL` (same key). Do not use `127.0.0.1` on a real iPhone (that is the phone, not the Mac). Backend should listen on `0.0.0.0:3001`.
     static var apiBaseURL: URL {
-        let raw = (Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String)?
+        let fromEnv = ProcessInfo.processInfo.environment["API_BASE_URL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fromPlist = (Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let raw = !fromEnv.isEmpty ? fromEnv : fromPlist
 
         if !raw.isEmpty, let url = URL(string: raw) {
 #if !targetEnvironment(simulator)
@@ -31,8 +34,8 @@ enum AppConfiguration {
 #if targetEnvironment(simulator)
         return URL(string: "http://127.0.0.1:3001/api/")!
 #else
-        log.warning("API_BASE_URL missing from Info.plist — using placeholder; set it to your Mac's LAN IP.")
-        return URL(string: "http://192.168.1.42:3001/api/")!
+        log.error("API_BASE_URL vacío: edita Info.plist (clave API_BASE_URL) con http://<IP-de-tu-Mac>:3001/api/ o define API_BASE_URL en Edit Scheme → Run → Arguments → Environment. IP del Mac: Terminal → ipconfig getifaddr en0. iPhone y Mac en la misma Wi‑Fi; API en 0.0.0.0:3001; firewall abierto al 3001.")
+        return URL(string: "http://127.0.0.1:3001/api/")!
 #endif
     }
 

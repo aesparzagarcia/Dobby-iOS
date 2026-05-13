@@ -11,10 +11,8 @@ private enum CartPalette {
     static let rowBackground = Color(red: 0.93, green: 0.91, blue: 0.96)
 }
 
-/// Placeholder copy until delivery / payment APIs exist.
+/// Placeholder copy until payment API exists.
 private enum CartFakeData {
-    static let details = "Torre de departamentos verde int 2"
-    static let estimatedDelivery = "30–45 min"
     static let paymentMethod = "Pago contra entrega"
 }
 
@@ -51,16 +49,18 @@ struct CartScreen: View {
                             text: viewModel.address ?? "Añade una dirección de entrega"
                         )
                         Divider().padding(.leading, 16)
-                        infoRow(
-                            label: "Detalles",
-                            icon: "info.circle.fill",
-                            text: CartFakeData.details
-                        )
-                        Divider().padding(.leading, 16)
+                        if let details = viewModel.addressDetails, !details.isEmpty {
+                            infoRow(
+                                label: "Detalles",
+                                icon: "info.circle.fill",
+                                text: details
+                            )
+                            Divider().padding(.leading, 16)
+                        }
                         infoRow(
                             label: "Entrega estimada",
                             icon: "clock.fill",
-                            text: CartFakeData.estimatedDelivery
+                            text: viewModel.estimatedDeliveryLabel
                         )
                         Divider().padding(.leading, 16)
                         infoRow(
