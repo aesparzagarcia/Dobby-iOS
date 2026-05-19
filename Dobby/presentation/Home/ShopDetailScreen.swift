@@ -204,7 +204,8 @@ private struct ShopProductGridCard: View {
                         .font(.footnote)
                         .fontWeight(.regular)
                         .foregroundStyle(.primary)
-                        .lineLimit(2)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
 
                     HStack(alignment: .center, spacing: 3) {
                         Image(systemName: "star.fill")
@@ -224,6 +225,7 @@ private struct ShopProductGridCard: View {
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
             .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+            .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }

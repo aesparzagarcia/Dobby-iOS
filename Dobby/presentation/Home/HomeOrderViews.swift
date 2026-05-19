@@ -85,6 +85,8 @@ private let trackingStageIcons: [String] = [
 struct OrderTrackingSectionView: View {
     let activeOrder: ActiveOrder
     var onViewDetails: () -> Void = {}
+    /// Por defecto "Tu pedido"; en lista de varios pedidos usa [ActiveOrder.productSummary].
+    var headerTitle: String = "Tu pedido"
 
     private let lastStep = 6
     /// Step index for `ASSIGNED` — hide map entry until courier can appear on map.
@@ -96,9 +98,10 @@ struct OrderTrackingSectionView: View {
         let showMapButton = step >= assignedStep
 
         VStack(alignment: .leading, spacing: 0) {
-            Text("Tu pedido")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+            Text(headerTitle)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
                 .padding(.bottom, 12)
 
             ScrollView(.horizontal, showsIndicators: false) {

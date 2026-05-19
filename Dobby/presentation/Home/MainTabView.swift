@@ -20,6 +20,7 @@ private enum MainPalette {
 struct MainTabView: View {
     let onLogout: () -> Void
     private let placesRepository: PlacesRepository
+    private let adsRepository: AdsRepository
     private let userAddressRepository: UserAddressRepository
     private let placesAutocompleteRepository: PlacesAutocompleteRepository
     private let orderRepository: OrderRepository
@@ -44,6 +45,7 @@ struct MainTabView: View {
     init(deps: AppDependencies, onLogout: @escaping () -> Void) {
         self.onLogout = onLogout
         self.placesRepository = deps.placesRepository
+        self.adsRepository = deps.adsRepository
         self.userAddressRepository = deps.userAddressRepository
         self.placesAutocompleteRepository = deps.placesAutocompleteRepository
         self.orderRepository = deps.orderRepository
@@ -64,6 +66,7 @@ struct MainTabView: View {
                 adsRepository: deps.adsRepository,
                 userAddressRepository: deps.userAddressRepository,
                 orderRepository: deps.orderRepository,
+                deliveryPricingConfigRepository: deps.deliveryPricingConfigRepository,
                 http: deps.httpClient,
                 cartLocalStore: cartStore
             )
@@ -85,6 +88,7 @@ struct MainTabView: View {
                     HomeTabScreen(
                         viewModel: homeViewModel,
                         placesRepository: placesRepository,
+                        adsRepository: adsRepository,
                         favoritesStore: favoritesStore,
                         userAddressRepository: userAddressRepository,
                         placesAutocompleteRepository: placesAutocompleteRepository,

@@ -12,8 +12,12 @@ final class HomeTabViewModel {
     private let adsRepository: AdsRepository
     private let userAddressRepository: UserAddressRepository
     private let orderRepository: OrderRepository
+    private let deliveryPricingConfigRepository: DeliveryPricingConfigRepository
     private let http: DobbyHTTPClient
     private let cartLocalStore: CartLocalStore
+
+    /// Tarifas desde `GET app/delivery-pricing-config` (panel web).
+    var deliveryPricingSettings: DeliveryPricingSettings = .default
 
     var featuredPlaces: [FeaturedPlace] = []
     var bestSellerProducts: [BestSellerProduct] = []
@@ -28,8 +32,8 @@ final class HomeTabViewModel {
     /// Coordenadas de la dirección de entrega (para ETA en carrito).
     var deliveryLatitude: Double?
     var deliveryLongitude: Double?
-    /// Active order for home tracking strip (`GET orders/active`).
-    var activeOrder: ActiveOrder?
+    /// Pedidos activos (`GET orders/active`).
+    var activeOrders: [ActiveOrder] = []
     var isLoading = false
     var isRefreshing = false
     var errorMessage: String?
@@ -51,9 +55,36 @@ final class HomeTabViewModel {
         cartLines.reduce(0) { $0 + $1.quantity }
     }
 
-    var cartTotal: Double {
-        cartLines.reduce(0) { $0 + $1.lineTotal }
+    var productsSubtotal: Double {
+        roundMoney(cartLines.reduce(0) { $0 + $1.lineTotal })
     }
+
+    /// Desglose con envío; `nil` si faltan coordenadas de entrega o de tienda.
+    var orderPricing: OrderPricing? {
+        let subtotal = productsSubtotal
+        guard let km = GeoDistance.maxRoadKmFromPickups(
+            userLat: deliveryLatitude,
+            userLng: deliveryLongitude,
+            cartLines: cartLines,
+            shopCoordsByShopId: shopCoordsByShopId
+        ) else { return nil }
+        let delivery = DeliveryPricingCalculator.calculate(
+            DeliveryPricingInput(
+                distanceKm: km,
+                demandMultiplier: deliveryPricingSettings.defaultDemandMultiplier,
+                isRaining: deliveryPricingSettings.defaultIsRaining
+            ),
+            config: deliveryPricingSettings
+        )
+        return OrderPricing(productsSubtotal: subtotal, delivery: delivery)
+    }
+
+    var grandTotal: Double {
+        orderPricing?.grandTotal ?? productsSubtotal
+    }
+
+    /// Alias histórico (solo productos).
+    var cartTotal: Double { productsSubtotal }
 
     /// Entrega estimada según distancia domicilio ↔ tienda(s) en el carrito (fallback si faltan coords).
     var estimatedDeliveryLabel: String {
@@ -108,6 +139,7 @@ final class HomeTabViewModel {
         adsRepository: AdsRepository,
         userAddressRepository: UserAddressRepository,
         orderRepository: OrderRepository,
+        deliveryPricingConfigRepository: DeliveryPricingConfigRepository,
         http: DobbyHTTPClient,
         cartLocalStore: CartLocalStore
     ) {
@@ -115,9 +147,17 @@ final class HomeTabViewModel {
         self.adsRepository = adsRepository
         self.userAddressRepository = userAddressRepository
         self.orderRepository = orderRepository
+        self.deliveryPricingConfigRepository = deliveryPricingConfigRepository
         self.http = http
         self.cartLocalStore = cartLocalStore
         cartLines = cartLocalStore.loadLines()
+        deliveryPricingSettings = deliveryPricingConfigRepository.currentSettings()
+        Task { await refreshDeliveryPricing() }
+    }
+
+    func refreshDeliveryPricing() async {
+        await deliveryPricingConfigRepository.refresh()
+        deliveryPricingSettings = deliveryPricingConfigRepository.currentSettings()
     }
 
     /// After tap “Pagar”: create order (Android `placeOrder`), wait API + 5s animation, then caller should pop navigation. Returns whether navigation should pop.
@@ -158,12 +198,18 @@ final class HomeTabViewModel {
         }
     }
 
-    func loadActiveOrder() async {
-        switch await orderRepository.getActiveOrder() {
-        case .success(let order):
-            activeOrder = order
-        case .failure:
-            activeOrder = nil
+    /// - Parameter clearOnFailure: `false` en pull-to-refresh para no borrar pedidos si la red falla o cancela la tarea.
+    func loadActiveOrder(clearOnFailure: Bool = true) async {
+        switch await orderRepository.getActiveOrders() {
+        case .success(let orders):
+            activeOrders = orders
+        case .failure(let error):
+            if !clearOnFailure {
+                applyNonSuppressedWarning(from: error)
+                return
+            }
+            guard !shouldPreserveExistingData(on: error) else { return }
+            activeOrders = []
         }
     }
 
@@ -181,7 +227,9 @@ final class HomeTabViewModel {
         warningMessage = nil
         loadAddresses()
         Task {
+            async let pricingTask: Void = refreshDeliveryPricing()
             await refreshShopCoords()
+            await pricingTask
             switch await placesRepository.getHome() {
             case .success(let data):
                 featuredPlaces = data.featuredPlaces
@@ -258,16 +306,18 @@ final class HomeTabViewModel {
         return t
     }
 
-    private func loadAds() async {
+    /// - Parameter clearOnFailure: `false` en pull-to-refresh para conservar anuncios ya cargados.
+    private func loadAds(clearOnFailure: Bool = true) async {
         switch await adsRepository.getAds() {
         case .success(let list):
             ads = list
         case .failure(let e):
-            ads = []
-            guard !e.shouldSuppressUserMessage else { return }
-            if case .http(let he) = e {
-                warningMessage = http.userFacingMessage(from: he)
+            guard clearOnFailure, !shouldPreserveExistingData(on: e) else {
+                applyNonSuppressedWarning(from: e)
+                return
             }
+            ads = []
+            applyNonSuppressedWarning(from: e)
         }
     }
 
@@ -276,10 +326,11 @@ final class HomeTabViewModel {
         errorMessage = nil
         async let homeTask: Void = refreshHome()
         async let addrTask: Void = refreshAddresses()
-        async let adsTask: Void = refreshAds()
-        async let orderTask: Void = loadActiveOrder()
+        async let adsTask: Void = loadAds(clearOnFailure: false)
+        async let orderTask: Void = loadActiveOrder(clearOnFailure: false)
         async let shopCoordsTask: Void = refreshShopCoords()
-        _ = await (homeTask, addrTask, adsTask, orderTask, shopCoordsTask)
+        async let pricingTask: Void = refreshDeliveryPricing()
+        _ = await (homeTask, addrTask, adsTask, orderTask, shopCoordsTask, pricingTask)
         isRefreshing = false
     }
 
@@ -337,13 +388,22 @@ final class HomeTabViewModel {
         }
     }
 
-    private func refreshAds() async {
-        switch await adsRepository.getAds() {
-        case .success(let list):
-            ads = list
-        case .failure(let e):
-            ads = []
-            guard !e.shouldSuppressUserMessage else { return }
+    /// No borrar datos por cancelación del refresh o errores de auth suprimidos (p. ej. 401 en vuelo).
+    private func shouldPreserveExistingData(on error: Error) -> Bool {
+        if Task.isCancelled { return true }
+        if let url = error as? URLError, url.code == .cancelled { return true }
+        if let e = error as? HomeRepositoryError, e.shouldSuppressUserMessage { return true }
+        if let e = error as? OrderRepositoryError, e.shouldSuppressUserMessage { return true }
+        return false
+    }
+
+    private func applyNonSuppressedWarning(from error: Error) {
+        if let e = error as? HomeRepositoryError, !e.shouldSuppressUserMessage {
+            if case .http(let he) = e {
+                warningMessage = http.userFacingMessage(from: he)
+            }
+        }
+        if let e = error as? OrderRepositoryError, !e.shouldSuppressUserMessage {
             if case .http(let he) = e {
                 warningMessage = http.userFacingMessage(from: he)
             }

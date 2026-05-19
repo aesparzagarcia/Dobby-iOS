@@ -26,12 +26,16 @@ protocol PlacesRepository: Sendable {
     func getShopProducts(shopId: String) async -> Result<[ShopProduct], HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getProduct` → `GET app/products/:id`.
     func getProduct(id: String) async -> Result<ProductDetail, HomeRepositoryError>
+    /// Parity with Android `PlacesRepository.getService` → `GET app/services/:id`.
+    func getService(id: String) async -> Result<ServiceDetail, HomeRepositoryError>
     /// Tiendas con coordenadas desde `GET app/places` (ETA por `shop_id` en carrito).
     func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError>
 }
 
 protocol AdsRepository: Sendable {
     func getAds() async -> Result<[Ad], HomeRepositoryError>
+    /// Parity with Android `AdsRepository.getAd` → `GET app/ads/:id` (404 → `nil`).
+    func getAd(id: String) async -> Result<Ad?, HomeRepositoryError>
 }
 
 protocol UserAddressRepository: Sendable {
@@ -130,6 +134,17 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
     )
 }
 
+private func mapServiceDetail(_ dto: ServiceDetailDTO) -> ServiceDetail {
+    ServiceDetail(
+        id: dto.id,
+        name: dto.name,
+        description: dto.description,
+        imageUrl: AppConfiguration.fullImageURL(dto.logoUrl),
+        category: dto.category,
+        rate: dto.rate
+    )
+}
+
 final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     private let api: DobbyHTTPClient
     private let sessionStore: SessionStore
@@ -203,6 +218,22 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         }
     }
 
+    func getService(id: String) async -> Result<ServiceDetail, HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            AuthSessionNavigation.notifyIfMissingAccessToken()
+            return .failure(.notAuthenticated)
+        }
+        let path = "app/services/\(id)"
+        let result: Result<ServiceDetailDTO, HTTPClientError> = await api.get(path, bearerToken: token)
+        switch result {
+        case .success(let dto):
+            return .success(mapServiceDetail(dto))
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
     func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
             AuthSessionNavigation.notifyIfMissingAccessToken()
@@ -225,6 +256,21 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 }
 
+private func mapAd(_ dto: AdDTO) -> Ad {
+    Ad(
+        id: dto.id,
+        imageUrl: AppConfiguration.fullImageURL(dto.imageUrl),
+        name: dto.advertiserName,
+        description: dto.description,
+        address: dto.address,
+        contactPhone: dto.contactPhone,
+        whatsapp: dto.whatsapp,
+        email: dto.email,
+        facebookUrl: dto.facebookUrl,
+        instagramUrl: dto.instagramUrl
+    )
+}
+
 final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
     private let api: DobbyHTTPClient
     private let sessionStore: SessionStore
@@ -242,21 +288,26 @@ final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
         let result: Result<[AdDTO], HTTPClientError> = await api.get("app/ads", bearerToken: token)
         switch result {
         case .success(let list):
-            let ads = list.map { dto in
-                Ad(
-                    id: dto.id,
-                    imageUrl: AppConfiguration.fullImageURL(dto.imageUrl),
-                    name: dto.advertiserName,
-                    description: dto.description,
-                    address: dto.address,
-                    contactPhone: dto.contactPhone,
-                    whatsapp: dto.whatsapp,
-                    email: dto.email,
-                    facebookUrl: dto.facebookUrl,
-                    instagramUrl: dto.instagramUrl
-                )
+            return .success(list.map(mapAd))
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
+    func getAd(id: String) async -> Result<Ad?, HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            AuthSessionNavigation.notifyIfMissingAccessToken()
+            return .failure(.notAuthenticated)
+        }
+        let path = "app/ads/\(id)"
+        let result: Result<AdDTO?, HTTPClientError> = await api.getOptionalDecodableOrNotFound(path, bearerToken: token)
+        switch result {
+        case .success(let dto):
+            if let dto {
+                return .success(mapAd(dto))
             }
-            return .success(ads)
+            return .success(nil)
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))

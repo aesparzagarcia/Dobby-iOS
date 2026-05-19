@@ -57,7 +57,8 @@ struct UniversalProductCard: View {
                     .font(.footnote)
                     .fontWeight(.regular)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
                 HStack(alignment: .center, spacing: 3) {
                     Image(systemName: "star.fill")
@@ -77,6 +78,8 @@ struct UniversalProductCard: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+        /// Aire alrededor de la tarjeta para que la sombra no la recorte el `ScrollView` horizontal.
+        .padding(.vertical, 12)
     }
 
     @ViewBuilder

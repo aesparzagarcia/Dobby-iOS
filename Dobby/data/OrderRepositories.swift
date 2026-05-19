@@ -23,7 +23,7 @@ enum OrderRepositoryError: Error, Sendable {
 
 protocol OrderRepository: Sendable {
     func createOrder(addressId: String, items: [CartLineItem]) async -> Result<Void, OrderRepositoryError>
-    func getActiveOrder() async -> Result<ActiveOrder?, OrderRepositoryError>
+    func getActiveOrders() async -> Result<[ActiveOrder], OrderRepositoryError>
     func getOrderTracking(orderId: String) async -> Result<OrderTrackingDetail?, OrderRepositoryError>
     func rateDelivery(orderId: String, stars: Int) async -> Result<Void, OrderRepositoryError>
 }
@@ -56,26 +56,31 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
         }
     }
 
-    func getActiveOrder() async -> Result<ActiveOrder?, OrderRepositoryError> {
+    func getActiveOrders() async -> Result<[ActiveOrder], OrderRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            return .success(nil)
+            return .success([])
         }
-        let result: Result<ActiveOrderDTO?, HTTPClientError> = await api.getOptionalDecodable("orders/active", bearerToken: token)
+        let result: Result<[ActiveOrderDTO], HTTPClientError> = await api.get("orders/active", bearerToken: token)
         switch result {
-        case .success(let dto):
-            guard let dto else { return .success(nil) }
-            let order = ActiveOrder(
-                id: dto.id,
-                status: dto.status,
-                total: dto.total,
-                deliveryAddress: dto.deliveryAddress,
-                createdAt: dto.createdAt
-            )
-            return .success(order)
+        case .success(let list):
+            return .success(list.map(Self.mapActiveOrder))
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))
         }
+    }
+
+    private static func mapActiveOrder(_ dto: ActiveOrderDTO) -> ActiveOrder {
+        ActiveOrder(
+            id: dto.id,
+            status: dto.status,
+            total: dto.total,
+            deliveryAddress: dto.deliveryAddress,
+            createdAt: dto.createdAt,
+            productLines: (dto.items ?? []).map {
+                ActiveOrderProductLine(name: $0.productName, quantity: $0.quantity)
+            }
+        )
     }
 
     func getOrderTracking(orderId: String) async -> Result<OrderTrackingDetail?, OrderRepositoryError> {

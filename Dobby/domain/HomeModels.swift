@@ -91,6 +91,16 @@ struct ProductDetail: Sendable {
     let shopId: String?
 }
 
+/// Parity with Android `ServiceDetail` (`GET app/services/:id`).
+struct ServiceDetail: Sendable, Equatable {
+    let id: String
+    let name: String
+    let description: String?
+    let imageUrl: String?
+    let category: String?
+    let rate: Float
+}
+
 /// Payload for `NavigationStack` product detail (home best sellers + shop grid).
 struct ProductDetailRoute: Hashable, Sendable {
     let id: String

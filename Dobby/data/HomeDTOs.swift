@@ -75,6 +75,15 @@ struct ProductDetailDTO: Decodable {
     }
 }
 
+struct ServiceDetailDTO: Decodable {
+    let id: String
+    let name: String
+    let description: String?
+    let logoUrl: String?
+    let category: String?
+    let rate: Float
+}
+
 /// `GET app/places` — solo usamos tiendas con coordenadas para ETA en carrito.
 struct PlacesResponseDTO: Decodable {
     let shops: [AppPlaceShopDTO]

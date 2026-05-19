@@ -32,15 +32,26 @@ struct CreateOrderResponseDTO: Decodable, Sendable {
     }
 }
 
+struct ActiveOrderItemDTO: Decodable, Sendable {
+    let productName: String
+    let quantity: Int
+
+    enum CodingKeys: String, CodingKey {
+        case productName = "product_name"
+        case quantity
+    }
+}
+
 struct ActiveOrderDTO: Decodable, Sendable {
     let id: String
     let status: String
     let total: Double
     let deliveryAddress: String?
     let createdAt: String?
+    let items: [ActiveOrderItemDTO]?
 
     enum CodingKeys: String, CodingKey {
-        case id, status, total
+        case id, status, total, items
         case deliveryAddress = "delivery_address"
         case createdAt = "created_at"
     }

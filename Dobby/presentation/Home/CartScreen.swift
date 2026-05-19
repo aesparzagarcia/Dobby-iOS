@@ -72,28 +72,21 @@ struct CartScreen: View {
                     .padding(.top, 24)
                     .background(Color.white.opacity(0.5))
 
-                    HStack {
-                        Text("Total")
-                            .font(.headline.weight(.bold))
-                        Spacer()
-                        Text(money(viewModel.cartTotal))
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(CartPalette.primary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 24)
+                    cartPricingFooter
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
 
                     Button {
                         onPay()
                     } label: {
-                        Text("Pagar \(money(viewModel.cartTotal))")
+                        Text("Pagar \(money(viewModel.grandTotal))")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(CartPalette.primary)
-                    .disabled(viewModel.cartLines.isEmpty || viewModel.cartTotal <= 0)
+                    .disabled(viewModel.cartLines.isEmpty || viewModel.grandTotal <= 0)
                     .opacity(viewModel.cartLines.isEmpty ? 0.45 : 1)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
@@ -127,6 +120,81 @@ struct CartScreen: View {
         } message: {
             Text(viewModel.cartPayError ?? "")
         }
+        .task {
+            await viewModel.refreshDeliveryPricing()
+        }
+    }
+
+    @ViewBuilder
+    private var cartPricingFooter: some View {
+        if let pricing = viewModel.orderPricing {
+            pricingLine(label: "Subtotal productos", amount: pricing.productsSubtotal)
+            pricingLine(
+                label: "Envío",
+                amount: pricing.delivery.finalDeliveryFee,
+                subtitle: deliveryFeeSubtitle(pricing.delivery)
+            )
+            if pricing.delivery.dynamicMultiplier > 1 {
+                Text(
+                    "Incluye tarifa dinámica (×\(String(format: "%.2f", pricing.delivery.dynamicMultiplier)))"
+                )
+                .font(.caption)
+                .foregroundStyle(CartPalette.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 4)
+            }
+            Divider()
+                .padding(.vertical, 10)
+        } else if !viewModel.cartLines.isEmpty {
+            HStack {
+                Text("Subtotal")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(money(viewModel.productsSubtotal))
+                    .font(.subheadline)
+            }
+            Text("El costo de envío se calculará al tener una dirección de entrega válida.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+        }
+
+        HStack {
+            Text("Total")
+                .font(.headline.weight(.bold))
+            Spacer()
+            Text(money(viewModel.grandTotal))
+                .font(.headline.weight(.bold))
+                .foregroundStyle(CartPalette.primary)
+        }
+        .padding(.top, viewModel.orderPricing == nil && viewModel.cartLines.isEmpty ? 0 : 8)
+    }
+
+    private func deliveryFeeSubtitle(_ delivery: DeliveryPricingBreakdown) -> String {
+        var s = "Base, distancia (\(String(format: "%.1f", delivery.distanceKm)) km) y zona"
+        if delivery.weatherFee > 0 { s += " · clima" }
+        return s
+    }
+
+    private func pricingLine(label: String, amount: Double, subtitle: String? = nil) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Text(money(amount))
+                .font(.subheadline.weight(.medium))
+        }
+        .padding(.bottom, 6)
     }
 
     private func cartLineRow(_ line: CartLineItem) -> some View {

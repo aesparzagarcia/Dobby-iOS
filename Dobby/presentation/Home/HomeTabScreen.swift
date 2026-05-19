@@ -16,13 +16,17 @@ private enum HomePalette {
 private enum HomeStackRoute: Hashable {
     case shop(ShopDetailRoute)
     case product(ProductDetailRoute)
+    case service(serviceId: String)
+    case ad(adId: String)
     case cart
+    case activeOrders
     case orderTracking(orderId: String)
 }
 
 struct HomeTabScreen: View {
     @Bindable var viewModel: HomeTabViewModel
     let placesRepository: PlacesRepository
+    let adsRepository: AdsRepository
     let favoritesStore: FavoritesStore
     let userAddressRepository: UserAddressRepository
     let placesAutocompleteRepository: PlacesAutocompleteRepository
@@ -67,6 +71,28 @@ struct HomeTabScreen: View {
                                 navigationPath.append(.cart)
                             }
                         )
+                    case .service(let serviceId):
+                        ServiceDetailScreen(
+                            serviceId: serviceId,
+                            placesRepository: placesRepository,
+                            httpClient: httpClient,
+                            cartItemCount: viewModel.cartItemCount,
+                            onBack: { popNavigation() },
+                            onCartClick: {
+                                navigationPath.append(.cart)
+                            }
+                        )
+                    case .ad(let adId):
+                        AdDetailScreen(
+                            adId: adId,
+                            adsRepository: adsRepository,
+                            httpClient: httpClient,
+                            cartItemCount: viewModel.cartItemCount,
+                            onBack: { popNavigation() },
+                            onCartClick: {
+                                navigationPath.append(.cart)
+                            }
+                        )
                     case .product(let r):
                         ProductDetailScreen(
                             product: r,
@@ -94,6 +120,13 @@ struct HomeTabScreen: View {
                                         onCheckoutSuccess()
                                     }
                                 }
+                            }
+                        )
+                    case .activeOrders:
+                        ActiveOrdersScreen(
+                            activeOrders: viewModel.activeOrders,
+                            onTrackOrder: { orderId in
+                                navigationPath.append(.orderTracking(orderId: orderId))
                             }
                         )
                     case .orderTracking(let orderId):
@@ -170,6 +203,7 @@ struct HomeTabScreen: View {
 
     private func onFeaturedPlaceTap(_ place: FeaturedPlace) {
         if place.isService {
+            navigationPath.append(.service(serviceId: place.id))
             return
         }
         navigationPath.append(
@@ -215,19 +249,25 @@ struct HomeTabScreen: View {
 
                     homeSearchBar
 
-                    if let order = viewModel.activeOrder {
-                        OrderTrackingSectionView(activeOrder: order) {
-                            navigationPath.append(.orderTracking(orderId: order.id))
-                        }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                            .padding(.bottom, 4)
+                    if !viewModel.activeOrders.isEmpty {
+                        ActiveOrdersHomeSectionView(
+                            activeOrders: viewModel.activeOrders,
+                            onTrackOrder: { orderId in
+                                navigationPath.append(.orderTracking(orderId: orderId))
+                            },
+                            onMultipleOrdersTap: {
+                                navigationPath.append(.activeOrders)
+                            }
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
                     }
 
                     sectionTitle("Destacado")
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 12) {
+                        LazyHStack(spacing: 6) {
                             ForEach(filteredPlaces) { place in
                                 FeaturedPlaceCard(place: place, width: cardWidth, onTap: { onFeaturedPlaceTap(place) })
                             }
@@ -237,9 +277,9 @@ struct HomeTabScreen: View {
 
                     if !filteredProducts.isEmpty {
                         sectionTitle("Más vendidos")
-                            .padding(.top, 20)
+                            .padding(.top, 10)
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 10) {
+                            LazyHStack(spacing: 6) {
                                 ForEach(filteredProducts) { product in
                                     Button {
                                         navigationPath.append(.product(ProductDetailRoute(bestSeller: product)))
@@ -261,8 +301,9 @@ struct HomeTabScreen: View {
                     }
 
                     if !viewModel.ads.isEmpty {
-                        AdsCarousel(ads: viewModel.ads)
-                            .padding(.vertical, 12)
+                        AdsCarousel(ads: viewModel.ads) { adId in
+                            navigationPath.append(.ad(adId: adId))
+                        }
                     }
 
                     if !restaurantsOnly.isEmpty {
@@ -478,98 +519,166 @@ private struct FeaturedPlaceCard: View {
     let width: CGFloat
     let onTap: () -> Void
 
+    private let cardRadius: CGFloat = 14
+    private var imageHeight: CGFloat { width * 3 / 4 }
+
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 6) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color(.systemGray5))
-                    if let url = place.imageUrl.flatMap(URL.init(string:)) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let img):
-                                img.resizable().scaledToFill()
-                            default:
-                                Text(String(place.name.prefix(1)).uppercased())
-                                    .font(.title)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    } else {
-                        Text(String(place.name.prefix(1)).uppercased())
-                            .font(.title)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(width: width, height: width * 3 / 4)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 0) {
+                imageBlock
+                    .frame(width: width, height: imageHeight)
+                    .clipped()
 
-                Text(place.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Text(place.typeLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(place.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Text(place.typeLabel)
+                        .font(.caption2)
+                        .foregroundStyle(Color(white: 0.25))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(width: width)
-            .contentShape(Rectangle())
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+            .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }
-}
 
-// MARK: - Ads
-
-private struct AdsCarousel: View {
-    let ads: [Ad]
-    @State private var index = 0
-
-    var body: some View {
-        let screenW = UIScreen.main.bounds.width
-        let pageW = max(200, screenW - 32)
-
-        TabView(selection: $index) {
-            ForEach(Array(ads.enumerated()), id: \.element.id) { i, ad in
-                adCard(ad)
-                    .frame(width: pageW)
-                    .tag(i)
-            }
-        }
-        .tabViewStyle(.page(indexDisplayMode: .automatic))
-        .frame(height: 160)
-        .task {
-            guard ads.count > 1 else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                index = (index + 1) % ads.count
+    @ViewBuilder
+    private var imageBlock: some View {
+        ZStack {
+            Color(.systemGray5)
+            if let url = place.imageUrl.flatMap(URL.init(string:)) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: width, height: imageHeight)
+                            .clipped()
+                    case .failure:
+                        placeholderMonogram
+                    case .empty:
+                        ProgressView()
+                    @unknown default:
+                        placeholderMonogram
+                    }
+                }
+            } else {
+                placeholderMonogram
             }
         }
     }
 
-    private func adCard(_ ad: Ad) -> some View {
+    private var placeholderMonogram: some View {
+        Text(String(place.name.prefix(1)).uppercased())
+            .font(.title2.weight(.medium))
+            .foregroundStyle(.secondary)
+    }
+}
+
+// MARK: - Ads (paridad con Android `LazyRow` + auto-scroll ~ViewPager)
+
+private struct AdsCarousel: View {
+    let ads: [Ad]
+    let onAdTap: (String) -> Void
+    @State private var visibleAdId: String?
+
+    private let cardHeight: CGFloat = 160
+    private let autoAdvanceNanos: UInt64 = 2_000_000_000
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(ads) { ad in
+                    Button {
+                        onAdTap(ad.id)
+                    } label: {
+                        adPageView(ad: ad)
+                    }
+                    .buttonStyle(.plain)
+                    .containerRelativeFrame(.horizontal, count: 1, spacing: 12)
+                    .id(ad.id)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $visibleAdId)
+        .frame(height: cardHeight)
+        .padding(.vertical, 12)
+        .onAppear {
+            if visibleAdId == nil { visibleAdId = ads.first?.id }
+        }
+        .task(id: ads.map(\.id).joined(separator: "|")) {
+            guard !ads.isEmpty else { return }
+            if visibleAdId == nil || !ads.contains(where: { $0.id == visibleAdId }) {
+                visibleAdId = ads.first?.id
+            }
+            guard ads.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: autoAdvanceNanos)
+                guard let current = visibleAdId,
+                      let idx = ads.firstIndex(where: { $0.id == current }) else {
+                    visibleAdId = ads.first?.id
+                    continue
+                }
+                let nextIdx = (idx + 1) % ads.count
+                withAnimation(.easeInOut(duration: 0.45)) {
+                    visibleAdId = ads[nextIdx].id
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func adPageView(ad: Ad) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(.systemGray5))
             if let url = ad.imageUrl.flatMap(URL.init(string:)) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let img):
-                        img.resizable().scaledToFill()
-                    default:
-                        Text(String(ad.name.prefix(1)).uppercased())
-                            .font(.largeTitle)
-                            .foregroundStyle(.secondary)
+                        img
+                            .resizable()
+                            .scaledToFill()
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                            .clipped()
+                    case .failure:
+                        adPlaceholderMonogram(ad: ad)
+                    case .empty:
+                        ProgressView()
+                    @unknown default:
+                        adPlaceholderMonogram(ad: ad)
                     }
                 }
             } else {
-                Text(String(ad.name.prefix(1)).uppercased())
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
+                adPlaceholderMonogram(ad: ad)
             }
         }
-        .frame(height: 160)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 16)
+        .frame(height: cardHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 4, x: 0, y: 2)
+    }
+
+    private func adPlaceholderMonogram(ad: Ad) -> some View {
+        Text(String(ad.name.prefix(1)).uppercased())
+            .font(.largeTitle.weight(.medium))
+            .foregroundStyle(.secondary)
     }
 }
