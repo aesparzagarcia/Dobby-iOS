@@ -82,6 +82,9 @@ private let trackingStageIcons: [String] = [
     "checkmark.circle.fill",
 ]
 
+/// Layout slot for the stage icon (40pt circle + pulse scale 1.08 needs headroom).
+private let trackingStageIconSlotSize: CGFloat = 48
+
 struct OrderTrackingSectionView: View {
     let activeOrder: ActiveOrder
     var onViewDetails: () -> Void = {}
@@ -123,6 +126,8 @@ struct OrderTrackingSectionView: View {
                         }
                     }
                 }
+                .padding(.top, 4)
+                .padding(.bottom, 2)
             }
 
             if showMapButton {
@@ -169,6 +174,8 @@ struct OrderTrackingSectionView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(isCompleted || isCurrent ? Color.white : Color.secondary.opacity(0.7))
             }
+            // Reserve space for the pulsing scale so ScrollView does not clip the circle top.
+            .frame(width: trackingStageIconSlotSize, height: trackingStageIconSlotSize)
 
             Text(label)
                 .font(.caption2)

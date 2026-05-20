@@ -7,7 +7,7 @@ import FirebaseMessaging
 import Foundation
 
 enum DobbyPushSync {
-    /// Sends current FCM token to the API when session is valid.
+    /// Sends current FCM token to the API and starts Firestore order listener when session is valid.
     static func sync(api: DobbyHTTPClient, sessionStore: SessionStore) async {
         guard sessionStore.isLoggedIn, let bearer = sessionStore.accessToken() else { return }
         do {
@@ -16,6 +16,7 @@ enum DobbyPushSync {
         } catch {
             // Missing GoogleService-Info, permission, or network.
         }
+        await DobbyOrderRealtime.start(sessionStore: sessionStore, api: api)
     }
 
     static func register(fcmToken: String) async {

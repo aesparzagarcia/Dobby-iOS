@@ -143,6 +143,21 @@ struct ProductDetailRoute: Hashable, Sendable {
         shopId = shopProduct.shopId
     }
 
+    /// Deep link from promotion push (`product_id` + optional `shop_id`); detail loads from API.
+    init(promotionPush productId: String, shopId: String?) {
+        id = productId
+        name = "Promoción"
+        description = nil
+        imageUrl = nil
+        price = 0
+        rate = 0
+        hasPromotion = true
+        discount = 0
+        pickupLatitude = nil
+        pickupLongitude = nil
+        self.shopId = shopId
+    }
+
     init(favorite: FavoriteProduct) {
         id = favorite.productId
         name = favorite.name

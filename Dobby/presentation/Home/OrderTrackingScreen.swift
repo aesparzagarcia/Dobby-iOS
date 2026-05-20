@@ -19,12 +19,26 @@ private enum OrderTrackingPalette {
 struct OrderTrackingScreen: View {
     @State private var viewModel: OrderTrackingViewModel
     let onBack: () -> Void
+    let onFinish: () -> Void
 
-    init(orderId: String, orderRepository: OrderRepository, http: DobbyHTTPClient, onBack: @escaping () -> Void) {
+    init(
+        orderId: String,
+        orderRepository: OrderRepository,
+        directionsRepository: DirectionsRepository,
+        http: DobbyHTTPClient,
+        onBack: @escaping () -> Void,
+        onFinish: @escaping () -> Void
+    ) {
         _viewModel = State(
-            initialValue: OrderTrackingViewModel(orderId: orderId, orderRepository: orderRepository, http: http)
+            initialValue: OrderTrackingViewModel(
+                orderId: orderId,
+                orderRepository: orderRepository,
+                directionsRepository: directionsRepository,
+                http: http
+            )
         )
         self.onBack = onBack
+        self.onFinish = onFinish
     }
 
     @State private var mapPosition: MapCameraPosition = .automatic
@@ -70,6 +84,19 @@ struct OrderTrackingScreen: View {
         .onAppear {
             locationManager.requestWhenInUseAuthorization()
             viewModel.onAppear()
+            if viewModel.tracking?.isDelivered == true {
+                isOrderDetailSheetVisible = true
+            }
+        }
+        .onChange(of: viewModel.tracking?.status) { _, _ in
+            if viewModel.tracking?.isDelivered == true {
+                isOrderDetailSheetVisible = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.orderChangedNotification)) { notification in
+            if let changedId = notification.userInfo?["order_id"] as? String,
+               changedId != viewModel.orderId { return }
+            viewModel.loadTracking()
         }
         .onDisappear {
             viewModel.onDisappear()
@@ -78,72 +105,121 @@ struct OrderTrackingScreen: View {
             hasFittedCamera = false
             fitMapCamera()
         }
-        .onChange(of: viewModel.tracking?.deliveryMan?.lat) { _, _ in
-            fitMapCamera()
+    }
+
+    @ViewBuilder
+    private func mapWithSheet(tracking: OrderTrackingDetail) -> some View {
+        if tracking.isDelivered {
+            deliveredLayout(tracking: tracking)
+        } else {
+            inProgressLayout(tracking: tracking)
         }
-        .onChange(of: viewModel.tracking?.deliveryMan?.lng) { _, _ in
+    }
+
+    @ViewBuilder
+    private func deliveredLayout(tracking: OrderTrackingDetail) -> some View {
+        VStack(spacing: 0) {
+            trackingMap(tracking: tracking, compact: true)
+                .frame(height: 112)
+            orderBottomSheet(tracking: tracking, fullScreen: true)
+        }
+        .ignoresSafeArea(edges: SwiftUI.Edge.Set.bottom)
+        .onAppear { fitMapCamera() }
+    }
+
+    @ViewBuilder
+    private func inProgressLayout(tracking: OrderTrackingDetail) -> some View {
+        ZStack(alignment: Alignment.bottom) {
+            trackingMap(tracking: tracking, compact: false)
+            inProgressSheetOverlay(tracking: tracking)
+        }
+        .ignoresSafeArea(edges: SwiftUI.Edge.Set.bottom)
+        .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
+        .onChange(of: isOrderDetailSheetVisible) { _, visible in
+            if visible { sheetDragOffset = 0 }
+        }
+        .onAppear {
             fitMapCamera()
         }
     }
 
     @ViewBuilder
-    private func mapWithSheet(tracking: OrderTrackingDetail) -> some View {
+    private func trackingMap(tracking: OrderTrackingDetail, compact: Bool) -> some View {
         let delivery = coordinate(lat: tracking.lat, lng: tracking.lng)
         let courier = coordinate(lat: tracking.deliveryMan?.lat, lng: tracking.deliveryMan?.lng)
-        let route = viewModel.routeCoordinates
+        let route = viewModel.routePoints
+        let usingStraightLineRoute = viewModel.usingStraightLineRoute
 
+        Map(
+            position: $mapPosition,
+            interactionModes: (!compact && isOrderDetailSheetVisible) ? MapInteractionModes() : .all
+        ) {
+            UserAnnotation()
+            if let c = delivery {
+                Annotation("Entrega", coordinate: c) {
+                    Image(systemName: "house.fill")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                        .padding(10)
+                        .background(OrderTrackingPalette.primary, in: Circle())
+                }
+            }
+            if let c = courier {
+                Annotation("Repartidor", coordinate: c) {
+                    Image(systemName: "bicycle")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                        .padding(10)
+                        .background(Color.orange, in: Circle())
+                }
+            }
+            if route.count >= 2 {
+                MapPolyline(coordinates: route)
+                    .stroke(Color.blue, lineWidth: 4)
+            }
+        }
+        .mapStyle(.standard)
+        .mapControls {
+            if compact || !isOrderDetailSheetVisible {
+                MapUserLocationButton()
+                MapCompass()
+            }
+        }
+        .overlay(alignment: .top) {
+            if usingStraightLineRoute, delivery != nil, courier != nil {
+                Text(
+                    "La ruta por calles no está disponible (solo línea recta). " +
+                    "Habilita Directions API y facturación en Google Cloud, y define DIRECTIONS_API_KEY " +
+                    "con una clave apta para el servicio web (no solo restricción «aplicaciones iOS»)."
+                )
+                .font(.caption)
+                .foregroundStyle(Color(.label))
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemRed).opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func inProgressSheetOverlay(tracking: OrderTrackingDetail) -> some View {
         ZStack(alignment: Alignment.bottom) {
-            Map(
-                position: $mapPosition,
-                interactionModes: isOrderDetailSheetVisible ? MapInteractionModes() : .all
-            ) {
-                UserAnnotation()
-                if let c = delivery {
-                    Annotation("Entrega", coordinate: c) {
-                        Image(systemName: "house.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white)
-                            .padding(10)
-                            .background(OrderTrackingPalette.primary, in: Circle())
+            Color.clear
+                .contentShape(Rectangle())
+                .allowsHitTesting(isOrderDetailSheetVisible)
+                .onTapGesture {
+                    guard isOrderDetailSheetVisible else { return }
+                    sheetDragOffset = 0
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isOrderDetailSheetVisible = false
                     }
                 }
-                if let c = courier {
-                    Annotation("Repartidor", coordinate: c) {
-                        Image(systemName: "bicycle")
-                            .font(.title3)
-                            .foregroundStyle(.white)
-                            .padding(10)
-                            .background(Color.orange, in: Circle())
-                    }
-                }
-                if route.count >= 2 {
-                    MapPolyline(coordinates: route)
-                        .stroke(Color.blue, lineWidth: 4)
-                }
-            }
-            .mapStyle(.standard)
-            .mapControls {
-                if !isOrderDetailSheetVisible {
-                    MapUserLocationButton()
-                    MapCompass()
-                }
-            }
-            .ignoresSafeArea(edges: SwiftUI.Edge.Set.bottom)
-            .overlay {
-                if isOrderDetailSheetVisible {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            sheetDragOffset = 0
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                isOrderDetailSheetVisible = false
-                            }
-                        }
-                }
-            }
 
             if isOrderDetailSheetVisible {
-                orderBottomSheet(tracking: tracking)
+                orderBottomSheet(tracking: tracking, fullScreen: false)
                     .offset(y: sheetDragOffset)
                     .transition(.move(edge: SwiftUI.Edge.bottom).combined(with: .opacity))
             } else {
@@ -165,14 +241,6 @@ struct OrderTrackingScreen: View {
                 .transition(.move(edge: SwiftUI.Edge.bottom).combined(with: .opacity))
             }
         }
-        .ignoresSafeArea(edges: SwiftUI.Edge.Set.bottom)
-        .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
-        .onChange(of: isOrderDetailSheetVisible) { _, visible in
-            if visible { sheetDragOffset = 0 }
-        }
-        .onAppear {
-            fitMapCamera()
-        }
     }
 
     private func coordinate(lat: Double?, lng: Double?) -> CLLocationCoordinate2D? {
@@ -180,12 +248,13 @@ struct OrderTrackingScreen: View {
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
+    /// Fits delivery + courier once on first load. Does not run again on poll updates so manual zoom/pan is preserved.
     private func fitMapCamera() {
-        guard let t = viewModel.tracking else { return }
+        guard let t = viewModel.tracking, !hasFittedCamera else { return }
         let delivery = coordinate(lat: t.lat, lng: t.lng)
         let courier = coordinate(lat: t.deliveryMan?.lat, lng: t.deliveryMan?.lng)
 
-        if let a = delivery, let b = courier, !hasFittedCamera {
+        if let a = delivery, let b = courier {
             let minLat = min(a.latitude, b.latitude)
             let maxLat = max(a.latitude, b.latitude)
             let minLon = min(a.longitude, b.longitude)
@@ -206,25 +275,29 @@ struct OrderTrackingScreen: View {
             mapPosition = .region(
                 MKCoordinateRegion(center: c, span: MKCoordinateSpan(latitudeDelta: 0.014, longitudeDelta: 0.014))
             )
+            hasFittedCamera = true
         }
     }
 
-    private func orderBottomSheet(tracking: OrderTrackingDetail) -> some View {
+    private func orderBottomSheet(tracking: OrderTrackingDetail, fullScreen: Bool) -> some View {
         let sheetShape = UnevenRoundedRectangle(
-            topLeadingRadius: 24,
+            topLeadingRadius: fullScreen ? 16 : 24,
             bottomLeadingRadius: 0,
             bottomTrailingRadius: 0,
-            topTrailingRadius: 24,
+            topTrailingRadius: fullScreen ? 16 : 24,
             style: .continuous
         )
         let bottomInset = orderTrackingBottomSafeInset()
-        // ~44% sheet; inset keeps background flush with bottom.
-        let sheetHeight = UIScreen.main.bounds.height * 0.44 + bottomInset
+        let sheetHeight: CGFloat = fullScreen
+            ? UIScreen.main.bounds.height - 112
+            : UIScreen.main.bounds.height * 0.44 + bottomInset
         let dragReveal = DragGesture(minimumDistance: 12)
             .onChanged { value in
-                if value.translation.height > 0 { sheetDragOffset = value.translation.height }
+                guard !fullScreen, value.translation.height > 0 else { return }
+                sheetDragOffset = value.translation.height
             }
             .onEnded { value in
+                guard !fullScreen else { return }
                 let dy = value.translation.height
                 let flick = value.predictedEndTranslation.height
                 let shouldDismiss = dy > 90 || flick > 160
@@ -236,23 +309,24 @@ struct OrderTrackingScreen: View {
                 }
             }
 
-        // One ScrollView for handle + body avoids a tall header ZStack sizing bug and stray top insets.
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                ZStack(alignment: .top) {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .gesture(dragReveal)
-                    Capsule()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 8)
-                        .allowsHitTesting(false)
+                if !fullScreen {
+                    ZStack(alignment: .top) {
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .gesture(dragReveal)
+                        Capsule()
+                            .fill(Color.primary.opacity(0.12))
+                            .frame(width: 40, height: 5)
+                            .padding(.top, 8)
+                            .allowsHitTesting(false)
+                    }
+                    .frame(height: 36)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 4)
                 }
-                .frame(height: 36)
-                .padding(.horizontal, 10)
-                .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Tu pedido")
@@ -292,6 +366,30 @@ struct OrderTrackingScreen: View {
                         .font(.subheadline)
                     }
 
+                    let productsSubtotal = tracking.productsSubtotal > 0
+                        ? tracking.productsSubtotal
+                        : tracking.items.reduce(0) { $0 + $1.price * Double($1.quantity) }
+                    HStack {
+                        Text("Subtotal productos")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(String(format: "$%.2f", productsSubtotal))
+                            .font(.subheadline)
+                    }
+                    .padding(.top, 4)
+
+                    if tracking.deliveryFee > 0 {
+                        HStack {
+                            Text("Envío")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "$%.2f", tracking.deliveryFee))
+                                .font(.subheadline)
+                        }
+                    }
+
                     HStack {
                         Text("Total")
                             .font(.headline)
@@ -299,9 +397,15 @@ struct OrderTrackingScreen: View {
                         Text(String(format: "$%.2f", tracking.total))
                             .font(.headline)
                     }
+                    .padding(.top, 4)
 
                     courierSection(tracking: tracking)
-                    ratingSection(tracking: tracking)
+                    if tracking.isDelivered {
+                        deliveredRatingsSection(tracking: tracking)
+                    } else if tracking.canRateDelivery {
+                        ratingSection(tracking: tracking)
+                    }
+                    finishSection(tracking: tracking)
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 16 + bottomInset)
@@ -327,7 +431,7 @@ struct OrderTrackingScreen: View {
             HStack(spacing: 8) {
                 Image(systemName: "bag.fill")
                     .foregroundStyle(OrderTrackingPalette.primary)
-                Text(orderStatusLabel(tracking.status))
+                Text(orderTrackingStatusLabel(tracking))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
             }
@@ -417,6 +521,99 @@ struct OrderTrackingScreen: View {
     }
 
     @ViewBuilder
+    private func deliveredRatingsSection(tracking: OrderTrackingDetail) -> some View {
+        Text("Valora tu experiencia")
+            .font(.headline)
+            .foregroundStyle(OrderTrackingPalette.primary)
+            .padding(.top, 8)
+
+        if tracking.canRateShop || tracking.shopRating != nil {
+            starRatingBlock(
+                title: "Restaurante",
+                subtitle: tracking.shopName ?? "Tienda",
+                existingRating: tracking.shopRating,
+                canRate: tracking.canRateShop,
+                onSelect: { viewModel.submitShopRating($0) }
+            )
+        }
+
+        if tracking.deliveryMan != nil, tracking.canRateDelivery || tracking.deliveryRating != nil {
+            starRatingBlock(
+                title: "Repartidor",
+                subtitle: tracking.deliveryMan?.name ?? "Repartidor",
+                existingRating: tracking.deliveryRating,
+                canRate: tracking.canRateDelivery,
+                onSelect: { viewModel.submitDeliveryRating($0) }
+            )
+        }
+
+        ForEach(tracking.items.filter { $0.canRate || $0.rating != nil }, id: \.productId) { item in
+            starRatingBlock(
+                title: "Producto",
+                subtitle: "\(item.productName) ×\(item.quantity)",
+                existingRating: item.rating,
+                canRate: item.canRate,
+                onSelect: { viewModel.submitProductRating(productId: item.productId, stars: $0) }
+            )
+        }
+
+        if viewModel.rateSubmitting {
+            Text("Enviando…")
+                .font(.caption)
+        }
+        if let re = viewModel.rateError {
+            Text(re)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .onTapGesture { viewModel.clearRateError() }
+        }
+    }
+
+    @ViewBuilder
+    private func starRatingBlock(
+        title: String,
+        subtitle: String,
+        existingRating: Int?,
+        canRate: Bool,
+        onSelect: @escaping (Int) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(OrderTrackingPalette.primary)
+            Text(subtitle)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            if canRate {
+                HStack(spacing: 8) {
+                    ForEach(1 ... 5, id: \.self) { s in
+                        Button {
+                            if !viewModel.rateSubmitting { onSelect(s) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("\(s)")
+                                Image(systemName: "star.fill")
+                                    .font(.caption2)
+                            }
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(Capsule())
+                        }
+                        .disabled(viewModel.rateSubmitting)
+                    }
+                }
+            } else if let r = existingRating {
+                let stars = min(max(r, 1), 5)
+                Text("Tu valoración: \(String(repeating: "⭐", count: stars))")
+                    .font(.subheadline)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
     private func ratingSection(tracking: OrderTrackingDetail) -> some View {
         if tracking.canRateDelivery {
             Text("¿Cómo fue el reparto?")
@@ -461,6 +658,27 @@ struct OrderTrackingScreen: View {
         }
     }
 
+    @ViewBuilder
+    private func finishSection(tracking: OrderTrackingDetail) -> some View {
+        if shouldShowFinishButton(tracking: tracking) {
+            Button {
+                onFinish()
+            } label: {
+                Text("Finalizar")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(OrderTrackingPalette.primary)
+            .padding(.top, 8)
+        }
+    }
+
+    private func shouldShowFinishButton(tracking: OrderTrackingDetail) -> Bool {
+        tracking.isDelivered && !tracking.hasPendingRatings
+    }
+
     private func orderTrackingBottomSafeInset() -> CGFloat {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return 0 }
         return scene.windows.first(where: \.isKeyWindow)?.safeAreaInsets.bottom ?? 0
@@ -471,6 +689,15 @@ private func telDialURL(_ raw: String) -> URL? {
     let cleaned = raw.filter { $0.isNumber || $0 == "+" }
     guard !cleaned.isEmpty else { return nil }
     return URL(string: "tel:\(cleaned)")
+}
+
+private func orderTrackingStatusLabel(_ tracking: OrderTrackingDetail) -> String {
+    if tracking.courierArrivedAtCustomer, tracking.status.uppercased() == "ON_DELIVERY" {
+        let name = tracking.deliveryMan?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !name.isEmpty { return "\(name) está afuera con tu pedido" }
+        return "Repartidor afuera con tu pedido"
+    }
+    return orderStatusLabel(tracking.status)
 }
 
 private func orderStatusLabel(_ status: String) -> String {

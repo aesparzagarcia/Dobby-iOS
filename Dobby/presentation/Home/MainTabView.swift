@@ -24,6 +24,7 @@ struct MainTabView: View {
     private let userAddressRepository: UserAddressRepository
     private let placesAutocompleteRepository: PlacesAutocompleteRepository
     private let orderRepository: OrderRepository
+    private let directionsRepository: DirectionsRepository
     private let httpClient: DobbyHTTPClient
     private let tokenRefresh: ConsumerTokenRefreshService
 
@@ -31,6 +32,9 @@ struct MainTabView: View {
     @State private var proactiveRefreshTask: Task<Void, Never>?
 
     @State private var tab: MainTab = .home
+    @State private var pendingOpenOrderTrackingId: String?
+    @State private var pendingOpenProductId: String?
+    @State private var pendingOpenProductShopId: String?
     /// When `true`, a pushed screen on Home (e.g. shop detail) is active — hide the floating tab bar.
     @State private var homeHidesFloatingTabBar = false
     /// When `true`, product detail or cart is visible on the Promotions tab — hide the floating tab bar.
@@ -49,6 +53,7 @@ struct MainTabView: View {
         self.userAddressRepository = deps.userAddressRepository
         self.placesAutocompleteRepository = deps.placesAutocompleteRepository
         self.orderRepository = deps.orderRepository
+        self.directionsRepository = deps.directionsRepository
         self.httpClient = deps.httpClient
         self.tokenRefresh = deps.tokenRefresh
         let cartStore = CartLocalStore(container: CartSwiftDataStack.sharedContainer)
@@ -93,9 +98,13 @@ struct MainTabView: View {
                         userAddressRepository: userAddressRepository,
                         placesAutocompleteRepository: placesAutocompleteRepository,
                         orderRepository: orderRepository,
+                        directionsRepository: directionsRepository,
                         httpClient: httpClient,
                         mainTabBarHidden: $homeHidesFloatingTabBar,
-                        onCheckoutSuccess: { tab = .home }
+                        onCheckoutSuccess: { tab = .home },
+                        pendingOpenOrderTrackingId: $pendingOpenOrderTrackingId,
+                        pendingOpenProductId: $pendingOpenProductId,
+                        pendingOpenProductShopId: $pendingOpenProductShopId
                     )
                 case .promotions:
                     PromotionsTabScreen(
@@ -132,6 +141,23 @@ struct MainTabView: View {
             PlaceOrderLoadingView()
         }
         .animation(.easeInOut(duration: 0.2), value: shouldShowFloatingTabBar)
+        .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.openOrderTrackingNotification)) { notification in
+            let orderId = (notification.userInfo?["order_id"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let orderId, !orderId.isEmpty else { return }
+            tab = .home
+            pendingOpenOrderTrackingId = orderId
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.openProductPromotionNotification)) { notification in
+            openProductPromotionFromPush(notification.userInfo)
+        }
+        .onAppear {
+            if let pending = DobbyOrderRealtime.PendingProductPromotion.consume() {
+                tab = .home
+                pendingOpenProductId = pending.productId
+                pendingOpenProductShopId = pending.shopId
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             proactiveRefreshTask?.cancel()
             proactiveRefreshTask = nil
@@ -147,6 +173,17 @@ struct MainTabView: View {
     }
 
     /// Tab bar only on root tab screens; hidden while Home or Promotions has a secondary screen pushed.
+    private func openProductPromotionFromPush(_ userInfo: [AnyHashable: Any]?) {
+        let productId = (userInfo?["product_id"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let productId, !productId.isEmpty else { return }
+        tab = .home
+        pendingOpenProductId = productId
+        let shopId = (userInfo?["shop_id"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingOpenProductShopId = shopId?.isEmpty == false ? shopId : nil
+    }
+
     private var shouldShowFloatingTabBar: Bool {
         switch tab {
         case .home:

@@ -40,6 +40,11 @@ final class SessionStore: @unchecked Sendable {
         return (v?.isEmpty == false) ? v : nil
     }
 
+    func userId() -> String? {
+        let v = read(Item.userId)
+        return (v?.isEmpty == false) ? v : nil
+    }
+
     func clearSession() {
         delete(Item.accessToken)
         delete(Item.refreshToken)

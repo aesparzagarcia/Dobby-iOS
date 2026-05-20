@@ -111,6 +111,7 @@ struct PhoneScreen: View {
                         Text("Recibir código por SMS")
                             .font(.system(.subheadline, design: .default, weight: .semibold))
                     }
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                     .background(brandGreen)

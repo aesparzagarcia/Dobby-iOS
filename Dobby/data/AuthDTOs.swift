@@ -91,3 +91,7 @@ struct AppRefreshResponseDTO: Decodable {
 struct PushOkDTO: Decodable {
     let ok: Bool?
 }
+
+struct FirebaseTokenDTO: Decodable {
+    let token: String
+}

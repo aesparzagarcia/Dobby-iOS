@@ -86,8 +86,10 @@ struct CartScreen: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(CartPalette.primary)
-                    .disabled(viewModel.cartLines.isEmpty || viewModel.grandTotal <= 0)
-                    .opacity(viewModel.cartLines.isEmpty ? 0.45 : 1)
+                    .disabled(viewModel.cartLines.isEmpty || !viewModel.hasValidDeliveryAddress)
+                    .opacity(
+                        viewModel.cartLines.isEmpty || !viewModel.hasValidDeliveryAddress ? 0.45 : 1
+                    )
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 28)

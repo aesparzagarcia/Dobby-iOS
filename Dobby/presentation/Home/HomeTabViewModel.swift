@@ -83,6 +83,12 @@ final class HomeTabViewModel {
         orderPricing?.grandTotal ?? productsSubtotal
     }
 
+    /// Dirección guardada con id y coordenadas (paridad Android `CartUiState.hasValidDeliveryAddress`).
+    var hasValidDeliveryAddress: Bool {
+        guard let id = defaultAddressId, !id.isEmpty else { return false }
+        return deliveryLatitude != nil && deliveryLongitude != nil
+    }
+
     /// Alias histórico (solo productos).
     var cartTotal: Double { productsSubtotal }
 
@@ -172,7 +178,8 @@ final class HomeTabViewModel {
             return false
         }
         isCheckoutLoading = true
-        switch await orderRepository.createOrder(addressId: addressId, items: cartLines) {
+        let deliveryFee = orderPricing?.delivery.finalDeliveryFee ?? 0
+        switch await orderRepository.createOrder(addressId: addressId, items: cartLines, deliveryFee: deliveryFee) {
         case .success:
             cartLines = []
             cartLocalStore.persist(lines: [])
@@ -323,15 +330,20 @@ final class HomeTabViewModel {
 
     func refresh() async {
         isRefreshing = true
+        defer { isRefreshing = false }
         errorMessage = nil
+
+        // Estado del pedido: detached para que no se cancele al soltar el pull-to-refresh antes de que termine el API.
+        Task.detached { @MainActor [weak self] in
+            await self?.loadActiveOrder(clearOnFailure: false)
+        }
+
         async let homeTask: Void = refreshHome()
         async let addrTask: Void = refreshAddresses()
         async let adsTask: Void = loadAds(clearOnFailure: false)
-        async let orderTask: Void = loadActiveOrder(clearOnFailure: false)
         async let shopCoordsTask: Void = refreshShopCoords()
         async let pricingTask: Void = refreshDeliveryPricing()
-        _ = await (homeTask, addrTask, adsTask, orderTask, shopCoordsTask, pricingTask)
-        isRefreshing = false
+        _ = await (homeTask, addrTask, adsTask, shopCoordsTask, pricingTask)
     }
 
     private func refreshShopCoords() async {

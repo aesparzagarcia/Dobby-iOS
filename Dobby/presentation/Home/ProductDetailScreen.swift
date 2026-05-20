@@ -72,7 +72,7 @@ struct ProductDetailScreen: View {
             ProductDetailPalette.screenBackground
                 .ignoresSafeArea()
 
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
                     productHeroImage
 
@@ -123,7 +123,9 @@ struct ProductDetailScreen: View {
                     .padding(.top, 20)
                     .padding(.bottom, 120)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         }
         .navigationTitle(product.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -196,6 +198,9 @@ struct ProductDetailScreen: View {
                         img
                             .resizable()
                             .scaledToFill()
+                            // Constrain intrinsic image width so wide photos do not expand ScrollView content.
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                            .clipped()
                     case .failure:
                         imagePlaceholder
                     case .empty:

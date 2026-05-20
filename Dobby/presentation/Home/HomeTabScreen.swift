@@ -31,11 +31,16 @@ struct HomeTabScreen: View {
     let userAddressRepository: UserAddressRepository
     let placesAutocompleteRepository: PlacesAutocompleteRepository
     let orderRepository: OrderRepository
+    let directionsRepository: DirectionsRepository
     let httpClient: DobbyHTTPClient
     /// When `true`, `MainTabView` hides the bottom floating tab bar (e.g. shop detail is visible).
     @Binding var mainTabBarHidden: Bool
     /// After a successful `Pagar`, switch to Inicio (no-op if already there) so the user sees order tracking.
     let onCheckoutSuccess: () -> Void
+    /// Set from push tap (e.g. repartidor asignado) — navigate to order tracking when non-nil.
+    @Binding var pendingOpenOrderTrackingId: String?
+    @Binding var pendingOpenProductId: String?
+    @Binding var pendingOpenProductShopId: String?
 
     private let searchHints = ["tacos", "cerveza", "la huerta de vega", "pizza", "café", "restaurantes"]
     @State private var hintIndex = 0
@@ -133,8 +138,13 @@ struct HomeTabScreen: View {
                         OrderTrackingScreen(
                             orderId: orderId,
                             orderRepository: orderRepository,
+                            directionsRepository: directionsRepository,
                             http: httpClient,
-                            onBack: { popNavigation() }
+                            onBack: { popNavigation() },
+                            onFinish: {
+                                navigationPath.removeAll()
+                                Task { await viewModel.loadActiveOrder() }
+                            }
                         )
                     }
                 }
@@ -155,6 +165,27 @@ struct HomeTabScreen: View {
         if !navigationPath.isEmpty {
             navigationPath.removeLast()
         }
+    }
+
+    private func openOrderTrackingIfNeeded(_ orderId: String?) {
+        guard let orderId = orderId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !orderId.isEmpty else { return }
+        navigationPath.append(.orderTracking(orderId: orderId))
+        pendingOpenOrderTrackingId = nil
+        Task { await viewModel.loadActiveOrder() }
+    }
+
+    private func openProductPromotionIfNeeded(productId: String?, shopId: String?) {
+        guard let productId = productId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !productId.isEmpty else { return }
+        let trimmedShop = shopId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let route = ProductDetailRoute(
+            promotionPush: productId,
+            shopId: (trimmedShop?.isEmpty == false) ? trimmedShop : nil
+        )
+        navigationPath.append(.product(route))
+        pendingOpenProductId = nil
+        pendingOpenProductShopId = nil
     }
 
     private var homeContent: some View {
@@ -182,6 +213,19 @@ struct HomeTabScreen: View {
         .background(Color.white)
         .onAppear {
             viewModel.loadInitial()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.orderChangedNotification)) { _ in
+            Task { await viewModel.loadActiveOrder() }
+        }
+        .onChange(of: pendingOpenOrderTrackingId) { _, orderId in
+            openOrderTrackingIfNeeded(orderId)
+        }
+        .onChange(of: pendingOpenProductId) { _, productId in
+            openProductPromotionIfNeeded(productId: productId, shopId: pendingOpenProductShopId)
+        }
+        .onAppear {
+            openOrderTrackingIfNeeded(pendingOpenOrderTrackingId)
+            openProductPromotionIfNeeded(productId: pendingOpenProductId, shopId: pendingOpenProductShopId)
         }
         .task {
             while !Task.isCancelled {

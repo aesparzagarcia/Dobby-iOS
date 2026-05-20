@@ -190,7 +190,6 @@ private struct ShopProductGridCard: View {
                             validDiscount: validDiscount,
                             originalPrice: product.price
                         )
-                        .padding(.bottom, 12)
                     }
                 }
                 .frame(width: width, height: width)

@@ -2,16 +2,21 @@
 //  OrderTrackingViewModel.swift
 //  Dobby
 //
-//  Parity with Android `OrderTrackingViewModel` (load + poll while assigned / en route).
+//  Parity with Android `OrderTrackingViewModel` (load + poll + Google Directions route).
 //
 
+import CoreLocation
 import Foundation
-import MapKit
+
+private let locationPollIntervalNs: UInt64 = 3_000_000_000
+/// Avoid Directions API burst while courier position updates (Android: 20s).
+private let routeMinIntervalNs: UInt64 = 20_000_000_000
 
 @MainActor
 @Observable
 final class OrderTrackingViewModel {
     private let orderRepository: OrderRepository
+    private let directionsRepository: DirectionsRepository
     private let http: DobbyHTTPClient
     let orderId: String
 
@@ -21,11 +26,25 @@ final class OrderTrackingViewModel {
     var rateSubmitting = false
     var rateError: String?
 
-    private var pollTask: Task<Void, Never>?
+    /// Driving route repartidor → delivery (Google Directions), or straight segment if API fails.
+    var routePoints: [CLLocationCoordinate2D] = []
+    /// True when Directions did not return a street polyline.
+    var usingStraightLineRoute = false
 
-    init(orderId: String, orderRepository: OrderRepository, http: DobbyHTTPClient) {
+    private var pollTask: Task<Void, Never>?
+    private var lastDmLat: Double?
+    private var lastDmLng: Double?
+    private var lastRouteFetchAt: UInt64 = 0
+
+    init(
+        orderId: String,
+        orderRepository: OrderRepository,
+        directionsRepository: DirectionsRepository,
+        http: DobbyHTTPClient
+    ) {
         self.orderId = orderId
         self.orderRepository = orderRepository
+        self.directionsRepository = directionsRepository
         self.http = http
     }
 
@@ -44,12 +63,12 @@ final class OrderTrackingViewModel {
         pollTask = Task { [weak self] in
             guard let self else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                try? await Task.sleep(nanoseconds: locationPollIntervalNs)
                 let status = self.tracking?.status.uppercased() ?? ""
                 guard status == "ASSIGNED" || status == "ON_DELIVERY" else { continue }
                 switch await self.orderRepository.getOrderTracking(orderId: self.orderId) {
                 case .success(let t):
-                    if let t { self.tracking = t }
+                    if let t { self.onTrackingRefreshed(t) }
                 case .failure:
                     break
                 }
@@ -72,6 +91,7 @@ final class OrderTrackingViewModel {
                 if let t {
                     tracking = t
                     errorMessage = nil
+                    onTrackingRefreshed(t)
                 } else {
                     tracking = nil
                     errorMessage = "No encontrado: el pedido no existe o no tienes acceso."
@@ -86,12 +106,85 @@ final class OrderTrackingViewModel {
         }
     }
 
+    private func onTrackingRefreshed(_ tracking: OrderTrackingDetail) {
+        let dm = tracking.deliveryMan
+        let lat = dm?.lat
+        let lng = dm?.lng
+        if lat == nil || lng == nil {
+            lastDmLat = nil
+            lastDmLng = nil
+            self.tracking = tracking
+            maybeRefreshRoute(tracking)
+            return
+        }
+        let moved = lastDmLat == nil || lastDmLng == nil
+            || abs(lat! - lastDmLat!) > 1e-5 || abs(lng! - lastDmLng!) > 1e-5
+        if moved {
+            lastDmLat = lat
+            lastDmLng = lng
+            self.tracking = tracking
+            maybeRefreshRoute(tracking)
+            return
+        }
+        self.tracking = tracking
+        maybeRefreshRoute(tracking)
+    }
+
+    private func maybeRefreshRoute(_ tracking: OrderTrackingDetail) {
+        guard let destLat = tracking.lat, let destLng = tracking.lng,
+              let dm = tracking.deliveryMan,
+              let oLat = dm.lat, let oLng = dm.lng
+        else {
+            if !routePoints.isEmpty {
+                routePoints = []
+                usingStraightLineRoute = false
+            }
+            return
+        }
+
+        let origin = CLLocationCoordinate2D(latitude: oLat, longitude: oLng)
+        let dest = CLLocationCoordinate2D(latitude: destLat, longitude: destLng)
+        let now = DispatchTime.now().uptimeNanoseconds
+        if !routePoints.isEmpty, now &- lastRouteFetchAt < routeMinIntervalNs { return }
+        lastRouteFetchAt = now
+
+        Task {
+            switch await directionsRepository.getRoutePoints(origin: origin, destination: dest) {
+            case .success(let points):
+                if points.isEmpty {
+                    routePoints = [origin, dest]
+                    usingStraightLineRoute = true
+                } else {
+                    routePoints = points
+                    usingStraightLineRoute = false
+                }
+            case .failure:
+                routePoints = [origin, dest]
+                usingStraightLineRoute = true
+            }
+        }
+    }
+
     func submitDeliveryRating(_ stars: Int) {
+        submitRating(stars: stars) { await self.orderRepository.rateDelivery(orderId: self.orderId, stars: stars) }
+    }
+
+    func submitShopRating(_ stars: Int) {
+        submitRating(stars: stars) { await self.orderRepository.rateShop(orderId: self.orderId, stars: stars) }
+    }
+
+    func submitProductRating(productId: String, stars: Int) {
+        submitRating(stars: stars) {
+            await self.orderRepository.rateProduct(orderId: self.orderId, productId: productId, stars: stars)
+        }
+    }
+
+    private func submitRating(stars: Int, action: @escaping () async -> Result<Void, OrderRepositoryError>) {
         guard stars >= 1, stars <= 5, !orderId.isEmpty else { return }
         Task {
             rateSubmitting = true
             rateError = nil
-            switch await orderRepository.rateDelivery(orderId: orderId, stars: stars) {
+            switch await action() {
             case .success:
                 rateSubmitting = false
                 loadTracking()
@@ -106,19 +199,6 @@ final class OrderTrackingViewModel {
 
     func clearRateError() {
         rateError = nil
-    }
-
-    /// Straight segment courier → delivery (parity with Android when Directions is unavailable).
-    var routeCoordinates: [CLLocationCoordinate2D] {
-        guard let t = tracking,
-              let dLat = t.lat, let dLng = t.lng,
-              let dm = t.deliveryMan,
-              let oLat = dm.lat, let oLng = dm.lng
-        else { return [] }
-        return [
-            CLLocationCoordinate2D(latitude: oLat, longitude: oLng),
-            CLLocationCoordinate2D(latitude: dLat, longitude: dLng),
-        ]
     }
 
     private func message(for error: OrderRepositoryError) -> String {

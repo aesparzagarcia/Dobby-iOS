@@ -381,6 +381,23 @@ struct DobbyHTTPClient: Sendable {
         await deleteAuthenticated(path: "app/push-device", bearerToken: bearerToken, isAuthRetry: false)
     }
 
+    /// Custom token for Firestore listeners (`POST app/firebase-token`).
+    func fetchFirebaseCustomToken(bearerToken: String?) async -> Result<String, HTTPClientError> {
+        let result: Result<FirebaseTokenDTO, HTTPClientError> = await post(
+            "app/firebase-token",
+            body: EmptyBody(),
+            bearerToken: bearerToken
+        )
+        switch result {
+        case .success(let dto):
+            return .success(dto.token)
+        case .failure(let error):
+            return .failure(error)
+        }
+    }
+
+    private struct EmptyBody: Encodable {}
+
     private func deleteAuthenticated(path: String, bearerToken: String?, isAuthRetry: Bool) async -> Result<Void, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
         let url = Self.join(baseURL: baseURL, path: path)
@@ -489,13 +506,25 @@ struct DobbyHTTPClient: Sendable {
 }
 
 extension DobbyHTTPClient {
+    private static func serverErrorMessage(from data: Data) -> String? {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let error = (json["error"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let details = (json["details"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let error, !error.isEmpty {
+                if let details, !details.isEmpty { return "\(error): \(details)" }
+                return error
+            }
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
     func userFacingMessage(from error: HTTPClientError) -> String {
         switch error {
         case .invalidURL:
             return "No se pudo conectar con el servidor."
         case let .statusCode(code, data):
-            if let data, let s = String(data: data, encoding: .utf8), !s.isEmpty {
-                return s
+            if let data, let message = Self.serverErrorMessage(from: data), !message.isEmpty {
+                return message
             }
             return "Error del servidor (\(code))."
         case .decoding:

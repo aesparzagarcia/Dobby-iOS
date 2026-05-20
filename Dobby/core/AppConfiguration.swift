@@ -63,4 +63,17 @@ enum AppConfiguration {
         return (Bundle.main.object(forInfoDictionaryKey: "PLACES_API_KEY") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
+
+    /// Google Directions API key (parity with Android `DIRECTIONS_API_KEY`). Prefer a web-service key (not iOS-app-only).
+    /// Falls back to `PLACES_API_KEY` when unset, same as Android falling back to `MAPS_API_KEY`.
+    static var directionsAPIKey: String {
+        if let env = ProcessInfo.processInfo.environment["DIRECTIONS_API_KEY"] {
+            let t = env.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !t.isEmpty { return t }
+        }
+        let fromPlist = (Bundle.main.object(forInfoDictionaryKey: "DIRECTIONS_API_KEY") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !fromPlist.isEmpty { return fromPlist }
+        return placesAPIKey
+    }
 }

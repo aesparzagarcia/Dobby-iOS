@@ -73,6 +73,7 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
     func logout() async {
         let bearer = sessionStore.accessToken()
         _ = await api.unregisterPushDevice(bearerToken: bearer)
+        DobbyOrderRealtime.signOut()
         sessionStore.clearSession()
     }
 
@@ -82,6 +83,7 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
         case .sessionDead:
             return false
         case .skipped, .refreshed, .unchanged:
+            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
             return true
         }
     }
