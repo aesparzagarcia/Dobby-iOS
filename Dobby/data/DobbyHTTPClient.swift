@@ -57,11 +57,11 @@ struct DobbyHTTPClient: Sendable {
         self.tokenRefresh = tokenRefresh
     }
 
-    private static func join(baseURL: URL, path: String) -> URL {
+    private static func join(baseURL: URL, path: String) -> URL? {
         var s = baseURL.absoluteString
         if !s.hasSuffix("/") { s += "/" }
         let p = path.hasPrefix("/") ? String(path.dropFirst()) : path
-        return URL(string: s + p)!
+        return URL(string: s + p)
     }
 
     private func shouldSkip401Refresh(for url: URL) -> Bool {
@@ -96,7 +96,7 @@ struct DobbyHTTPClient: Sendable {
     }
 
     func post<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async -> Result<Response, HTTPClientError> {
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
@@ -149,7 +149,7 @@ struct DobbyHTTPClient: Sendable {
         isAuthRetry: Bool
     ) async -> Result<Response, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 25
@@ -230,7 +230,7 @@ struct DobbyHTTPClient: Sendable {
         treatNotFoundAsNil: Bool = false
     ) async -> Result<Response?, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 25
@@ -301,7 +301,7 @@ struct DobbyHTTPClient: Sendable {
 
     private func getAuthenticated<Response: Decodable>(path: String, bearerToken: String?, isAuthRetry: Bool) async -> Result<Response, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 25
@@ -400,7 +400,7 @@ struct DobbyHTTPClient: Sendable {
 
     private func deleteAuthenticated(path: String, bearerToken: String?, isAuthRetry: Bool) async -> Result<Void, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.timeoutInterval = 25
@@ -453,7 +453,7 @@ struct DobbyHTTPClient: Sendable {
 
     private func patchAuthenticated(path: String, bearerToken: String?, isAuthRetry: Bool) async -> Result<Void, HTTPClientError> {
         let effectiveBearer = await refreshedBearerToken(from: bearerToken, isAuthRetry: isAuthRetry)
-        let url = Self.join(baseURL: baseURL, path: path)
+        guard let url = Self.join(baseURL: baseURL, path: path) else { return .failure(.invalidURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         request.timeoutInterval = 25
@@ -521,7 +521,7 @@ extension DobbyHTTPClient {
     func userFacingMessage(from error: HTTPClientError) -> String {
         switch error {
         case .invalidURL:
-            return "No se pudo conectar con el servidor."
+            return "URL del servidor inválida. En Info.plist usa API_BASE_URL con http://<IP>:3001/api/"
         case let .statusCode(code, data):
             if let data, let message = Self.serverErrorMessage(from: data), !message.isEmpty {
                 return message
@@ -538,6 +538,8 @@ extension DobbyHTTPClient {
                     return "Tiempo de espera: no respondió tu Mac. En Info.plist (API_BASE_URL) o en el scheme (variable API_BASE_URL) pon http://<IP-de-tu-Mac>:3001/api/ — Terminal: ipconfig getifaddr en0. Misma Wi‑Fi, API escuchando en 0.0.0.0:3001 y firewall abierto al puerto 3001."
                 case .cannotConnectToHost, .cannotFindHost:
                     return "No se pudo conectar: revisa API_BASE_URL, que la API esté en marcha y el puerto."
+                case .unsupportedURL:
+                    return "URL del servidor inválida. En Info.plist define API_BASE_URL como http://<IP-de-tu-Mac>:3001/api/"
                 default:
                     break
                 }

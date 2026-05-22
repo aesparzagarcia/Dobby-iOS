@@ -53,6 +53,7 @@
 		D2D2D2D2D2D2D443893848901 /* CartScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2D2D2D2D2D2D443893848902 /* CartScreen.swift */; };
 		D38A27B5D5D54569A8AB54A9 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77756B392EDB4F0C9287280E /* SplashView.swift */; };
 		D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */; };
+		FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */; };
 		D5D5D5D5D5D5D443893848901 /* PromotionsTabViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D5D5D5D5D5D443893848902 /* PromotionsTabViewModel.swift */; };
 		D6D6D6D6D6D6D443893848901 /* PromotionsTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D6D6D6D6D6D443893848902 /* PromotionsTabScreen.swift */; };
 		D705109EA661463D938B10B1 /* SplashViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B011F5514844F68B2AC6536 /* SplashViewModel.swift */; };
@@ -162,6 +163,7 @@
 		D0D0D0D0D0D0D443893848902 /* DeviceLocationFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLocationFetcher.swift; sourceTree = "<group>"; };
 		D2D2D2D2D2D2D443893848902 /* CartScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartScreen.swift; sourceTree = "<group>"; };
 		D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalProductCard.swift; sourceTree = "<group>"; };
+		FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingScreenHeader.swift; sourceTree = "<group>"; };
 		D5D5D5D5D5D5D443893848902 /* PromotionsTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabViewModel.swift; sourceTree = "<group>"; };
 		D6D6D6D6D6D6D443893848902 /* PromotionsTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabScreen.swift; sourceTree = "<group>"; };
 		DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -322,6 +324,7 @@
 		AAAA00000000000000000005 /* presentation */ = {
 			isa = PBXGroup;
 			children = (
+				AAAA00000000000000000012 /* components */,
 				AAAA00000000000000000006 /* navigation */,
 				AAAA00000000000000000007 /* Splash */,
 				AAAA00000000000000000008 /* Auth */,
@@ -329,6 +332,14 @@
 				AAAA0000000000000000000E /* main */,
 			);
 			path = presentation;
+			sourceTree = "<group>";
+		};
+		AAAA00000000000000000012 /* components */ = {
+			isa = PBXGroup;
+			children = (
+				FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */,
+			);
+			path = components;
 			sourceTree = "<group>";
 		};
 		AAAA00000000000000000006 /* navigation */ = {
@@ -686,6 +697,7 @@
 				4A4A4A4A4B9D443893848901 /* HomeTabViewModel.swift in Sources */,
 				5A5A5A5A5B9D443893848901 /* HomeTabScreen.swift in Sources */,
 				D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */,
+				FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */,
 				C7C7C7C7C7C7C443893848901 /* ProductDetailScreen.swift in Sources */,
 				D5D5D5D5D5D5D443893848901 /* PromotionsTabViewModel.swift in Sources */,
 				D6D6D6D6D6D6D443893848901 /* PromotionsTabScreen.swift in Sources */,

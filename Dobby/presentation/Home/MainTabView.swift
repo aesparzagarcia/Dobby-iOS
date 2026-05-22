@@ -35,6 +35,8 @@ struct MainTabView: View {
     @State private var pendingOpenOrderTrackingId: String?
     @State private var pendingOpenProductId: String?
     @State private var pendingOpenProductShopId: String?
+    @State private var pendingOpenProductName: String?
+    @State private var pendingOpenProductDiscount: Int?
     /// When `true`, a pushed screen on Home (e.g. shop detail) is active — hide the floating tab bar.
     @State private var homeHidesFloatingTabBar = false
     /// When `true`, product detail or cart is visible on the Promotions tab — hide the floating tab bar.
@@ -104,7 +106,10 @@ struct MainTabView: View {
                         onCheckoutSuccess: { tab = .home },
                         pendingOpenOrderTrackingId: $pendingOpenOrderTrackingId,
                         pendingOpenProductId: $pendingOpenProductId,
-                        pendingOpenProductShopId: $pendingOpenProductShopId
+                        pendingOpenProductShopId: $pendingOpenProductShopId,
+                        pendingOpenProductName: $pendingOpenProductName,
+                        pendingOpenProductDiscount: $pendingOpenProductDiscount,
+                        tokenRefresh: tokenRefresh
                     )
                 case .promotions:
                     PromotionsTabScreen(
@@ -151,11 +156,14 @@ struct MainTabView: View {
         .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.openProductPromotionNotification)) { notification in
             openProductPromotionFromPush(notification.userInfo)
         }
-        .onAppear {
+        .task {
+            await tokenRefresh.refreshAccessTokenOnForeground()
             if let pending = DobbyOrderRealtime.PendingProductPromotion.consume() {
                 tab = .home
                 pendingOpenProductId = pending.productId
                 pendingOpenProductShopId = pending.shopId
+                pendingOpenProductName = pending.productName
+                pendingOpenProductDiscount = pending.discountPercent
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -182,6 +190,14 @@ struct MainTabView: View {
         let shopId = (userInfo?["shop_id"] as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         pendingOpenProductShopId = shopId?.isEmpty == false ? shopId : nil
+        let name = (userInfo?["product_name"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingOpenProductName = name?.isEmpty == false ? name : nil
+        if let raw = userInfo?["discount"] as? String, let pct = Int(raw) {
+            pendingOpenProductDiscount = max(1, min(100, pct))
+        } else {
+            pendingOpenProductDiscount = nil
+        }
     }
 
     private var shouldShowFloatingTabBar: Bool {

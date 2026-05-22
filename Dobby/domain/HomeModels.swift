@@ -143,19 +143,45 @@ struct ProductDetailRoute: Hashable, Sendable {
         shopId = shopProduct.shopId
     }
 
-    /// Deep link from promotion push (`product_id` + optional `shop_id`); detail loads from API.
-    init(promotionPush productId: String, shopId: String?) {
+    init(detail: ProductDetail, pickupLatitude: Double? = nil, pickupLongitude: Double? = nil, shopId: String? = nil) {
+        id = detail.id
+        name = detail.name
+        description = detail.description
+        imageUrl = detail.imageUrls.first
+        price = detail.price
+        rate = detail.rate
+        hasPromotion = detail.hasPromotion
+        discount = detail.discount
+        self.pickupLatitude = pickupLatitude
+        self.pickupLongitude = pickupLongitude
+        self.shopId = shopId ?? detail.shopId
+    }
+
+    /// Deep link from promotion push; list fields may come from FCM `data` until `GET app/products/:id` completes.
+    init(
+        promotionPush productId: String,
+        shopId: String?,
+        productName: String? = nil,
+        discountPercent: Int? = nil
+    ) {
         id = productId
-        name = "Promoción"
+        let trimmedName = productName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        name = trimmedName.isEmpty ? "Promoción" : trimmedName
         description = nil
         imageUrl = nil
         price = 0
         rate = 0
-        hasPromotion = true
-        discount = 0
+        let pct = max(0, min(100, discountPercent ?? 0))
+        hasPromotion = pct > 0
+        discount = pct
         pickupLatitude = nil
         pickupLongitude = nil
         self.shopId = shopId
+    }
+
+    /// Route from push before API returns full product (price still loads from server).
+    var isPromotionPushStub: Bool {
+        price == 0 && imageUrl == nil
     }
 
     init(favorite: FavoriteProduct) {

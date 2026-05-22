@@ -95,17 +95,32 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
     }
 
     private func handleProductPromotionPush(userInfo: [AnyHashable: Any]) {
-        guard pushType(from: userInfo) == "product_promotion" else { return }
+        guard isProductPromotionPayload(userInfo) else { return }
         guard let productId = productId(from: userInfo) else { return }
         let shop = shopId(from: userInfo)
-        DobbyOrderRealtime.PendingProductPromotion.store(productId: productId, shopId: shop)
+        let name = productName(from: userInfo)
+        let discount = discountPercent(from: userInfo)
+        DobbyOrderRealtime.PendingProductPromotion.store(
+            productId: productId,
+            shopId: shop,
+            productName: name,
+            discountPercent: discount
+        )
         var info: [String: String] = ["product_id": productId]
         if let shop { info["shop_id"] = shop }
+        if let name { info["product_name"] = name }
+        if let discount { info["discount"] = String(discount) }
         NotificationCenter.default.post(
             name: DobbyOrderRealtime.openProductPromotionNotification,
             object: nil,
             userInfo: info
         )
+    }
+
+    private func isProductPromotionPayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        if pushType(from: userInfo) == "product_promotion" { return true }
+        let openScreen = stringValue(userInfo, keys: ["open_screen", "gcm.notification.open_screen"])
+        return productId(from: userInfo) != nil && openScreen == "product_detail"
     }
 
     private func isConsumerPushPayload(_ userInfo: [AnyHashable: Any]) -> Bool {
@@ -124,14 +139,30 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
     }
 
     private func productId(from userInfo: [AnyHashable: Any]) -> String? {
-        let raw = (userInfo["product_id"] as? String) ?? (userInfo["gcm.notification.product_id"] as? String)
-        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
+        stringValue(userInfo, keys: ["product_id", "gcm.notification.product_id"])
     }
 
     private func shopId(from userInfo: [AnyHashable: Any]) -> String? {
-        let raw = (userInfo["shop_id"] as? String) ?? (userInfo["gcm.notification.shop_id"] as? String)
-        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
+        stringValue(userInfo, keys: ["shop_id", "gcm.notification.shop_id"])
+    }
+
+    private func productName(from userInfo: [AnyHashable: Any]) -> String? {
+        stringValue(userInfo, keys: ["product_name", "gcm.notification.product_name"])
+    }
+
+    private func discountPercent(from userInfo: [AnyHashable: Any]) -> Int? {
+        guard let raw = stringValue(userInfo, keys: ["discount", "gcm.notification.discount"]),
+              let value = Int(raw) else { return nil }
+        return max(1, min(100, value))
+    }
+
+    private func stringValue(_ userInfo: [AnyHashable: Any], keys: [String]) -> String? {
+        for key in keys {
+            if let raw = userInfo[key] as? String {
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { return trimmed }
+            }
+        }
+        return nil
     }
 }

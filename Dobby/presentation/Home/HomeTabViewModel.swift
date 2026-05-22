@@ -104,30 +104,41 @@ final class HomeTabViewModel {
 
     func addProductToCart(_ product: ProductDetailRoute, quantity: Int, detail: ProductDetail? = nil) {
         guard quantity > 0 else { return }
-        let validDiscount = max(0, min(100, product.discount))
-        let showPromotion = product.hasPromotion && validDiscount > 0
-        let unitAfterDiscount = product.unitPriceAfterDiscount
-        let list = product.price
-        let resolvedShopId = detail?.shopId ?? product.shopId
+        let route: ProductDetailRoute
+        if let detail {
+            route = ProductDetailRoute(
+                detail: detail,
+                pickupLatitude: product.pickupLatitude,
+                pickupLongitude: product.pickupLongitude,
+                shopId: product.shopId
+            )
+        } else {
+            route = product
+        }
+        let validDiscount = max(0, min(100, route.discount))
+        let showPromotion = route.hasPromotion && validDiscount > 0
+        let unitAfterDiscount = route.unitPriceAfterDiscount
+        let list = route.price
+        let resolvedShopId = route.shopId
 
-        if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
+        if let i = cartLines.firstIndex(where: { $0.productId == route.id }) {
             cartLines[i].quantity += quantity
-            if cartLines[i].pickupLatitude == nil, let p = product.pickupLatitude { cartLines[i].pickupLatitude = p }
-            if cartLines[i].pickupLongitude == nil, let p = product.pickupLongitude { cartLines[i].pickupLongitude = p }
+            if cartLines[i].pickupLatitude == nil, let p = route.pickupLatitude { cartLines[i].pickupLatitude = p }
+            if cartLines[i].pickupLongitude == nil, let p = route.pickupLongitude { cartLines[i].pickupLongitude = p }
             if cartLines[i].shopId == nil, let s = resolvedShopId { cartLines[i].shopId = s }
         } else {
             cartLines.append(
                 CartLineItem(
-                    productId: product.id,
-                    name: product.name,
-                    imageUrl: product.imageUrl,
+                    productId: route.id,
+                    name: route.name,
+                    imageUrl: route.imageUrl,
                     quantity: quantity,
                     unitPrice: unitAfterDiscount,
                     listUnitPrice: list,
                     hasPromotion: showPromotion,
                     discount: validDiscount,
-                    pickupLatitude: product.pickupLatitude,
-                    pickupLongitude: product.pickupLongitude,
+                    pickupLatitude: route.pickupLatitude,
+                    pickupLongitude: route.pickupLongitude,
                     shopId: resolvedShopId
                 )
             )

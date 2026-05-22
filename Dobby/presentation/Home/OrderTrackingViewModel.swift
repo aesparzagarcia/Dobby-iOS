@@ -35,6 +35,7 @@ final class OrderTrackingViewModel {
     private var lastDmLat: Double?
     private var lastDmLng: Double?
     private var lastRouteFetchAt: UInt64 = 0
+    private var lastRouteStatus: String?
 
     init(
         orderId: String,
@@ -83,8 +84,13 @@ final class OrderTrackingViewModel {
             return
         }
         Task {
-            isLoading = true
-            errorMessage = nil
+            // Keep the Map mounted during refresh — toggling `isLoading` removed the Map and
+            // triggered Metal "drawable destroyed while command buffer alive" crashes.
+            let isInitialLoad = tracking == nil
+            if isInitialLoad {
+                isLoading = true
+                errorMessage = nil
+            }
             switch await orderRepository.getOrderTracking(orderId: orderId) {
             case .success(let t):
                 isLoading = false
@@ -131,7 +137,16 @@ final class OrderTrackingViewModel {
     }
 
     private func maybeRefreshRoute(_ tracking: OrderTrackingDetail) {
-        guard let destLat = tracking.lat, let destLng = tracking.lng,
+        let statusKey = tracking.status.uppercased()
+        if lastRouteStatus != statusKey {
+            lastRouteStatus = statusKey
+            lastRouteFetchAt = 0
+            if !routePoints.isEmpty {
+                routePoints = []
+                usingStraightLineRoute = false
+            }
+        }
+        guard let routeDest = tracking.routeDestinationCoordinate,
               let dm = tracking.deliveryMan,
               let oLat = dm.lat, let oLng = dm.lng
         else {
@@ -143,23 +158,23 @@ final class OrderTrackingViewModel {
         }
 
         let origin = CLLocationCoordinate2D(latitude: oLat, longitude: oLng)
-        let dest = CLLocationCoordinate2D(latitude: destLat, longitude: destLng)
+        let destination = CLLocationCoordinate2D(latitude: routeDest.lat, longitude: routeDest.lng)
         let now = DispatchTime.now().uptimeNanoseconds
         if !routePoints.isEmpty, now &- lastRouteFetchAt < routeMinIntervalNs { return }
         lastRouteFetchAt = now
 
         Task {
-            switch await directionsRepository.getRoutePoints(origin: origin, destination: dest) {
+            switch await directionsRepository.getRoutePoints(origin: origin, destination: destination) {
             case .success(let points):
                 if points.isEmpty {
-                    routePoints = [origin, dest]
+                    routePoints = [origin, destination]
                     usingStraightLineRoute = true
                 } else {
                     routePoints = points
                     usingStraightLineRoute = false
                 }
             case .failure:
-                routePoints = [origin, dest]
+                routePoints = [origin, destination]
                 usingStraightLineRoute = true
             }
         }

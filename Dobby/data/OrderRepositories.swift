@@ -107,6 +107,9 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                 lng: dto.lng,
                 createdAt: dto.createdAt,
                 shopName: dto.shopName,
+                shopAddress: dto.shopAddress,
+                shopLat: dto.shopLat,
+                shopLng: dto.shopLng,
                 estimatedPreparationMinutes: dto.estimatedPreparationMinutes,
                 estimatedDeliveryMinutes: dto.estimatedDeliveryMinutes,
                 arrivedAtCustomerAt: dto.arrivedAtCustomerAt,
@@ -120,6 +123,7 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                         productName: $0.productName,
                         quantity: $0.quantity,
                         price: $0.price,
+                        imageUrl: AppConfiguration.fullImageURL($0.imageUrl),
                         rating: $0.rating,
                         canRate: $0.canRate
                     )

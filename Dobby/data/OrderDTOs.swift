@@ -77,6 +77,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
     let lng: Double?
     let createdAt: String?
     let shopName: String?
+    let shopAddress: String?
+    let shopLat: Double?
+    let shopLng: Double?
     let estimatedPreparationMinutes: Int?
     let estimatedDeliveryMinutes: Int?
     let arrivedAtCustomerAt: String?
@@ -94,6 +97,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
         case deliveryAddress = "delivery_address"
         case createdAt = "created_at"
         case shopName = "shop_name"
+        case shopAddress = "shop_address"
+        case shopLat = "shop_lat"
+        case shopLng = "shop_lng"
         case estimatedPreparationMinutes = "estimated_preparation_minutes"
         case estimatedDeliveryMinutes = "estimated_delivery_minutes"
         case arrivedAtCustomerAt = "arrived_at_customer_at"
@@ -116,6 +122,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
         lng = try c.decodeIfPresent(Double.self, forKey: .lng)
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
         shopName = try c.decodeIfPresent(String.self, forKey: .shopName)
+        shopAddress = try c.decodeIfPresent(String.self, forKey: .shopAddress)
+        shopLat = try c.decodeIfPresent(Double.self, forKey: .shopLat)
+        shopLng = try c.decodeIfPresent(Double.self, forKey: .shopLng)
         estimatedPreparationMinutes = try c.decodeIfPresent(Int.self, forKey: .estimatedPreparationMinutes)
         estimatedDeliveryMinutes = try c.decodeIfPresent(Int.self, forKey: .estimatedDeliveryMinutes)
         arrivedAtCustomerAt = try c.decodeIfPresent(String.self, forKey: .arrivedAtCustomerAt)
@@ -133,6 +142,7 @@ struct OrderTrackingItemDTO: Decodable, Sendable {
     let productName: String
     let quantity: Int
     let price: Double
+    let imageUrl: String?
     let rating: Int?
     let canRate: Bool
 
@@ -140,6 +150,7 @@ struct OrderTrackingItemDTO: Decodable, Sendable {
         case productId = "product_id"
         case productName = "product_name"
         case quantity, price, rating
+        case imageUrl = "image_url"
         case canRate = "can_rate"
     }
 
@@ -149,6 +160,7 @@ struct OrderTrackingItemDTO: Decodable, Sendable {
         productName = try c.decode(String.self, forKey: .productName)
         quantity = try c.decode(Int.self, forKey: .quantity)
         price = try c.decodeIfPresent(Double.self, forKey: .price) ?? 0
+        imageUrl = try c.decodeIfPresent(String.self, forKey: .imageUrl)
         rating = try c.decodeIfPresent(Int.self, forKey: .rating)
         canRate = try c.decodeIfPresent(Bool.self, forKey: .canRate) ?? false
     }

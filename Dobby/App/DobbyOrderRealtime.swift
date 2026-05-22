@@ -18,21 +18,38 @@ enum DobbyOrderRealtime {
     enum PendingProductPromotion {
         private(set) static var productId: String?
         private(set) static var shopId: String?
+        private(set) static var productName: String?
+        private(set) static var discountPercent: Int?
 
-        static func store(productId: String, shopId: String?) {
+        static func store(
+            productId: String,
+            shopId: String?,
+            productName: String? = nil,
+            discountPercent: Int? = nil
+        ) {
             let id = productId.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !id.isEmpty else { return }
             self.productId = id
             let trimmedShop = shopId?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             self.shopId = (trimmedShop?.isEmpty == false) ? trimmedShop : nil
+            let trimmedName = productName?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            self.productName = (trimmedName?.isEmpty == false) ? trimmedName : nil
+            if let discountPercent {
+                self.discountPercent = max(1, min(100, discountPercent))
+            } else {
+                self.discountPercent = nil
+            }
         }
 
-        static func consume() -> (productId: String, shopId: String?)? {
+        static func consume() -> (productId: String, shopId: String?, productName: String?, discountPercent: Int?)? {
             guard let id = productId, !id.isEmpty else { return nil }
-            let result = (id, shopId)
+            let result = (id, shopId, productName, discountPercent)
             productId = nil
             shopId = nil
+            productName = nil
+            discountPercent = nil
             return result
         }
     }

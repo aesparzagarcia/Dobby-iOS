@@ -36,7 +36,7 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
         self.productLines = productLines
     }
 
-    /// Step index 0…6 for the 7-stage progress UI (6 = delivered).
+    /// Step index 0…6 for the 7-stage home progress UI (6 = delivered).
     var stepIndex: Int {
         orderStatusToTrackingStep(status)
     }

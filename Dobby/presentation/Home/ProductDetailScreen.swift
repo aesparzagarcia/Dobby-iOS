@@ -13,6 +13,7 @@ private enum ProductDetailPalette {
 struct ProductDetailScreen: View {
     let product: ProductDetailRoute
     let placesRepository: PlacesRepository
+    var tokenRefresh: ConsumerTokenRefreshService? = nil
     let favoritesStore: FavoritesStore
     let cartItemCount: Int
     /// Pops one level on the home `NavigationStack` (e.g. back to restaurant). Prefer this over `dismiss()` with `navigationPath`.
@@ -25,16 +26,37 @@ struct ProductDetailScreen: View {
     @State private var loadedDetail: ProductDetail?
     @State private var detailFetchFinished = false
 
+    /// Prefer API detail (e.g. promotion push only sends `product_id`).
+    private var displayProduct: ProductDetailRoute {
+        if let detail = loadedDetail {
+            return ProductDetailRoute(
+                detail: detail,
+                pickupLatitude: product.pickupLatitude,
+                pickupLongitude: product.pickupLongitude,
+                shopId: product.shopId
+            )
+        }
+        return product
+    }
+
     private var validDiscount: Int {
-        max(0, min(100, product.discount))
+        max(0, min(100, displayProduct.discount))
     }
 
     private var showPromotion: Bool {
-        product.hasPromotion && validDiscount > 0
+        displayProduct.hasPromotion && validDiscount > 0
     }
 
     private var discountedPrice: Double {
-        showPromotion ? product.price * (1 - Double(validDiscount) / 100) : product.price
+        showPromotion ? displayProduct.price * (1 - Double(validDiscount) / 100) : displayProduct.price
+    }
+
+    private var showDetailLoading: Bool {
+        !detailFetchFinished && loadedDetail == nil
+    }
+
+    private var canAddToCart: Bool {
+        quantity > 0 && (loadedDetail != nil || !product.isPromotionPushStub)
     }
 
     /// Unit price × current quantity (updates with + / −).
@@ -78,13 +100,18 @@ struct ProductDetailScreen: View {
 
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .top, spacing: 12) {
-                            Text(product.name)
-                                .font(.title2.weight(.bold))
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if showDetailLoading {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                Text(displayProduct.name)
+                                    .font(.title2.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
 
                             Button {
-                                favoritesStore.toggle(from: product)
+                                favoritesStore.toggle(from: displayProduct)
                             } label: {
                                 Image(systemName: isFavorite ? "heart.fill" : "heart")
                                     .font(.title3)
@@ -100,7 +127,7 @@ struct ProductDetailScreen: View {
                             Image(systemName: "star.fill")
                                 .font(.subheadline)
                                 .foregroundStyle(ProductDetailPalette.primary)
-                            Text(String(format: "%.1f", product.rate))
+                            Text(String(format: "%.1f", displayProduct.rate))
                                 .font(.subheadline)
                                 .foregroundStyle(Color(white: 0.35))
                         }
@@ -127,7 +154,7 @@ struct ProductDetailScreen: View {
             }
             .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         }
-        .navigationTitle(product.name)
+        .navigationTitle(displayProduct.name)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -151,25 +178,46 @@ struct ProductDetailScreen: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomActionBar
         }
-        .task {
+        .task(id: product.id) {
+            await loadProductDetail()
+        }
+    }
+
+    private func loadProductDetail() async {
+        loadedDetail = nil
+        detailFetchFinished = false
+        if product.isPromotionPushStub, let tokenRefresh {
+            await tokenRefresh.refreshAccessTokenOnForeground()
+        }
+        for attempt in 0 ..< 6 {
+            if Task.isCancelled { return }
             switch await placesRepository.getProduct(id: product.id) {
             case .success(let detail):
                 loadedDetail = detail
+                detailFetchFinished = true
+                return
             case .failure:
-                break
+                if attempt < 5 {
+                    if let tokenRefresh {
+                        await tokenRefresh.refreshAccessTokenOnForeground()
+                    }
+                    try? await Task.sleep(nanoseconds: UInt64(300_000_000 * UInt64(attempt + 1)))
+                }
             }
-            detailFetchFinished = true
         }
+        detailFetchFinished = true
     }
 
     private var priceBlock: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if showPromotion {
+            if showDetailLoading {
+                ProgressView()
+            } else if showPromotion {
                 HStack(spacing: 8) {
                     Text(String(format: "$%.2f", discountedPrice))
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.primary)
-                    Text(String(format: "$%.2f", product.price))
+                    Text(String(format: "$%.2f", displayProduct.price))
                         .font(.subheadline)
                         .strikethrough()
                         .foregroundStyle(.secondary)
@@ -182,7 +230,7 @@ struct ProductDetailScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
             } else {
-                Text(String(format: "$%.2f", product.price))
+                Text(String(format: "$%.2f", displayProduct.price))
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.primary)
             }
@@ -225,7 +273,7 @@ struct ProductDetailScreen: View {
     private var imagePlaceholder: some View {
         ZStack {
             Color(.systemGray5)
-            Text(String(product.name.prefix(1)).uppercased())
+            Text(String(displayProduct.name.prefix(1)).uppercased())
                 .font(.system(size: 72, weight: .medium))
                 .foregroundStyle(.secondary)
         }
@@ -286,8 +334,8 @@ struct ProductDetailScreen: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(ProductDetailPalette.primary)
-                .disabled(quantity == 0)
-                .opacity(quantity == 0 ? 0.45 : 1)
+                .disabled(!canAddToCart)
+                .opacity(canAddToCart ? 1 : 0.45)
                 .accessibilityLabel("Añadir al carrito, total \(lineTotalFormatted)")
             }
             .padding(.horizontal, 16)

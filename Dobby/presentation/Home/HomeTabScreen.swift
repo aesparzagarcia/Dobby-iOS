@@ -41,11 +41,15 @@ struct HomeTabScreen: View {
     @Binding var pendingOpenOrderTrackingId: String?
     @Binding var pendingOpenProductId: String?
     @Binding var pendingOpenProductShopId: String?
+    @Binding var pendingOpenProductName: String?
+    @Binding var pendingOpenProductDiscount: Int?
+    let tokenRefresh: ConsumerTokenRefreshService
 
     private let searchHints = ["tacos", "cerveza", "la huerta de vega", "pizza", "café", "restaurantes"]
     @State private var hintIndex = 0
     @State private var showCurrentAddress = false
     @State private var navigationPath: [HomeStackRoute] = []
+    @State private var productPromotionDeepLinkTask: Task<Void, Never>?
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -102,6 +106,7 @@ struct HomeTabScreen: View {
                         ProductDetailScreen(
                             product: r,
                             placesRepository: placesRepository,
+                            tokenRefresh: tokenRefresh,
                             favoritesStore: favoritesStore,
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
@@ -175,17 +180,56 @@ struct HomeTabScreen: View {
         Task { await viewModel.loadActiveOrder() }
     }
 
-    private func openProductPromotionIfNeeded(productId: String?, shopId: String?) {
+    private func scheduleOpenProductPromotionIfNeeded(
+        productId: String?,
+        shopId: String?,
+        productName: String?,
+        discountPercent: Int?
+    ) {
         guard let productId = productId?.trimmingCharacters(in: .whitespacesAndNewlines),
               !productId.isEmpty else { return }
         let trimmedShop = shopId?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let route = ProductDetailRoute(
-            promotionPush: productId,
-            shopId: (trimmedShop?.isEmpty == false) ? trimmedShop : nil
-        )
-        navigationPath.append(.product(route))
+        let resolvedShop = (trimmedShop?.isEmpty == false) ? trimmedShop : nil
+        let trimmedName = productName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedName = (trimmedName?.isEmpty == false) ? trimmedName : nil
+        let resolvedDiscount = discountPercent.map { max(1, min(100, $0)) }
+
         pendingOpenProductId = nil
         pendingOpenProductShopId = nil
+        pendingOpenProductName = nil
+        pendingOpenProductDiscount = nil
+
+        if navigationPath.contains(where: { route in
+            if case .product(let r) = route { return r.id == productId }
+            return false
+        }) {
+            return
+        }
+
+        productPromotionDeepLinkTask?.cancel()
+        productPromotionDeepLinkTask = Task { @MainActor in
+            await tokenRefresh.refreshAccessTokenOnForeground()
+            var waits = 0
+            while viewModel.isLoading && waits < 40 {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                waits += 1
+            }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            if navigationPath.contains(where: { route in
+                if case .product(let r) = route { return r.id == productId }
+                return false
+            }) {
+                return
+            }
+            let route = ProductDetailRoute(
+                promotionPush: productId,
+                shopId: resolvedShop,
+                productName: resolvedName,
+                discountPercent: resolvedDiscount
+            )
+            navigationPath.append(.product(route))
+        }
     }
 
     private var homeContent: some View {
@@ -221,11 +265,21 @@ struct HomeTabScreen: View {
             openOrderTrackingIfNeeded(orderId)
         }
         .onChange(of: pendingOpenProductId) { _, productId in
-            openProductPromotionIfNeeded(productId: productId, shopId: pendingOpenProductShopId)
+            scheduleOpenProductPromotionIfNeeded(
+                productId: productId,
+                shopId: pendingOpenProductShopId,
+                productName: pendingOpenProductName,
+                discountPercent: pendingOpenProductDiscount
+            )
         }
         .onAppear {
             openOrderTrackingIfNeeded(pendingOpenOrderTrackingId)
-            openProductPromotionIfNeeded(productId: pendingOpenProductId, shopId: pendingOpenProductShopId)
+            scheduleOpenProductPromotionIfNeeded(
+                productId: pendingOpenProductId,
+                shopId: pendingOpenProductShopId,
+                productName: pendingOpenProductName,
+                discountPercent: pendingOpenProductDiscount
+            )
         }
         .task {
             while !Task.isCancelled {
