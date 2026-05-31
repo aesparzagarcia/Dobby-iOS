@@ -2,22 +2,20 @@
 //  UniversalProductCard.swift
 //  Dobby
 //
-//  Parity with Android `com.ares.ewe.presentation.ui.main.home.UniversalProductCard`.
+//  Parity with Android `UniversalProductCard.kt`.
 //
 
 import SwiftUI
 
-enum UniversalProductCardPalette {
-    /// Same accent as `HomeTabScreen` / shop product tiles.
-    static let accent = Color(red: 0.45, green: 0.35, blue: 0.75)
-}
+private let productCardScale: CGFloat = HomeLayoutConstants.productCardScale
 
 /// Horizontal product tile (best sellers, promotions, etc.).
 struct UniversalProductCard: View {
     let product: BestSellerProduct
     let width: CGFloat
 
-    private let cardRadius: CGFloat = 14
+    private var corner: CGFloat { 16 * productCardScale }
+    private var imageHeight: CGFloat { 120 * productCardScale }
 
     private var validDiscount: Int {
         max(0, min(100, product.discount))
@@ -35,7 +33,7 @@ struct UniversalProductCard: View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
                 imageBlock
-                    .frame(width: width, height: width)
+                    .frame(width: width, height: imageHeight)
                     .clipped()
 
                 if showPromotion {
@@ -45,40 +43,32 @@ struct UniversalProductCard: View {
                     )
                 }
             }
-            .frame(width: width, height: width)
+            .frame(width: width, height: imageHeight)
 
-            VStack(alignment: .leading, spacing: 4) {
+            Text(product.name)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .padding(.horizontal, 10 * productCardScale)
+                .padding(.top, 8 * productCardScale)
+
+            HStack(spacing: 6 * productCardScale) {
                 Text(String(format: "$%.2f", discountedPrice))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-
-                Text(product.name)
-                    .font(.footnote)
-                    .fontWeight(.regular)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .truncationMode(.tail)
-
-                HStack(alignment: .center, spacing: 3) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(UniversalProductCardPalette.accent)
-                    Text(String(format: "%.1f", product.rate))
-                        .font(.caption2)
-                        .foregroundStyle(Color(white: 0.25))
-                }
+                Spacer(minLength: 0)
+                HomeRatingDisplay(rate: product.rate)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 8)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10 * productCardScale)
+            .padding(.vertical, 3 * productCardScale)
+            .padding(.bottom, 10 * productCardScale)
         }
         .frame(width: width)
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
-        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
-        /// Aire alrededor de la tarjeta para que la sombra no la recorte el `ScrollView` horizontal.
-        .padding(.vertical, 12)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .shadow(color: HomeScreenPalette.cardShadow, radius: 4, x: 0, y: 2)
+        .padding(.vertical, 8)
     }
 
     @ViewBuilder
@@ -92,7 +82,7 @@ struct UniversalProductCard: View {
                         img
                             .resizable()
                             .scaledToFill()
-                            .frame(width: width, height: width)
+                            .frame(width: width, height: imageHeight)
                             .clipped()
                     case .failure:
                         placeholderMonogram

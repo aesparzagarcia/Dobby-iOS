@@ -14,7 +14,7 @@ import UIKit
 // MARK: - Palette (Android `FloatingAddressCardColor` / `ConfirmButtonColor`)
 
 private enum MapLocationLikePalette {
-    static let cardBlue = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 0xFF / 255)
+    static let cardBlue = DobbyBrandColor.primary
     static let confirmGreen = Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255)
 }
 

@@ -9,7 +9,7 @@ private let brandGreen = Color(red: 0x2E / 255, green: 0xCC / 255, blue: 0x71 / 
 private let subtitleBlack = Color(red: 0x11 / 255, green: 0x11 / 255, blue: 0x11 / 255)
 private let backSurface = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
 private let fieldPlaceholderMuted = Color.black.opacity(0.35)
-private let pageIndicatorActive = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 1)
+private let pageIndicatorActive = DobbyBrandColor.primary
 
 private let pageCount = 3
 

@@ -8,7 +8,7 @@
 import SwiftUI
 
 private enum ProfilePalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
     static let screenBackground = Color(red: 0.97, green: 0.96, blue: 0.98)
     static let cardBackground = Color(.systemGray6)
     static let xpCardTint = Color(.systemGray5)

@@ -7,9 +7,7 @@ import SwiftUI
 import UIKit
 
 private enum HomePalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let searchBackground = Color(red: 0.93, green: 0.90, blue: 0.98)
-    static let title = primary
+    static let primary = HomeScreenPalette.primary
 }
 
 /// Single navigation stack so Back always pops one level (shop → product → cart), never jumps to home.
@@ -37,6 +35,7 @@ struct HomeTabScreen: View {
     @Binding var mainTabBarHidden: Bool
     /// After a successful `Pagar`, switch to Inicio (no-op if already there) so the user sees order tracking.
     let onCheckoutSuccess: () -> Void
+    let onPromotionsTabClick: () -> Void
     /// Set from push tap (e.g. repartidor asignado) — navigate to order tracking when non-nil.
     @Binding var pendingOpenOrderTrackingId: String?
     @Binding var pendingOpenProductId: String?
@@ -45,12 +44,10 @@ struct HomeTabScreen: View {
     @Binding var pendingOpenProductDiscount: Int?
     let tokenRefresh: ConsumerTokenRefreshService
 
-    private let searchHints = ["tacos", "cerveza", "la huerta de vega", "pizza", "café", "restaurantes"]
-    @State private var hintIndex = 0
     @State private var showCurrentAddress = false
     @State private var navigationPath: [HomeStackRoute] = []
+    @State private var quickCategory: HomeQuickCategory = .all
     @State private var productPromotionDeepLinkTask: Task<Void, Never>?
-    @FocusState private var searchFocused: Bool
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -65,15 +62,24 @@ struct HomeTabScreen: View {
                             httpClient: httpClient,
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
-                            onProductTap: { product in
+                            onProductTap: { product, isAvailable in
                                 navigationPath.append(
                                     .product(
                                         ProductDetailRoute(
                                             shopProduct: product,
                                             pickupLatitude: r.pickupLatitude,
-                                            pickupLongitude: r.pickupLongitude
+                                            pickupLongitude: r.pickupLongitude,
+                                            isShopAvailableForOrders: isAvailable
                                         )
                                     )
+                                )
+                            },
+                            onAddToCart: { product in
+                                viewModel.addShopProductToCart(
+                                    product,
+                                    pickupLatitude: r.pickupLatitude,
+                                    pickupLongitude: r.pickupLongitude,
+                                    shopId: r.shopId
                                 )
                             },
                             onCartClick: {
@@ -109,6 +115,8 @@ struct HomeTabScreen: View {
                             tokenRefresh: tokenRefresh,
                             favoritesStore: favoritesStore,
                             cartItemCount: viewModel.cartItemCount,
+                            userLatitude: viewModel.deliveryLatitude,
+                            userLongitude: viewModel.deliveryLongitude,
                             onBack: { popNavigation() },
                             onCartClick: {
                                 navigationPath.append(.cart)
@@ -281,12 +289,6 @@ struct HomeTabScreen: View {
                 discountPercent: pendingOpenProductDiscount
             )
         }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 3_500_000_000)
-                hintIndex = (hintIndex + 1) % searchHints.count
-            }
-        }
         .fullScreenCover(isPresented: $showCurrentAddress) {
             NavigationStack {
                 CurrentAddressScreen(
@@ -318,13 +320,22 @@ struct HomeTabScreen: View {
 
     private var content: some View {
         let screenW = UIScreen.main.bounds.width
-        let cardWidth = max(120, (screenW - 56) / 2)
-        let productWidth = HomeProductCardLayout.cardWidth(screenWidth: screenW)
+        let featuredCardWidth = HomeLayoutConstants.featuredCardWidth(screenWidth: screenW)
+        let productWidth = HomeLayoutConstants.productCardWidth(featuredWidth: featuredCardWidth)
 
         let query = viewModel.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filteredPlaces = viewModel.featuredPlaces.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
-        let filteredProducts = viewModel.bestSellerProducts.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
-        let restaurantsOnly = filteredPlaces.filter { !$0.isService }
+        let categoryPlaces = filterPlacesByCategory(viewModel.featuredPlaces, category: quickCategory)
+        let filteredPlaces = categoryPlaces.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
+        let categoryProducts: [BestSellerProduct] = {
+            if quickCategory == .offers {
+                return viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
+            }
+            return viewModel.bestSellerProducts
+        }()
+        let filteredProducts = categoryProducts.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
+        let destacadosPreview = Array(filteredPlaces.prefix(HomeLayoutConstants.destacadosPreviewLimit))
+        let bestSellersPreview = Array(filteredProducts.prefix(HomeLayoutConstants.bestSellersPreviewLimit))
+        let restaurantsOnly = filteredPlaces.filter { !$0.isService && ($0.shopType == "RESTAURANT" || $0.shopType == nil) }
         let servicesOnly = filteredPlaces.filter(\.isService)
 
         return ZStack(alignment: .topTrailing) {
@@ -334,7 +345,12 @@ struct HomeTabScreen: View {
                         warningBanner(warn)
                     }
 
-                    addressHeaderBlock
+                    HomeAddressSearchHeader(
+                        addressLabel: viewModel.addressLabel,
+                        address: viewModel.address,
+                        searchQuery: $viewModel.searchQuery,
+                        onAddressClick: { showCurrentAddress = true }
+                    )
 
                     if viewModel.addressFetchCompleted,
                        viewModel.needsDeliveryAddressCallout,
@@ -344,8 +360,6 @@ struct HomeTabScreen: View {
                             .padding(.top, 5)
                             .padding(.bottom, 3)
                     }
-
-                    homeSearchBar
 
                     if !viewModel.activeOrders.isEmpty {
                         ActiveOrdersHomeSectionView(
@@ -358,27 +372,42 @@ struct HomeTabScreen: View {
                             }
                         )
                         .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
+                        .padding(.vertical, 8)
                     }
 
-                    sectionTitle("Destacado")
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 6) {
-                            ForEach(filteredPlaces) { place in
-                                FeaturedPlaceCard(place: place, width: cardWidth, onTap: { onFeaturedPlaceTap(place) })
-                            }
+                    HomeCategoryRow(selected: quickCategory) { category in
+                        quickCategory = category
+                        if category == .offers {
+                            onPromotionsTabClick()
                         }
-                        .padding(.horizontal, 16)
                     }
 
-                    if !filteredProducts.isEmpty {
-                        sectionTitle("Más vendidos")
-                            .padding(.top, 10)
+                    if !destacadosPreview.isEmpty {
+                        HomeSectionHeader(title: "Destacados")
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 6) {
-                                ForEach(filteredProducts) { product in
+                            HStack(spacing: 12) {
+                                ForEach(destacadosPreview) { place in
+                                    HomeFeaturedPlaceCard(
+                                        place: place,
+                                        width: featuredCardWidth,
+                                        onTap: { onFeaturedPlaceTap(place) }
+                                    )
+                                }
+                                HomeFeaturedSeeMoreCard(width: featuredCardWidth) {
+                                    quickCategory = .all
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
+                        }
+                        .padding(.bottom, 10)
+                    }
+
+                    if !bestSellersPreview.isEmpty {
+                        HomeSectionHeader(title: "Más vendidos")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(bestSellersPreview) { product in
                                     Button {
                                         navigationPath.append(.product(ProductDetailRoute(bestSeller: product)))
                                     } label: {
@@ -386,9 +415,12 @@ struct HomeTabScreen: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
+                                HomeProductSeeMoreCard(width: productWidth, onTap: onPromotionsTabClick)
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
                         }
+                        .padding(.bottom, 10)
                     }
 
                     if !query.isEmpty && filteredPlaces.isEmpty && filteredProducts.isEmpty {
@@ -398,6 +430,10 @@ struct HomeTabScreen: View {
                             .padding(.top, 24)
                     }
 
+                    if viewModel.ads.isEmpty {
+                        HomePromoBanner()
+                    }
+
                     if !viewModel.ads.isEmpty {
                         AdsCarousel(ads: viewModel.ads) { adId in
                             navigationPath.append(.ad(adId: adId))
@@ -405,32 +441,40 @@ struct HomeTabScreen: View {
                     }
 
                     if !restaurantsOnly.isEmpty {
-                        sectionTitle("Restaurantes")
-                            .padding(.top, 8)
+                        HomeSectionHeader(title: "Restaurantes populares")
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 12) {
+                            HStack(spacing: 12) {
                                 ForEach(restaurantsOnly) { place in
-                                    FeaturedPlaceCard(place: place, width: cardWidth, onTap: { onFeaturedPlaceTap(place) })
+                                    HomeFeaturedPlaceCard(
+                                        place: place,
+                                        width: featuredCardWidth,
+                                        onTap: { onFeaturedPlaceTap(place) }
+                                    )
                                 }
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
                         }
+                        .padding(.bottom, 20)
                     }
 
                     if !servicesOnly.isEmpty {
-                        sectionTitle("Servicios")
-                            .padding(.top, 20)
+                        HomeSectionHeader(title: "Servicios destacados")
                         ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 12) {
+                            HStack(spacing: 12) {
                                 ForEach(servicesOnly) { place in
-                                    FeaturedPlaceCard(place: place, width: cardWidth, onTap: { onFeaturedPlaceTap(place) })
+                                    HomeServicePlaceRow(place: place) {
+                                        onFeaturedPlaceTap(place)
+                                    }
                                 }
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
                         }
+                        .padding(.bottom, 8)
                     }
 
-                    Color.clear.frame(height: 100)
+                    Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
                 }
             }
             .refreshable {
@@ -440,80 +484,20 @@ struct HomeTabScreen: View {
             Button {
                 navigationPath.append(.cart)
             } label: {
-                CartIconBadge(count: viewModel.cartItemCount)
+                HomeCartIconBadge(count: viewModel.cartItemCount)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Carrito")
-            .padding(.trailing, 16)
+            .padding(.trailing, 4)
             .padding(.top, 4)
         }
-    }
-
-    private var addressHeaderBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                showCurrentAddress = true
-            } label: {
-                Text(viewModel.addressLabel ?? "Casa")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(HomePalette.primary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-
-            Button {
-                showCurrentAddress = true
-            } label: {
-                Text(viewModel.address ?? "Añade tu dirección")
-                    .font(.subheadline)
-                    .foregroundStyle(viewModel.address != nil ? Color.primary : Color.secondary)
-            }
-            .padding(.horizontal, 20)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.trailing, 56)
-    }
-
-    private var homeSearchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField(
-                "",
-                text: $viewModel.searchQuery,
-                prompt: Text("Busca \"\(searchHints[hintIndex])\"")
-                    .foregroundStyle(Color.secondary)
-            )
-            .focused($searchFocused)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.search)
-            .onSubmit { searchFocused = false }
-            .frame(maxWidth: .infinity)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(HomePalette.searchBackground)
-        .clipShape(Capsule())
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
-    }
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.title3.weight(.semibold))
-            .foregroundStyle(HomePalette.title)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
     }
 
     private func warningBanner(_ msg: String) -> some View {
         HStack {
             Text(msg)
                 .font(.caption)
-                .foregroundStyle(.primary)
+                .foregroundStyle(DobbyBrandColor.dark)
             Spacer(minLength: 8)
             Button("Cerrar") {
                 viewModel.clearWarningMessage()
@@ -521,7 +505,7 @@ struct HomeTabScreen: View {
             .font(.caption.weight(.semibold))
         }
         .padding(12)
-        .background(Color.orange.opacity(0.15))
+        .background(DobbyBrandColor.warningBackground)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
@@ -543,7 +527,7 @@ private struct CalloutTriangleUp: Shape {
 }
 
 private struct DeliveryAddressCalloutView: View {
-    private static let blue = Color(red: 57 / 255, green: 103 / 255, blue: 1)
+    private static let blue = DobbyBrandColor.primary
     let onTap: () -> Void
     @State private var bobUp = false
 
@@ -583,108 +567,6 @@ private struct DeliveryAddressCalloutView: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Añade tu dirección de entrega. Toca para abrir el mapa y guardarla.")
-    }
-}
-
-// MARK: - Cart
-
-private struct CartIconBadge: View {
-    let count: Int
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "cart.fill")
-                .font(.title2)
-                .foregroundStyle(.primary)
-                .padding(8)
-            if count > 0 {
-                Text("\(min(count, 99))")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(4)
-                    .background(HomePalette.primary)
-                    .clipShape(Circle())
-                    .offset(x: 4, y: -4)
-            }
-        }
-    }
-}
-
-// MARK: - Featured
-
-private struct FeaturedPlaceCard: View {
-    let place: FeaturedPlace
-    let width: CGFloat
-    let onTap: () -> Void
-
-    private let cardRadius: CGFloat = 14
-    private var imageHeight: CGFloat { width * 3 / 4 }
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                imageBlock
-                    .frame(width: width, height: imageHeight)
-                    .clipped()
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(place.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    Text(place.typeLabel)
-                        .font(.caption2)
-                        .foregroundStyle(Color(white: 0.25))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(width: width)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
-            .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private var imageBlock: some View {
-        ZStack {
-            Color(.systemGray5)
-            if let url = place.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: width, height: imageHeight)
-                            .clipped()
-                    case .failure:
-                        placeholderMonogram
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        placeholderMonogram
-                    }
-                }
-            } else {
-                placeholderMonogram
-            }
-        }
-    }
-
-    private var placeholderMonogram: some View {
-        Text(String(place.name.prefix(1)).uppercased())
-            .font(.title2.weight(.medium))
-            .foregroundStyle(.secondary)
     }
 }
 

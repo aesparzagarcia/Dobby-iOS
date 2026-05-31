@@ -10,6 +10,12 @@
 		0EA7E32F35B24C0AB8079EB3 /* DobbyHTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37B05B911B346E3BE0FF584 /* DobbyHTTPClient.swift */; };
 		0F5607CAF37446D1BDB0657A /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1161CEE73B9D443893848921 /* HomeModels.swift */; };
 		102582FF06724F87AB4EBD2A /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */; };
+		DBC1DBC1DBC144389384901 /* DobbyBrandColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC2DBC2DBC244389384902 /* DobbyBrandColor.swift */; };
+		PC1PC1PC1PC144389384901 /* ProductCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC2PC2PC2PC244389384902 /* ProductCategory.swift */; };
+		SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */; };
+		HSC1HSC1HSC144389384901 /* HomeScreenComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = HSC2HSC2HSC244389384902 /* HomeScreenComponents.swift */; };
+		HLC1HLC1HLC144389384901 /* HomeLayoutConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = HLC2HLC2HLC244389384902 /* HomeLayoutConstants.swift */; };
+		HSH1HSH1HSH144389384901 /* HomeShopHours.swift in Sources */ = {isa = PBXBuildFile; fileRef = HSH2HSH2HSH244389384902 /* HomeShopHours.swift */; };
 		1A1A1A1A1B9D443893848901 /* AddressDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1B9D443893848902 /* AddressDisplay.swift */; };
 		20012989919C4EC1BC1FED5F /* AuthRepositoryImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9320781FB77C4C63829415A6 /* AuthRepositoryImpl.swift */; };
 		21AEE7CBF5AE437F969BE4A5 /* RegisterUserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDC4AD8D09194711BE5804E2 /* RegisterUserViewModel.swift */; };
@@ -167,12 +173,18 @@
 		D5D5D5D5D5D5D443893848902 /* PromotionsTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabViewModel.swift; sourceTree = "<group>"; };
 		D6D6D6D6D6D6D443893848902 /* PromotionsTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabScreen.swift; sourceTree = "<group>"; };
 		DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		DBC2DBC2DBC244389384902 /* DobbyBrandColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyBrandColor.swift; sourceTree = "<group>"; };
+		PC2PC2PC2PC244389384902 /* ProductCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCategory.swift; sourceTree = "<group>"; };
+		HSC2HSC2HSC244389384902 /* HomeScreenComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreenComponents.swift; sourceTree = "<group>"; };
+		HLC2HLC2HLC244389384902 /* HomeLayoutConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeLayoutConstants.swift; sourceTree = "<group>"; };
+		HSH2HSH2HSH244389384902 /* HomeShopHours.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeShopHours.swift; sourceTree = "<group>"; };
 		E1E1E1E1E1E1E443893848902 /* AddressAutocompleteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressAutocompleteModels.swift; sourceTree = "<group>"; };
 		E2E2E2E2E2E2E443893848902 /* PlacesAutocompleteDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesAutocompleteDTOs.swift; sourceTree = "<group>"; };
 		E3E3E3E3E3E3E443893848902 /* GooglePlacesClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GooglePlacesClient.swift; sourceTree = "<group>"; };
 		E4E4E4E4E4E4E443893848902 /* PlacesAutocompleteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesAutocompleteRepository.swift; sourceTree = "<group>"; };
 		E50810FB3FDE4E649C683C80 /* DobbyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyApp.swift; sourceTree = "<group>"; };
 		E5E5E5E5E5E5E443893848902 /* ShopDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopDetailScreen.swift; sourceTree = "<group>"; };
+		SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopDetailComponents.swift; sourceTree = "<group>"; };
 		SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailScreen.swift; sourceTree = "<group>"; };
 		SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailViewModel.swift; sourceTree = "<group>"; };
 		AD01AD01AD0144389384902 /* AdDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdDetailScreen.swift; sourceTree = "<group>"; };
@@ -264,6 +276,9 @@
 		AAAA00000000000000000002 /* core */ = {
 			isa = PBXGroup;
 			children = (
+				DBC2DBC2DBC244389384902 /* DobbyBrandColor.swift */,
+				PC2PC2PC2PC244389384902 /* ProductCategory.swift */,
+				HSH2HSH2HSH244389384902 /* HomeShopHours.swift */,
 				DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */,
 				4CF8A100000600000000000A /* DeliveryServiceArea.swift */,
 				4CF8A100000700000000000A /* DeliveryEtaEstimator.swift */,
@@ -377,6 +392,8 @@
 				F1F1F1F1F1F1F443893848902 /* ChosenAddressScreen.swift */,
 				7C7C7C7C7C9D443893848902 /* CurrentAddressScreen.swift */,
 				5A5A5A5A5B9D443893848902 /* HomeTabScreen.swift */,
+				HSC2HSC2HSC244389384902 /* HomeScreenComponents.swift */,
+				HLC2HLC2HLC244389384902 /* HomeLayoutConstants.swift */,
 				K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */,
 				4CF8A100000A00000000000A /* ActiveOrdersViews.swift */,
 				K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */,
@@ -386,6 +403,7 @@
 				D2D2D2D2D2D2D443893848902 /* CartScreen.swift */,
 				C7C7C7C7C7C7C443893848902 /* ProductDetailScreen.swift */,
 				E5E5E5E5E5E5E443893848902 /* ShopDetailScreen.swift */,
+				SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */,
 				SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */,
 				SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */,
 				AD01AD01AD0144389384902 /* AdDetailScreen.swift */,
@@ -662,6 +680,11 @@
 				DR03DR03DR0344389384901 /* GoogleDirectionsClient.swift in Sources */,
 				DR04DR04DR0444389384901 /* DirectionsRepository.swift in Sources */,
 				102582FF06724F87AB4EBD2A /* AppConfiguration.swift in Sources */,
+				DBC1DBC1DBC144389384901 /* DobbyBrandColor.swift in Sources */,
+				PC1PC1PC1PC144389384901 /* ProductCategory.swift in Sources */,
+				HSC1HSC1HSC144389384901 /* HomeScreenComponents.swift in Sources */,
+				HLC1HLC1HLC144389384901 /* HomeLayoutConstants.swift in Sources */,
+				HSH1HSH1HSH144389384901 /* HomeShopHours.swift in Sources */,
 				4CF8A200000600000000000A /* DeliveryServiceArea.swift in Sources */,
 				4CF8A200000700000000000A /* DeliveryEtaEstimator.swift in Sources */,
 				4CF8A200000800000000000A /* DeliveryPricing.swift in Sources */,
@@ -711,6 +734,7 @@
 				G4G4G4G4G4G4G443893848901 /* ProfileTabScreen.swift in Sources */,
 				D2D2D2D2D2D2D443893848901 /* CartScreen.swift in Sources */,
 				E5E5E5E5E5E5E443893848901 /* ShopDetailScreen.swift in Sources */,
+				SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */,
 				SDS1SDS1SDS144389384901 /* ServiceDetailScreen.swift in Sources */,
 				SDS2SDS2SDS244389384901 /* ServiceDetailViewModel.swift in Sources */,
 				AD01AD01AD0144389384901 /* AdDetailScreen.swift in Sources */,

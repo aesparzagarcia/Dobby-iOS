@@ -8,14 +8,14 @@
 import SwiftUI
 
 private enum OrderUIPalette {
-    /// App primary blue (#3967FF), parity with Android `Color.kt` / `MaterialTheme.colorScheme.primary`.
-    static let primary = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 0xFF / 255)
-    static let headerTitle = Color(red: 0x11 / 255, green: 0x18 / 255, blue: 0x27 / 255)
-    static let currentLabel = Color(red: 0x11 / 255, green: 0x18 / 255, blue: 0x27 / 255)
+    static let primary = DobbyBrandColor.primary
+    static let gradientEnd = DobbyBrandColor.dark
+    static let headerTitle = DobbyBrandColor.dark
+    static let currentLabel = DobbyBrandColor.dark
     static let inactiveBorder = Color(red: 0.82, green: 0.82, blue: 0.84)
     static let inactiveIcon = Color(red: 0.56, green: 0.56, blue: 0.58)
     static let inactiveLabel = Color(red: 0.56, green: 0.56, blue: 0.58)
-    static let currentHalo = primary.opacity(0.22)
+    static let currentHalo = DobbyBrandColor.primaryHalo
 }
 
 // MARK: - Place order loading
@@ -28,7 +28,7 @@ struct PlaceOrderLoadingView: View {
             LinearGradient(
                 colors: [
                     OrderUIPalette.primary.opacity(0.92),
-                    Color(red: 0.35, green: 0.28, blue: 0.62),
+                    OrderUIPalette.gradientEnd,
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -84,7 +84,9 @@ private let trackingStages: [TrackingStage] = [
     TrackingStage(label: "Entregado", systemImage: "checkmark"),
 ]
 
-private let trackingStageIconSlotSize: CGFloat = 48
+/// Slot must fit the current-step halo (52pt); a 48pt frame was clipping the circle at the top.
+private let trackingStageIconSlotSize: CGFloat = 56
+private let trackingStageHaloSize: CGFloat = 52
 private let trackingStageCircleSize: CGFloat = 40
 
 private enum TrackingConnectorStyle {
@@ -121,6 +123,7 @@ struct OrderTrackingSectionView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .tint(OrderUIPalette.primary)
                 .foregroundStyle(OrderUIPalette.primary)
             }
             .padding(.bottom, 14)
@@ -145,10 +148,13 @@ struct OrderTrackingSectionView: View {
                         .frame(width: 72)
                     }
                 }
+                .padding(.top, 4)
+                .padding(.bottom, 2)
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 16)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
@@ -172,7 +178,7 @@ struct OrderTrackingSectionView: View {
                 if isCurrent {
                     Circle()
                         .fill(OrderUIPalette.currentHalo)
-                        .frame(width: 52, height: 52)
+                        .frame(width: trackingStageHaloSize, height: trackingStageHaloSize)
                 }
 
                 Group {

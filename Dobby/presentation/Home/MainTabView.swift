@@ -13,8 +13,8 @@ enum MainTab: Hashable {
 }
 
 private enum MainPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let barBackground = Color(red: 0.93, green: 0.90, blue: 0.98)
+    static let primary = DobbyBrandColor.primary
+    static let barBackground = DobbyBrandColor.light
 }
 
 struct MainTabView: View {
@@ -104,6 +104,7 @@ struct MainTabView: View {
                         httpClient: httpClient,
                         mainTabBarHidden: $homeHidesFloatingTabBar,
                         onCheckoutSuccess: { tab = .home },
+                        onPromotionsTabClick: { tab = .promotions },
                         pendingOpenOrderTrackingId: $pendingOpenOrderTrackingId,
                         pendingOpenProductId: $pendingOpenProductId,
                         pendingOpenProductShopId: $pendingOpenProductShopId,

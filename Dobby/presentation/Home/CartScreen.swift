@@ -6,7 +6,7 @@
 import SwiftUI
 
 private enum CartPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
     static let screenBackground = Color(red: 0.97, green: 0.96, blue: 0.98)
     static let rowBackground = Color(red: 0.93, green: 0.91, blue: 0.96)
 }

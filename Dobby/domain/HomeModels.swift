@@ -8,9 +8,12 @@ import UIKit
 
 /// Shared sizing for home “Best sellers” cards and shop product grid so tiles match.
 enum HomeProductCardLayout {
-    /// Same formula as `HomeTabScreen` horizontal `UniversalProductCard` width.
+    static func featuredCardWidth(screenWidth: CGFloat = UIScreen.main.bounds.width) -> CGFloat {
+        HomeLayoutConstants.featuredCardWidth(screenWidth: screenWidth)
+    }
+
     static func cardWidth(screenWidth: CGFloat = UIScreen.main.bounds.width) -> CGFloat {
-        max(88, (screenWidth - 52) / 3.15)
+        HomeLayoutConstants.productCardWidth(featuredWidth: featuredCardWidth(screenWidth: screenWidth))
     }
 
     static let shopGridHorizontalPadding: CGFloat = 18
@@ -22,8 +25,11 @@ struct FeaturedPlace: Identifiable, Hashable {
     let imageUrl: String?
     let typeLabel: String
     let isService: Bool
+    let shopType: String?
+    let serviceCategory: String?
     let rate: Float
-    /// Coordenadas del comercio si el backend las envía (para ETA en carrito).
+    let openingHour: String?
+    let closingHour: String?
     let latitude: Double?
     let longitude: Double?
 }
@@ -47,9 +53,26 @@ struct ShopProduct: Identifiable, Hashable, Sendable {
     let price: Double
     let imageUrl: String?
     let rate: Float
+    let ratingCount: Int
     let hasPromotion: Bool
     let discount: Int
     let shopId: String?
+    let category: String?
+}
+
+struct ShopProductsPage: Sendable {
+    let shopStatus: String
+    let openingHour: String?
+    let closingHour: String?
+    let products: [ShopProduct]
+
+    var isShopAvailableForOrders: Bool {
+        HomeShopHours.isShopAvailableForOrders(
+            shopStatus: shopStatus,
+            openingHour: openingHour,
+            closingHour: closingHour
+        )
+    }
 }
 
 /// Parity with Android `com.ares.ewe.domain.model.FavoriteProduct`.
@@ -86,6 +109,7 @@ struct ProductDetail: Sendable {
     let price: Double
     let imageUrls: [String]
     let rate: Float
+    let ratingCount: Int
     let hasPromotion: Bool
     let discount: Int
     let shopId: String?
@@ -114,6 +138,8 @@ struct ProductDetailRoute: Hashable, Sendable {
     let pickupLatitude: Double?
     let pickupLongitude: Double?
     let shopId: String?
+    let ratingCount: Int
+    let isShopAvailableForOrders: Bool
 
     init(bestSeller: BestSellerProduct) {
         id = bestSeller.id
@@ -127,9 +153,16 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         shopId = bestSeller.shopId
+        ratingCount = 0
+        isShopAvailableForOrders = true
     }
 
-    init(shopProduct: ShopProduct, pickupLatitude: Double? = nil, pickupLongitude: Double? = nil) {
+    init(
+        shopProduct: ShopProduct,
+        pickupLatitude: Double? = nil,
+        pickupLongitude: Double? = nil,
+        isShopAvailableForOrders: Bool = true
+    ) {
         id = shopProduct.id
         name = shopProduct.name
         description = shopProduct.description
@@ -141,6 +174,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.pickupLatitude = pickupLatitude
         self.pickupLongitude = pickupLongitude
         shopId = shopProduct.shopId
+        ratingCount = shopProduct.ratingCount
+        self.isShopAvailableForOrders = isShopAvailableForOrders
     }
 
     init(detail: ProductDetail, pickupLatitude: Double? = nil, pickupLongitude: Double? = nil, shopId: String? = nil) {
@@ -155,6 +190,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.pickupLatitude = pickupLatitude
         self.pickupLongitude = pickupLongitude
         self.shopId = shopId ?? detail.shopId
+        ratingCount = detail.ratingCount
+        isShopAvailableForOrders = true
     }
 
     /// Deep link from promotion push; list fields may come from FCM `data` until `GET app/products/:id` completes.
@@ -177,6 +214,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         self.shopId = shopId
+        ratingCount = 0
+        isShopAvailableForOrders = true
     }
 
     /// Route from push before API returns full product (price still loads from server).
@@ -196,6 +235,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         shopId = nil
+        ratingCount = 0
+        isShopAvailableForOrders = true
     }
 
     /// Single-unit price after promotion discount (matches product detail screen).

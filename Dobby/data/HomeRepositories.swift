@@ -23,7 +23,7 @@ protocol PlacesRepository: Sendable {
     func getHome() async -> Result<HomeData, HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getPromotions` → `GET app/promotions`.
     func getPromotions() async -> Result<[BestSellerProduct], HomeRepositoryError>
-    func getShopProducts(shopId: String) async -> Result<[ShopProduct], HomeRepositoryError>
+    func getShopProducts(shopId: String) async -> Result<ShopProductsPage, HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getProduct` → `GET app/products/:id`.
     func getProduct(id: String) async -> Result<ProductDetail, HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getService` → `GET app/services/:id`.
@@ -86,7 +86,11 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         imageUrl: AppConfiguration.fullImageURL(p.logoUrl),
         typeLabel: typeLabel,
         isService: isService,
+        shopType: isService ? nil : p.type,
+        serviceCategory: isService ? p.category : nil,
         rate: p.rate,
+        openingHour: p.openingHour,
+        closingHour: p.closingHour,
         latitude: p.lat,
         longitude: p.lng
     )
@@ -113,9 +117,11 @@ private func mapShopProduct(_ p: ShopProductDTO, fallbackShopId: String) -> Shop
         price: p.price,
         imageUrl: AppConfiguration.fullImageURL(p.imageUrl),
         rate: p.rate,
+        ratingCount: p.ratingCount ?? 0,
         hasPromotion: p.hasPromotion,
         discount: p.discount,
-        shopId: p.shopId ?? fallbackShopId
+        shopId: p.shopId ?? fallbackShopId,
+        category: p.category
     )
 }
 
@@ -128,6 +134,7 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         price: dto.price,
         imageUrls: urls,
         rate: dto.rate,
+        ratingCount: dto.ratingCount ?? 0,
         hasPromotion: dto.hasPromotion,
         discount: dto.discount,
         shopId: dto.shopId
@@ -186,16 +193,24 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         }
     }
 
-    func getShopProducts(shopId: String) async -> Result<[ShopProduct], HomeRepositoryError> {
+    func getShopProducts(shopId: String) async -> Result<ShopProductsPage, HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
             AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let path = "app/shops/\(shopId)/products"
-        let result: Result<[ShopProductDTO], HTTPClientError> = await api.get(path, bearerToken: token)
+        let result: Result<ShopProductsResponseDTO, HTTPClientError> = await api.get(path, bearerToken: token)
         switch result {
-        case .success(let list):
-            return .success(list.map { mapShopProduct($0, fallbackShopId: shopId) })
+        case .success(let response):
+            let products = response.products.map { mapShopProduct($0, fallbackShopId: shopId) }
+            return .success(
+                ShopProductsPage(
+                    shopStatus: response.shop.status,
+                    openingHour: response.shop.openingHour,
+                    closingHour: response.shop.closingHour,
+                    products: products
+                )
+            )
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))

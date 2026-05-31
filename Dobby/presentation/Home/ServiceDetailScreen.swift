@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 private enum ServiceDetailPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
 }
 
 struct ServiceDetailScreen: View {
@@ -86,7 +86,7 @@ struct ServiceDetailScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onCartClick) {
-                    ServiceDetailCartIconBadge(count: cartItemCount)
+                    HomeCartIconBadge(count: cartItemCount)
                 }
                 .buttonStyle(.plain)
             }
@@ -193,28 +193,5 @@ struct ServiceDetailScreen: View {
         Text(String(name.prefix(1)).uppercased())
             .font(.largeTitle.weight(.medium))
             .foregroundStyle(.secondary)
-    }
-}
-
-private struct ServiceDetailCartIconBadge: View {
-    let count: Int
-    private let iconSize: CGFloat = 20
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "cart.fill")
-                .font(.system(size: iconSize, weight: .medium))
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
-            if count > 0 {
-                Text("\(min(count, 99))")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(3)
-                    .background(ServiceDetailPalette.primary)
-                    .clipShape(Circle())
-                    .offset(x: 5, y: -3)
-            }
-        }
     }
 }

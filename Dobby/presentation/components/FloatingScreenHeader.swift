@@ -8,8 +8,8 @@
 import SwiftUI
 
 enum FloatingScreenHeaderStyle {
-    static let titleColor = Color(red: 0x11 / 255, green: 0x18 / 255, blue: 0x27 / 255)
-    static let cartBadgeBackground = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let titleColor = DobbyBrandColor.dark
+    static let cartBadgeBackground = DobbyBrandColor.primary
     static let backButtonBackground = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
     static let cardCornerRadius: CGFloat = 18
     static let backButtonCornerRadius: CGFloat = 12

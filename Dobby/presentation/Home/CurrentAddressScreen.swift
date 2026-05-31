@@ -8,8 +8,7 @@
 import SwiftUI
 
 private enum AddressScreenPalette {
-    /// #3967FF (ARGB 0xFF3967FF)
-    static let iconBlue = Color(red: 0x39 / 255, green: 0x67 / 255, blue: 0xFF / 255)
+    static let iconBlue = DobbyBrandColor.primary
     static let border = Color(.systemGray4)
 }
 

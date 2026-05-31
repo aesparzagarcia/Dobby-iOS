@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 private enum PromotionsPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
 }
 
 /// Routes for the promotions tab `NavigationStack` (product detail + cart).

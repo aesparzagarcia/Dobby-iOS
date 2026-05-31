@@ -11,8 +11,30 @@ import Foundation
 struct ShopDetailUiState: Equatable {
     var shopName: String = ""
     var products: [ShopProduct] = []
+    var searchQuery: String = ""
+    var selectedCategoryId: String?
+    var shopStatus: String?
+    var openingHour: String?
+    var closingHour: String?
+    var isShopAvailableForOrders: Bool = true
     var isLoading: Bool = false
     var errorMessage: String?
+
+    var showShopClosedBanner: Bool {
+        !isShopAvailableForOrders
+    }
+
+    var shopReopensLabel: String? {
+        HomeShopHours.formatShopReopensLabel(shopStatus: shopStatus, openingHour: openingHour)
+    }
+
+    var filteredProducts: [ShopProduct] {
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        return products.filter { product in
+            ProductCategory.matchesFilter(productCategory: product.category, filterId: selectedCategoryId)
+                && (query.isEmpty || product.name.localizedCaseInsensitiveContains(query))
+        }
+    }
 }
 
 @MainActor
@@ -32,9 +54,16 @@ final class ShopDetailViewModel {
         Task { await loadProductsAsync() }
     }
 
-    /// Parity with Android `loadProducts()`.
     func loadProducts() {
         Task { await loadProductsAsync() }
+    }
+
+    func onSearchQueryChange(_ query: String) {
+        uiState.searchQuery = query
+    }
+
+    func onCategorySelected(_ categoryId: String?) {
+        uiState.selectedCategoryId = categoryId
     }
 
     private func loadProductsAsync() async {
@@ -42,10 +71,16 @@ final class ShopDetailViewModel {
         uiState.isLoading = true
 
         switch await placesRepository.getShopProducts(shopId: shopId) {
-        case .success(let products):
+        case .success(let page):
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
-                products: products,
+                products: page.products,
+                searchQuery: uiState.searchQuery,
+                selectedCategoryId: uiState.selectedCategoryId,
+                shopStatus: page.shopStatus,
+                openingHour: page.openingHour,
+                closingHour: page.closingHour,
+                isShopAvailableForOrders: page.isShopAvailableForOrders,
                 isLoading: false,
                 errorMessage: nil
             )
@@ -53,6 +88,9 @@ final class ShopDetailViewModel {
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
                 products: [],
+                searchQuery: uiState.searchQuery,
+                selectedCategoryId: uiState.selectedCategoryId,
+                isShopAvailableForOrders: true,
                 isLoading: false,
                 errorMessage: e.shouldSuppressUserMessage ? nil : message(for: e)
             )

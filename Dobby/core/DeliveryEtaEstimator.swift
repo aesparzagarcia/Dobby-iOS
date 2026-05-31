@@ -14,6 +14,23 @@ enum DeliveryEtaEstimator {
     /// Solo si faltan coordenadas de domicilio o de tienda en líneas del carrito; con datos se muestra el rango calculado.
     private static let fallbackLabel = "30–45 min"
 
+    static func estimateLabelForPickup(
+        userLatitude: Double?,
+        userLongitude: Double?,
+        pickupLatitude: Double?,
+        pickupLongitude: Double?
+    ) -> String {
+        guard let uLat = userLatitude, let uLng = userLongitude,
+              let pLat = pickupLatitude, let pLng = pickupLongitude,
+              uLat.isFinite, uLng.isFinite, pLat.isFinite, pLng.isFinite
+        else { return fallbackLabel }
+        let center = centerMinutes(userLat: uLat, userLng: uLng, shopLat: pLat, shopLng: pLng)
+        let low = Int((center * 0.82).rounded()).clamped(to: 18...150)
+        var high = Int((center * 1.18).rounded()).clamped(to: low + 5...160)
+        if high <= low { high = low + 8 }
+        return "\(low)\u{2013}\(high) min"
+    }
+
     static func estimateLabel(
         userLatitude: Double?,
         userLongitude: Double?,

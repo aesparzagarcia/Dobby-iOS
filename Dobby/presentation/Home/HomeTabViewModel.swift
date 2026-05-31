@@ -146,6 +146,44 @@ final class HomeTabViewModel {
         cartLocalStore.persist(lines: cartLines)
     }
 
+    func addShopProductToCart(
+        _ product: ShopProduct,
+        pickupLatitude: Double?,
+        pickupLongitude: Double?,
+        shopId: String
+    ) {
+        let validDiscount = max(0, min(100, product.discount))
+        let showPromotion = product.hasPromotion && validDiscount > 0
+        let unitAfterDiscount = showPromotion
+            ? product.price * (1 - Double(validDiscount) / 100)
+            : product.price
+        let resolvedShopId = product.shopId ?? shopId
+
+        if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
+            cartLines[i].quantity += 1
+            if cartLines[i].pickupLatitude == nil, let lat = pickupLatitude { cartLines[i].pickupLatitude = lat }
+            if cartLines[i].pickupLongitude == nil, let lng = pickupLongitude { cartLines[i].pickupLongitude = lng }
+            if cartLines[i].shopId == nil { cartLines[i].shopId = resolvedShopId }
+        } else {
+            cartLines.append(
+                CartLineItem(
+                    productId: product.id,
+                    name: product.name,
+                    imageUrl: product.imageUrl,
+                    quantity: 1,
+                    unitPrice: unitAfterDiscount,
+                    listUnitPrice: product.price,
+                    hasPromotion: showPromotion,
+                    discount: validDiscount,
+                    pickupLatitude: pickupLatitude,
+                    pickupLongitude: pickupLongitude,
+                    shopId: resolvedShopId
+                )
+            )
+        }
+        cartLocalStore.persist(lines: cartLines)
+    }
+
     func removeCartLine(productId: String) {
         cartLines.removeAll { $0.productId == productId }
         cartLocalStore.persist(lines: cartLines)
@@ -287,19 +325,7 @@ final class HomeTabViewModel {
         Task {
             switch await userAddressRepository.getAddresses() {
             case .success(let list):
-                let chosen = list.first(where: \.isDefault) ?? list.first
-                defaultAddressId = chosen?.id
-                addressLabel = chosen?.label ?? "Casa"
-                if let raw = chosen?.address {
-                    address = raw.addressWithColonyOnly()
-                } else {
-                    address = nil
-                }
-                addressDetails = Self.normalizedAddressDetails(from: chosen?.description)
-                deliveryLatitude = chosen?.lat
-                deliveryLongitude = chosen?.lng
-                addressFetchCompleted = true
-                needsDeliveryAddressCallout = list.isEmpty
+                applyAddressList(list)
             case .failure(let e):
                 defaultAddressId = nil
                 addressLabel = "Casa"
@@ -317,6 +343,22 @@ final class HomeTabViewModel {
                 }
             }
         }
+    }
+
+    private func applyAddressList(_ list: [UserAddress]) {
+        let chosen = list.first(where: \.isDefault) ?? list.first
+        defaultAddressId = chosen?.id
+        addressLabel = chosen?.label ?? "Casa"
+        if let raw = chosen?.address {
+            address = raw.addressWithColonyOnly()
+        } else {
+            address = nil
+        }
+        addressDetails = Self.normalizedAddressDetails(from: chosen?.description)
+        deliveryLatitude = chosen?.lat
+        deliveryLongitude = chosen?.lng
+        addressFetchCompleted = true
+        needsDeliveryAddressCallout = list.isEmpty
     }
 
     private static func normalizedAddressDetails(from raw: String?) -> String? {
@@ -344,17 +386,21 @@ final class HomeTabViewModel {
         defer { isRefreshing = false }
         errorMessage = nil
 
-        // Estado del pedido: detached para que no se cancele al soltar el pull-to-refresh antes de que termine el API.
+        // Pedidos y direcciones: detached para que no se cancelen al soltar el pull-to-refresh.
         Task.detached { @MainActor [weak self] in
             await self?.loadActiveOrder(clearOnFailure: false)
         }
+        Task.detached { @MainActor [weak self] in
+            await self?.refreshAddresses()
+        }
+        Task.detached { @MainActor [weak self] in
+            await self?.refreshHome()
+        }
 
-        async let homeTask: Void = refreshHome()
-        async let addrTask: Void = refreshAddresses()
         async let adsTask: Void = loadAds(clearOnFailure: false)
         async let shopCoordsTask: Void = refreshShopCoords()
         async let pricingTask: Void = refreshDeliveryPricing()
-        _ = await (homeTask, addrTask, adsTask, shopCoordsTask, pricingTask)
+        _ = await (adsTask, shopCoordsTask, pricingTask)
     }
 
     private func refreshShopCoords() async {
@@ -373,6 +419,10 @@ final class HomeTabViewModel {
             bestSellerProducts = data.bestSellerProducts
             errorMessage = nil
         case .failure(let e):
+            guard !shouldPreserveExistingData(on: e) else {
+                applyNonSuppressedWarning(from: e)
+                return
+            }
             if !e.shouldSuppressUserMessage {
                 errorMessage = message(for: e)
             }
@@ -382,20 +432,12 @@ final class HomeTabViewModel {
     private func refreshAddresses() async {
         switch await userAddressRepository.getAddresses() {
         case .success(let list):
-            let chosen = list.first(where: \.isDefault) ?? list.first
-            defaultAddressId = chosen?.id
-            addressLabel = chosen?.label ?? "Casa"
-            if let raw = chosen?.address {
-                address = raw.addressWithColonyOnly()
-            } else {
-                address = nil
-            }
-            addressDetails = Self.normalizedAddressDetails(from: chosen?.description)
-            deliveryLatitude = chosen?.lat
-            deliveryLongitude = chosen?.lng
-            addressFetchCompleted = true
-            needsDeliveryAddressCallout = list.isEmpty
+            applyAddressList(list)
         case .failure(let e):
+            guard !shouldPreserveExistingData(on: e) else {
+                applyNonSuppressedWarning(from: e)
+                return
+            }
             defaultAddressId = nil
             addressLabel = "Casa"
             address = nil
@@ -407,6 +449,8 @@ final class HomeTabViewModel {
             guard !e.shouldSuppressUserMessage else { return }
             if case .http(let he) = e {
                 warningMessage = http.userFacingMessage(from: he)
+            } else {
+                warningMessage = "Inicia sesión para ver tus direcciones."
             }
         }
     }

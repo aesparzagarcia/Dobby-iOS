@@ -20,6 +20,14 @@ struct FeaturedPlaceDTO: Decodable {
     let rate: Float
     let lat: Double?
     let lng: Double?
+    let openingHour: String?
+    let closingHour: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, logoUrl, type, category, kind, rate, lat, lng
+        case openingHour = "opening_hour"
+        case closingHour = "closing_hour"
+    }
 }
 
 struct ShopProductDTO: Decodable {
@@ -30,14 +38,34 @@ struct ShopProductDTO: Decodable {
     let price: Double
     let imageUrl: String?
     let rate: Float
+    let ratingCount: Int?
     let hasPromotion: Bool
     let discount: Int
+    let category: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, price, imageUrl, rate, discount
+        case id, name, description, price, imageUrl, rate, discount, category
         case shopId = "shop_id"
+        case ratingCount = "rating_count"
         case hasPromotion = "has_promotion"
     }
+}
+
+struct ShopInfoDTO: Decodable {
+    let status: String
+    let openingHour: String?
+    let closingHour: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case openingHour = "opening_hour"
+        case closingHour = "closing_hour"
+    }
+}
+
+struct ShopProductsResponseDTO: Decodable {
+    let shop: ShopInfoDTO
+    let products: [ShopProductDTO]
 }
 
 struct BestSellerProductDTO: Decodable {
@@ -65,12 +93,14 @@ struct ProductDetailDTO: Decodable {
     let price: Double
     let imageUrls: [String]?
     let rate: Float
+    let ratingCount: Int?
     let hasPromotion: Bool
     let discount: Int
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, price, imageUrls, rate, discount
         case shopId = "shop_id"
+        case ratingCount = "rating_count"
         case hasPromotion = "has_promotion"
     }
 }

@@ -6,9 +6,16 @@
 import SwiftUI
 
 private enum ProductDetailPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let screenBackground = Color(red: 0.97, green: 0.96, blue: 0.98)
+    static let mutedText = Color(red: 0.42, green: 0.45, blue: 0.50)
+    static let ratingPillBg = Color(red: 0.95, green: 0.96, blue: 0.97)
+    static let quantityPillBg = Color(red: 0.95, green: 0.96, blue: 0.97)
+    static let closedGray = Color(red: 0.42, green: 0.45, blue: 0.50)
+    static let promoOrange = Color(red: 1, green: 0.54, blue: 0.24)
+    static let divider = Color(red: 0.91, green: 0.91, blue: 0.93)
 }
+
+private let heroHeight: CGFloat = 300
+private let cardOverlap: CGFloat = 24
 
 struct ProductDetailScreen: View {
     let product: ProductDetailRoute
@@ -16,17 +23,41 @@ struct ProductDetailScreen: View {
     var tokenRefresh: ConsumerTokenRefreshService? = nil
     let favoritesStore: FavoritesStore
     let cartItemCount: Int
-    /// Pops one level on the home `NavigationStack` (e.g. back to restaurant). Prefer this over `dismiss()` with `navigationPath`.
+    let userLatitude: Double?
+    let userLongitude: Double?
     let onBack: () -> Void
     let onCartClick: () -> Void
     let onAddToCart: (Int, ProductDetail?) -> Void
 
-    @State private var quantity = 0
-    /// Loaded from `GET app/products/:id` (lists like home/promotions omit description).
+    @State private var quantity = 1
     @State private var loadedDetail: ProductDetail?
     @State private var detailFetchFinished = false
+    @State private var imagePage = 0
 
-    /// Prefer API detail (e.g. promotion push only sends `product_id`).
+    init(
+        product: ProductDetailRoute,
+        placesRepository: PlacesRepository,
+        tokenRefresh: ConsumerTokenRefreshService? = nil,
+        favoritesStore: FavoritesStore,
+        cartItemCount: Int,
+        userLatitude: Double? = nil,
+        userLongitude: Double? = nil,
+        onBack: @escaping () -> Void,
+        onCartClick: @escaping () -> Void,
+        onAddToCart: @escaping (Int, ProductDetail?) -> Void
+    ) {
+        self.product = product
+        self.placesRepository = placesRepository
+        self.tokenRefresh = tokenRefresh
+        self.favoritesStore = favoritesStore
+        self.cartItemCount = cartItemCount
+        self.userLatitude = userLatitude
+        self.userLongitude = userLongitude
+        self.onBack = onBack
+        self.onCartClick = onCartClick
+        self.onAddToCart = onAddToCart
+    }
+
     private var displayProduct: ProductDetailRoute {
         if let detail = loadedDetail {
             return ProductDetailRoute(
@@ -37,6 +68,22 @@ struct ProductDetailScreen: View {
             )
         }
         return product
+    }
+
+    private var displayRatingCount: Int {
+        loadedDetail?.ratingCount ?? product.ratingCount
+    }
+
+    private var showInitialLoading: Bool {
+        product.isPromotionPushStub && !detailFetchFinished && loadedDetail == nil
+    }
+
+    private var imageUrls: [String] {
+        if let detail = loadedDetail, !detail.imageUrls.isEmpty {
+            return detail.imageUrls
+        }
+        if let url = product.imageUrl { return [url] }
+        return []
     }
 
     private var validDiscount: Int {
@@ -51,21 +98,17 @@ struct ProductDetailScreen: View {
         showPromotion ? displayProduct.price * (1 - Double(validDiscount) / 100) : displayProduct.price
     }
 
-    private var showDetailLoading: Bool {
-        !detailFetchFinished && loadedDetail == nil
-    }
-
-    private var canAddToCart: Bool {
-        quantity > 0 && (loadedDetail != nil || !product.isPromotionPushStub)
-    }
-
-    /// Unit price × current quantity (updates with + / −).
     private var lineTotal: Double {
         discountedPrice * Double(quantity)
     }
 
-    private var lineTotalFormatted: String {
-        String(format: "$%.2f", lineTotal)
+    private var deliveryEtaLabel: String {
+        DeliveryEtaEstimator.estimateLabelForPickup(
+            userLatitude: userLatitude,
+            userLongitude: userLongitude,
+            pickupLatitude: product.pickupLatitude,
+            pickupLongitude: product.pickupLongitude
+        )
     }
 
     private var displayDescription: String? {
@@ -76,13 +119,8 @@ struct ProductDetailScreen: View {
         return nil
     }
 
-    private var showDescriptionLoading: Bool {
-        !detailFetchFinished && displayDescription == nil
-    }
-
-    private var heroImageURL: URL? {
-        if let first = loadedDetail?.imageUrls.first, let u = URL(string: first) { return u }
-        return product.imageUrl.flatMap(URL.init(string:))
+    private var canAddToCart: Bool {
+        quantity > 0 && product.isShopAvailableForOrders && (loadedDetail != nil || !product.isPromotionPushStub)
     }
 
     private var isFavorite: Bool {
@@ -90,97 +128,283 @@ struct ProductDetailScreen: View {
     }
 
     var body: some View {
-        ZStack {
-            ProductDetailPalette.screenBackground
-                .ignoresSafeArea()
+        ZStack(alignment: .bottom) {
+            Color.white.ignoresSafeArea()
 
-            ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 0) {
-                    productHeroImage
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .top, spacing: 12) {
-                            if showDetailLoading {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            } else {
-                                Text(displayProduct.name)
-                                    .font(.title2.weight(.bold))
-                                    .foregroundStyle(.primary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Button {
-                                favoritesStore.toggle(from: displayProduct)
-                            } label: {
-                                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                                    .font(.title3)
-                                    .foregroundStyle(isFavorite ? ProductDetailPalette.primary : .secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(isFavorite ? "Quitar de favoritos" : "Añadir a favoritos")
-                        }
-
-                        priceBlock
-
-                        HStack(spacing: 6) {
-                            Image(systemName: "star.fill")
-                                .font(.subheadline)
-                                .foregroundStyle(ProductDetailPalette.primary)
-                            Text(String(format: "%.1f", displayProduct.rate))
-                                .font(.subheadline)
-                                .foregroundStyle(Color(white: 0.35))
-                        }
-
-                        if showDescriptionLoading {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else if let desc = displayDescription {
-                            Text(desc)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text("Sin descripción disponible.")
-                                .font(.body)
-                                .foregroundStyle(.tertiary)
-                        }
+            if showInitialLoading {
+                ProgressView()
+                    .tint(DobbyBrandColor.primary)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        heroSection
+                        infoCard
+                            .offset(y: -cardOverlap)
+                            .padding(.bottom, 100)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 120)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-        }
-        .navigationTitle(displayProduct.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    onBack()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
-                }
-                .accessibilityLabel("Atrás")
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: onCartClick) {
-                    ProductDetailCartIconBadge(count: cartItemCount)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+
             bottomActionBar
         }
+        .navigationBarHidden(true)
         .task(id: product.id) {
             await loadProductDetail()
         }
+    }
+
+    private var heroSection: some View {
+        ZStack(alignment: .top) {
+            TabView(selection: $imagePage) {
+                if imageUrls.isEmpty {
+                    imagePlaceholder
+                        .tag(0)
+                } else {
+                    ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, urlString in
+                        Group {
+                            if let url = URL(string: urlString) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .success(let img):
+                                        img.resizable().scaledToFill()
+                                    case .failure:
+                                        imagePlaceholder
+                                    case .empty:
+                                        ZStack {
+                                            Color(.systemGray5)
+                                            ProgressView()
+                                        }
+                                    @unknown default:
+                                        imagePlaceholder
+                                    }
+                                }
+                            } else {
+                                imagePlaceholder
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: heroHeight)
+                        .clipped()
+                        .tag(index)
+                    }
+                }
+            }
+            .frame(height: heroHeight)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            if imageUrls.count > 1 {
+                HStack(spacing: 6) {
+                    ForEach(imageUrls.indices, id: \.self) { index in
+                        Circle()
+                            .fill(index == imagePage ? Color.white : Color.white.opacity(0.55))
+                            .frame(width: index == imagePage ? 8 : 6, height: index == imagePage ? 8 : 6)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 36)
+            }
+
+            HStack {
+                overlayIconButton(systemName: "chevron.left", action: onBack)
+                Spacer()
+                Button(action: onCartClick) {
+                    HomeCartIconBadge(count: cartItemCount)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+
+            overlayIconButton(
+                systemName: isFavorite ? "heart.fill" : "heart",
+                tint: isFavorite ? DobbyBrandColor.primary : .primary,
+                action: { favoritesStore.toggle(from: displayProduct) }
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .padding(.trailing, 16)
+            .padding(.bottom, 12)
+        }
+    }
+
+    private var infoCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                Text(displayProduct.name)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HomeRatingDisplay(rate: displayProduct.rate, ratingCount: displayRatingCount)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(ProductDetailPalette.ratingPillBg)
+                    .clipShape(Capsule())
+            }
+
+            if let desc = displayDescription {
+                Text(desc)
+                    .font(.body)
+                    .foregroundStyle(ProductDetailPalette.mutedText)
+                    .padding(.top, 10)
+            }
+
+            priceBlock
+                .padding(.top, 14)
+
+            Divider()
+                .overlay(ProductDetailPalette.divider)
+                .padding(.vertical, 12)
+
+            statusRow
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var priceBlock: some View {
+        Group {
+            if showPromotion {
+                HStack(spacing: 8) {
+                    Text(String(format: "$%.2f", discountedPrice))
+                        .font(.title3.weight(.bold))
+                    HStack(spacing: 4) {
+                        Text("-\(validDiscount)%")
+                            .font(.caption2.weight(.bold))
+                        Text(String(format: "$%.2f", displayProduct.price))
+                            .font(.caption2)
+                            .strikethrough()
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(ProductDetailPalette.promoOrange)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            } else {
+                Text(String(format: "$%.2f", displayProduct.price))
+                    .font(.title3.weight(.bold))
+            }
+        }
+        .foregroundStyle(.primary)
+    }
+
+    private var statusRow: some View {
+        let statusColor = product.isShopAvailableForOrders ? DobbyBrandColor.primary : ProductDetailPalette.closedGray
+        return HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "clock")
+                    .font(.system(size: 14))
+                Text(deliveryEtaLabel)
+                    .font(.subheadline.weight(.medium))
+            }
+            .foregroundStyle(DobbyBrandColor.primary)
+            .frame(maxWidth: .infinity)
+
+            Rectangle()
+                .fill(DobbyBrandColor.primary.opacity(0.25))
+                .frame(width: 1, height: 18)
+
+            HStack(spacing: 6) {
+                Image(systemName: "takeoutbag.and.cup.and.straw.fill")
+                    .font(.system(size: 14))
+                Text(product.isShopAvailableForOrders ? "Disponible" : "No disponible")
+                    .font(.subheadline.weight(.medium))
+            }
+            .foregroundStyle(statusColor)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var bottomActionBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 12) {
+                HStack(spacing: 0) {
+                    Button {
+                        if quantity > 1 { quantity -= 1 }
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(DobbyBrandColor.primary)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(quantity <= 1)
+
+                    Text("\(quantity)")
+                        .font(.title3.monospacedDigit().weight(.medium))
+                        .frame(minWidth: 28)
+
+                    Button { quantity += 1 } label: {
+                        Image(systemName: "plus")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(DobbyBrandColor.primary)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(ProductDetailPalette.quantityPillBg)
+                .clipShape(Capsule())
+
+                Button {
+                    onAddToCart(quantity, loadedDetail)
+                    quantity = 1
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "cart.fill")
+                            .font(.system(size: 16))
+                        Text("Añadir al carrito")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 4)
+                        Text(String(format: "$%.2f", lineTotal))
+                            .font(.subheadline.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .frame(maxWidth: .infinity)
+                    .background(canAddToCart ? DobbyBrandColor.primary : DobbyBrandColor.primary.opacity(0.45))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(!canAddToCart)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.white)
+        }
+    }
+
+    private func overlayIconButton(
+        systemName: String,
+        tint: Color = .primary,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .background(Color.white)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var imagePlaceholder: some View {
+        ZStack {
+            Color(.systemGray5)
+            Text(String(displayProduct.name.prefix(1)).uppercased())
+                .font(.system(size: 72, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: heroHeight)
     }
 
     private func loadProductDetail() async {
@@ -206,165 +430,5 @@ struct ProductDetailScreen: View {
             }
         }
         detailFetchFinished = true
-    }
-
-    private var priceBlock: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if showDetailLoading {
-                ProgressView()
-            } else if showPromotion {
-                HStack(spacing: 8) {
-                    Text(String(format: "$%.2f", discountedPrice))
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.primary)
-                    Text(String(format: "$%.2f", displayProduct.price))
-                        .font(.subheadline)
-                        .strikethrough()
-                        .foregroundStyle(.secondary)
-                    Text("-\(validDiscount)%")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(red: 1, green: 0.89, blue: 0.3))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-            } else {
-                Text(String(format: "$%.2f", displayProduct.price))
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(.primary)
-            }
-        }
-    }
-
-    private var productHeroImage: some View {
-        Group {
-            if let url = heroImageURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            // Constrain intrinsic image width so wide photos do not expand ScrollView content.
-                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                            .clipped()
-                    case .failure:
-                        imagePlaceholder
-                    case .empty:
-                        ZStack {
-                            Color(.systemGray5)
-                            ProgressView()
-                        }
-                    @unknown default:
-                        imagePlaceholder
-                    }
-                }
-            } else {
-                imagePlaceholder
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 280)
-        .clipped()
-        .background(Color(.systemGray5))
-    }
-
-    private var imagePlaceholder: some View {
-        ZStack {
-            Color(.systemGray5)
-            Text(String(displayProduct.name.prefix(1)).uppercased())
-                .font(.system(size: 72, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var bottomActionBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 16) {
-                HStack(spacing: 10) {
-                    if quantity > 0 {
-                        Button {
-                            quantity -= 1
-                        } label: {
-                            Image(systemName: "minus")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 36, height: 36)
-                                .background(ProductDetailPalette.primary)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Disminuir cantidad")
-                    }
-
-                    Text("\(quantity)")
-                        .font(.title3.monospacedDigit().weight(.medium))
-                        .frame(minWidth: 28)
-                        .foregroundStyle(.primary)
-
-                    Button {
-                        quantity += 1
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 36, height: 36)
-                            .background(ProductDetailPalette.primary)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Aumentar cantidad")
-                }
-
-                Button {
-                    onAddToCart(quantity, loadedDetail)
-                    quantity = 0
-                } label: {
-                    VStack(spacing: 4) {
-                        Text("Añadir al carrito")
-                            .font(.subheadline.weight(.semibold))
-                        Text(lineTotalFormatted)
-                            .font(.title3.weight(.bold))
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(ProductDetailPalette.primary)
-                .disabled(!canAddToCart)
-                .opacity(canAddToCart ? 1 : 0.45)
-                .accessibilityLabel("Añadir al carrito, total \(lineTotalFormatted)")
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-        }
-    }
-}
-
-// MARK: - Cart badge (matches shop detail toolbar)
-
-private struct ProductDetailCartIconBadge: View {
-    let count: Int
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "cart.fill")
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(.primary)
-                .frame(width: 32, height: 32)
-            if count > 0 {
-                Text("\(min(count, 99))")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(3)
-                    .background(ProductDetailPalette.primary)
-                    .clipShape(Circle())
-                    .offset(x: 5, y: -3)
-            }
-        }
     }
 }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 private enum ActiveOrdersPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
 }
 
 // MARK: - Home section (0 / 1 / N pedidos)

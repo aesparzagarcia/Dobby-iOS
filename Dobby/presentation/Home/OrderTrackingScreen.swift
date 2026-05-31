@@ -11,14 +11,14 @@ import SwiftUI
 import UIKit
 
 private enum OrderTrackingPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
-    static let titleDark = Color(red: 0x11 / 255, green: 0x18 / 255, blue: 0x27 / 255)
-    static let statusBackground = Color(red: 0.45, green: 0.35, blue: 0.75).opacity(0.14)
+    static let primary = DobbyBrandColor.primary
+    static let titleDark = DobbyBrandColor.dark
+    static let statusBackground = DobbyBrandColor.primaryLightBackground
     static let statusSubtitle = Color(red: 0.42, green: 0.36, blue: 0.54)
     static let muted = Color(red: 0.56, green: 0.56, blue: 0.58)
-    static let totalBarBackground = Color(red: 0.45, green: 0.35, blue: 0.75).opacity(0.12)
+    static let totalBarBackground = DobbyBrandColor.light
     static let iconTileBackground = Color(red: 0.95, green: 0.96, blue: 0.97)
-    static let checkBadgeBackground = Color(red: 0.45, green: 0.35, blue: 0.75).opacity(0.2)
+    static let checkBadgeBackground = DobbyBrandColor.primary.opacity(0.18)
     /// Brand green aligned with Android OrderTrackingScreen / PhoneScreen (#2ECC71).
     static let brandGreen = Color(red: 46 / 255, green: 204 / 255, blue: 113 / 255)
 }
@@ -246,7 +246,7 @@ struct OrderTrackingScreen: View {
             }
             if route.count >= 2 {
                 MapPolyline(coordinates: route)
-                    .stroke(Color.blue, lineWidth: 4)
+                    .stroke(OrderTrackingPalette.primary, lineWidth: 4)
             }
         }
         .id(viewModel.orderId)

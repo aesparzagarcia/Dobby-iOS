@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 private enum FavoritesPalette {
-    static let primary = Color(red: 0.45, green: 0.35, blue: 0.75)
+    static let primary = DobbyBrandColor.primary
 }
 
 private enum FavoritesStackRoute: Hashable {
