@@ -195,94 +195,113 @@ struct ShopDetailProductCard: View {
         let corner = 16 * scale
         let statusColor = isProductAvailable ? DobbyBrandColor.primary : ShopDetailPalette.closedGray
         let footerBg = isProductAvailable ? ShopDetailPalette.footerBg : ShopDetailPalette.unavailableFooterBg
+        let cardShape = RoundedRectangle(cornerRadius: corner, style: .continuous)
 
         VStack(spacing: 0) {
-            Button(action: onTap) {
-                productImage(height: 180 * scale, corner: corner)
-            }
-            .buttonStyle(.plain)
+            productImage(height: 180 * scale, corner: corner)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
 
-            Button(action: onTap) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(product.name)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+            productInfoSection(scale: scale, discountedPrice: discountedPrice)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onTap)
 
-                    Text(product.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
-                        .font(.caption)
-                        .foregroundStyle(ShopDetailPalette.mutedText)
-                        .lineLimit(2)
-                        .padding(.top, 4 * scale)
-
-                    Divider()
-                        .overlay(ShopDetailPalette.cardBorder)
-                        .padding(.vertical, 10 * scale)
-
-                    HStack(alignment: .center) {
-                        HStack(spacing: 8 * scale) {
-                            Text(String(format: "$%.2f", discountedPrice))
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(.primary)
-
-                            if showPromotion {
-                                HStack(spacing: 4) {
-                                    Text("-\(validDiscount)%")
-                                        .font(.caption2.weight(.bold))
-                                    Text(String(format: "$%.2f", product.price))
-                                        .font(.caption2)
-                                        .strikethrough()
-                                }
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(ShopDetailPalette.promoOrange)
-                                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                            }
-                        }
-
-                        Spacer(minLength: 8)
-
-                        HomeRatingDisplay(rate: product.rate, ratingCount: product.ratingCount)
-                    }
-                }
-                .padding(.horizontal, 14 * scale)
-                .padding(.vertical, 12 * scale)
-            }
-            .buttonStyle(.plain)
-
-            HStack(spacing: 0) {
-                HStack(spacing: 6 * scale) {
-                    Image(systemName: "takeoutbag.and.cup.and.straw.fill")
-                        .font(.system(size: 14 * scale))
-                    Text(isProductAvailable ? "Disponible" : "No disponible")
-                        .font(.caption.weight(.medium))
-                }
-                .foregroundStyle(statusColor)
-                .frame(maxWidth: .infinity)
-
-                Rectangle()
-                    .fill(statusColor.opacity(0.25))
-                    .frame(width: 1, height: 18 * scale)
-
-                Group {
-                    if isProductAvailable {
-                        Button(action: onAddTap) {
-                            addRowLabel(scale: scale, color: statusColor)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        addRowLabel(scale: scale, color: statusColor.opacity(0.45))
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.vertical, 10 * scale)
-            .background(footerBg)
+            productFooter(scale: scale, statusColor: statusColor, footerBg: footerBg)
         }
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .clipShape(cardShape)
+        .contentShape(cardShape)
+        .background {
+            cardShape
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+                .allowsHitTesting(false)
+        }
+        .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private func productInfoSection(scale: CGFloat, discountedPrice: Double) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(product.name)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+
+            Text(product.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
+                .font(.caption)
+                .foregroundStyle(ShopDetailPalette.mutedText)
+                .lineLimit(2)
+                .padding(.top, 4 * scale)
+
+            Divider()
+                .overlay(ShopDetailPalette.cardBorder)
+                .padding(.vertical, 10 * scale)
+
+            HStack(alignment: .center) {
+                HStack(spacing: 8 * scale) {
+                    Text(String(format: "$%.2f", discountedPrice))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+
+                    if showPromotion {
+                        HStack(spacing: 4) {
+                            Text("-\(validDiscount)%")
+                                .font(.caption2.weight(.bold))
+                            Text(String(format: "$%.2f", product.price))
+                                .font(.caption2)
+                                .strikethrough()
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(ShopDetailPalette.promoOrange)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                HomeRatingDisplay(rate: product.rate, ratingCount: product.ratingCount)
+            }
+        }
+        .padding(.horizontal, 14 * scale)
+        .padding(.vertical, 12 * scale)
+    }
+
+    @ViewBuilder
+    private func productFooter(scale: CGFloat, statusColor: Color, footerBg: Color) -> some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 6 * scale) {
+                Image(systemName: "takeoutbag.and.cup.and.straw.fill")
+                    .font(.system(size: 14 * scale))
+                Text(isProductAvailable ? "Disponible" : "No disponible")
+                    .font(.caption.weight(.medium))
+            }
+            .foregroundStyle(statusColor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
+
+            Rectangle()
+                .fill(statusColor.opacity(0.25))
+                .frame(width: 1, height: 18 * scale)
+                .allowsHitTesting(false)
+
+            if isProductAvailable {
+                Button(action: onAddTap) {
+                    addRowLabel(scale: scale, color: statusColor)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(ShopDetailAddButtonStyle(tint: statusColor))
+            } else {
+                addRowLabel(scale: scale, color: statusColor.opacity(0.45))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(height: 48)
+        .background(footerBg)
     }
 
     private func addRowLabel(scale: CGFloat, color: Color) -> some View {
@@ -293,7 +312,6 @@ struct ShopDetailProductCard: View {
                 .font(.caption.weight(.semibold))
         }
         .foregroundStyle(color)
-        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -335,5 +353,16 @@ struct ShopDetailProductCard: View {
         Text(String(product.name.prefix(1)).uppercased())
             .font(.title2.weight(.medium))
             .foregroundStyle(.secondary)
+    }
+}
+
+private struct ShopDetailAddButtonStyle: ButtonStyle {
+    let tint: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(tint.opacity(configuration.isPressed ? 0.22 : 0))
+            .opacity(configuration.isPressed ? 0.78 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

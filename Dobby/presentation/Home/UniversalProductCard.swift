@@ -75,7 +75,8 @@ struct UniversalProductCard: View {
     private var imageBlock: some View {
         ZStack {
             Color(.systemGray5)
-            if let url = product.imageUrl.flatMap(URL.init(string:)) {
+            if let urlString = AppConfiguration.fullImageURL(product.imageUrl),
+               let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let img):

@@ -43,6 +43,8 @@ struct MainTabView: View {
     @State private var promotionsHidesFloatingTabBar = false
     /// When `true`, product detail or cart is visible on the Favorites tab — hide the floating tab bar.
     @State private var favoritesHidesFloatingTabBar = false
+    /// When `true`, order history or tracking is visible on the Profile tab — hide the floating tab bar.
+    @State private var profileHidesFloatingTabBar = false
     @State private var homeViewModel: HomeTabViewModel
     @State private var promotionsViewModel: PromotionsTabViewModel
     @State private var favoritesStore: FavoritesStore
@@ -130,7 +132,15 @@ struct MainTabView: View {
                         onCheckoutSuccess: { tab = .home }
                     )
                 case .profile:
-                    ProfileTabScreen(viewModel: profileViewModel, onLogout: onLogout)
+                    ProfileTabScreen(
+                        viewModel: profileViewModel,
+                        favoritesCount: favoritesStore.products.count,
+                        orderRepository: orderRepository,
+                        directionsRepository: directionsRepository,
+                        httpClient: httpClient,
+                        mainTabBarHidden: $profileHidesFloatingTabBar,
+                        onLogout: onLogout
+                    )
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -210,7 +220,7 @@ struct MainTabView: View {
         case .favorites:
             return !favoritesHidesFloatingTabBar
         case .profile:
-            return true
+            return !profileHidesFloatingTabBar
         }
     }
 }

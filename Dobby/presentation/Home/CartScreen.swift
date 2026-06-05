@@ -40,59 +40,57 @@ struct CartScreen: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                    }
 
-                    VStack(alignment: .leading, spacing: 0) {
-                        infoRow(
-                            label: viewModel.addressLabel ?? "Casa",
-                            icon: "mappin.circle.fill",
-                            text: viewModel.address ?? "Añade una dirección de entrega"
-                        )
-                        Divider().padding(.leading, 16)
-                        if let details = viewModel.addressDetails, !details.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
                             infoRow(
-                                label: "Detalles",
-                                icon: "info.circle.fill",
-                                text: details
+                                label: viewModel.addressLabel ?? "Casa",
+                                icon: "mappin.circle.fill",
+                                text: viewModel.address ?? "Añade una dirección de entrega"
                             )
                             Divider().padding(.leading, 16)
+                            if let details = viewModel.addressDetails, !details.isEmpty {
+                                infoRow(
+                                    label: "Detalles",
+                                    icon: "info.circle.fill",
+                                    text: details
+                                )
+                                Divider().padding(.leading, 16)
+                            }
+                            infoRow(
+                                label: "Entrega estimada",
+                                icon: "clock.fill",
+                                text: viewModel.estimatedDeliveryLabel
+                            )
+                            Divider().padding(.leading, 16)
+                            infoRow(
+                                label: "Método de pago",
+                                icon: "creditcard.fill",
+                                text: CartFakeData.paymentMethod
+                            )
                         }
-                        infoRow(
-                            label: "Entrega estimada",
-                            icon: "clock.fill",
-                            text: viewModel.estimatedDeliveryLabel
-                        )
-                        Divider().padding(.leading, 16)
-                        infoRow(
-                            label: "Método de pago",
-                            icon: "creditcard.fill",
-                            text: CartFakeData.paymentMethod
-                        )
-                    }
-                    .padding(.top, 24)
-                    .background(Color.white.opacity(0.5))
-
-                    cartPricingFooter
-                        .padding(.horizontal, 20)
                         .padding(.top, 24)
+                        .background(Color.white.opacity(0.5))
 
-                    Button {
-                        onPay()
-                    } label: {
-                        Text("Pagar \(money(viewModel.grandTotal))")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
+                        cartPricingFooter
+                            .padding(.horizontal, 20)
+                            .padding(.top, 24)
+
+                        Button {
+                            onPay()
+                        } label: {
+                            Text("Pagar \(money(viewModel.grandTotal))")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(CartPalette.primary)
+                        .disabled(!viewModel.hasValidDeliveryAddress)
+                        .opacity(viewModel.hasValidDeliveryAddress ? 1 : 0.45)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 28)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(CartPalette.primary)
-                    .disabled(viewModel.cartLines.isEmpty || !viewModel.hasValidDeliveryAddress)
-                    .opacity(
-                        viewModel.cartLines.isEmpty || !viewModel.hasValidDeliveryAddress ? 0.45 : 1
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 28)
                 }
             }
         }

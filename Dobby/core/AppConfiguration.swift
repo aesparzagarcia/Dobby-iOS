@@ -95,10 +95,18 @@ enum AppConfiguration {
         return result
     }
 
-    /// Origin for relative image paths from the API (matches Android `BASE_URL` without `api/`).
+    /// Origin for relative image paths from the API (matches Android `toDisplayImageUrl`).
+    /// Relative `/uploads/...`, and absolute URLs with a stale host (uses path only).
     static func fullImageURL(_ path: String?) -> String? {
         guard let path, !path.isEmpty else { return nil }
-        if path.hasPrefix("http") { return path }
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pathComponent: String
+        if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
+            guard let url = URL(string: trimmed), !url.path.isEmpty else { return trimmed }
+            pathComponent = url.path
+        } else {
+            pathComponent = trimmed.hasPrefix("/") ? trimmed : "/\(trimmed)"
+        }
         var base = apiBaseURL.absoluteString
         if base.hasSuffix("/api/") {
             base = String(base.dropLast(5))
@@ -106,8 +114,19 @@ enum AppConfiguration {
             base = String(base.dropLast(4))
         }
         base = base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
-        return base + "/" + trimmed
+        let normalizedPath = pathComponent.hasPrefix("/") ? String(pathComponent.dropFirst()) : pathComponent
+        return base + "/" + normalizedPath
+    }
+
+    /// Persist `/uploads/...` only so changing `API_BASE_URL` does not break cached favorites.
+    static func normalizeImageURLForStorage(_ path: String?) -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
+            guard let url = URL(string: trimmed), !url.path.isEmpty else { return trimmed }
+            return url.path
+        }
+        return trimmed
     }
 
     /// Google Places API key (parity with Android `PLACES_API_KEY`). Use `Info.plist` key `PLACES_API_KEY`, or Xcode scheme Environment Variable `PLACES_API_KEY`.

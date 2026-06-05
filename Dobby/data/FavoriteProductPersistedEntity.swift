@@ -44,7 +44,7 @@ final class FavoriteProductPersistedEntity {
             productId: product.productId,
             name: product.name,
             price: product.price,
-            imageUrl: product.imageUrl,
+            imageUrl: AppConfiguration.normalizeImageURLForStorage(product.imageUrl),
             rate: product.rate,
             hasPromotion: product.hasPromotion,
             discount: product.discount,
@@ -57,7 +57,7 @@ final class FavoriteProductPersistedEntity {
             productId: productId,
             name: name,
             price: price,
-            imageUrl: imageUrl,
+            imageUrl: AppConfiguration.fullImageURL(imageUrl),
             rate: rate,
             hasPromotion: hasPromotion,
             discount: discount

@@ -46,6 +46,23 @@ enum HomeShopHours {
         return "Abre hoy a las \(formatHour12(openRaw))"
     }
 
+    /// Home/promotions list items: match shop hours from featured places (ACTIVE shops on `/home`).
+    static func isProductShopAvailableForOrders(
+        shopId: String?,
+        featuredPlaces: [FeaturedPlace]
+    ) -> Bool {
+        let id = shopId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if id.isEmpty { return false }
+        guard let shop = featuredPlaces.first(where: { $0.id == id && !$0.isService }) else {
+            return false
+        }
+        return isShopAvailableForOrders(
+            shopStatus: "ACTIVE",
+            openingHour: shop.openingHour,
+            closingHour: shop.closingHour
+        )
+    }
+
     private static func parseHour(_ raw: String?) -> (hour: Int, minute: Int)? {
         let s = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if s.isEmpty { return nil }

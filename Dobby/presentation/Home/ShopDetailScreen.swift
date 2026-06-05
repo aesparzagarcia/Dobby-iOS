@@ -97,7 +97,7 @@ struct ShopDetailScreen: View {
                         Spacer()
                     } else {
                         ScrollView {
-                            LazyVStack(spacing: 12) {
+                            LazyVStack(spacing: 20) {
                                 ForEach(viewModel.uiState.filteredProducts) { product in
                                     ShopDetailProductCard(
                                         product: product,
@@ -108,6 +108,7 @@ struct ShopDetailScreen: View {
                                             onAddToCart(product)
                                         }
                                     )
+                                    .id(product.id)
                                 }
                             }
                             .padding(.horizontal, 16)

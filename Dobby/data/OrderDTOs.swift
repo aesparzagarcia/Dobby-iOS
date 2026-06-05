@@ -49,6 +49,21 @@ struct ActiveOrderItemDTO: Decodable, Sendable {
     }
 }
 
+struct OrderHistoryDTO: Decodable, Sendable {
+    let id: String
+    let status: String
+    let total: Double
+    let createdAt: String?
+    let shopName: String?
+    let items: [ActiveOrderItemDTO]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, status, total, items
+        case createdAt = "created_at"
+        case shopName = "shop_name"
+    }
+}
+
 struct ActiveOrderDTO: Decodable, Sendable {
     let id: String
     let status: String

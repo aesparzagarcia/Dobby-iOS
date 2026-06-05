@@ -7,6 +7,12 @@
 
 import Foundation
 
+struct ProfileRecentEvent: Sendable, Hashable {
+    let label: String
+    let delta: Int
+    let timeAgo: String
+}
+
 /// Parity with Android `ProfileUiState`.
 struct ProfileUiState: Sendable {
     var isLoading: Bool = true
@@ -16,12 +22,26 @@ struct ProfileUiState: Sendable {
     var phone: String?
     var avatarLetter: String = "?"
     var dobbyXp: Int = 0
+    var levelKey: String = "EXPLORADOR"
     var levelName: String = ""
     var xpInLevelProgress: Float = 0
     var xpToNextLabel: String?
     var orderStreakDays: Int = 0
     var totalOrdersDelivered: Int = 0
-    var recentEvents: [(String, Int)] = []
+    var favoritesCount: Int = 0
+    var recentEvents: [ProfileRecentEvent] = []
+
+    var levelNumber: Int {
+        consumerLevelNumber(levelKey)
+    }
+
+    var badgesUnlockedCount: Int {
+        [
+            totalOrdersDelivered >= 1,
+            totalOrdersDelivered >= 3,
+            orderStreakDays >= 1,
+        ].filter { $0 }.count
+    }
 }
 
 @MainActor
@@ -78,7 +98,11 @@ final class ProfileTabViewModel {
                 }
                 let initial = display.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "?"
                 let events = g.recentEvents.map { e in
-                    (reasonLabelEs(e.reason), e.delta)
+                    ProfileRecentEvent(
+                        label: reasonLabelEs(e.reason),
+                        delta: e.delta,
+                        timeAgo: formatTimeAgoEs(e.createdAt)
+                    )
                 }
                 uiState = ProfileUiState(
                     isLoading: false,
@@ -88,11 +112,13 @@ final class ProfileTabViewModel {
                     phone: g.phone.flatMap { $0.isEmpty ? nil : $0 },
                     avatarLetter: initial,
                     dobbyXp: current,
+                    levelKey: g.levelKey,
                     levelName: g.levelName,
                     xpInLevelProgress: progress,
-                    xpToNextLabel: xpToNext.map { "\($0) XP al siguiente nivel" },
+                    xpToNextLabel: xpToNext.map { "\($0) XP para el siguiente nivel" },
                     orderStreakDays: g.orderStreakDays,
                     totalOrdersDelivered: g.totalOrdersDelivered,
+                    favoritesCount: uiState.favoritesCount,
                     recentEvents: events
                 )
             case .failure(let error):
@@ -102,7 +128,10 @@ final class ProfileTabViewModel {
         }
     }
 
-    /// Local helper (avoids relying on `ProfileRepositoryError` computed members across module/protocol boundaries).
+    func updateFavoritesCount(_ count: Int) {
+        uiState.favoritesCount = count
+    }
+
     private func profileAuthErrorShouldSuppress(_ error: ProfileRepositoryError) -> Bool {
         switch error {
         case .notAuthenticated:
@@ -121,15 +150,38 @@ final class ProfileTabViewModel {
         }
     }
 
-    /// Parity with Android `reasonLabelEs`.
     private func reasonLabelEs(_ reason: String) -> String {
         switch reason {
-        case "purchase": return "Compra"
+        case "purchase": return "Compra completada"
         case "first_order": return "Primer pedido"
         case "peak_hour": return "Hora pico"
         case "order_streak": return "Racha de pedidos"
-        case "rate_delivery": return "Valorar reparto"
+        case "rate_delivery": return "Valoraste tu entrega"
         default: return reason
         }
     }
+}
+
+func consumerLevelNumber(_ levelKey: String) -> Int {
+    let order = ["EXPLORADOR", "FRECUENTE", "FAN", "VIP", "DOBBY_MASTER"]
+    let idx = order.firstIndex(of: levelKey.uppercased()) ?? 0
+    return idx + 1
+}
+
+private func formatTimeAgoEs(_ iso: String) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    var date = formatter.date(from: iso)
+    if date == nil {
+        formatter.formatOptions = [.withInternetDateTime]
+        date = formatter.date(from: iso)
+    }
+    guard let date else { return "Reciente" }
+    let minutes = Int(Date().timeIntervalSince(date) / 60)
+    if minutes < 1 { return "Hace un momento" }
+    if minutes < 60 { return "Hace \(minutes) min" }
+    if minutes < 60 * 24 { return "Hace \(minutes / 60) h" }
+    if minutes < 60 * 24 * 2 { return "Hace 1 día" }
+    if minutes < 60 * 24 * 7 { return "Hace \(minutes / (60 * 24)) días" }
+    return "Hace más de una semana"
 }

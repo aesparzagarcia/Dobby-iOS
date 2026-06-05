@@ -24,6 +24,7 @@ enum OrderRepositoryError: Error, Sendable {
 protocol OrderRepository: Sendable {
     func createOrder(addressId: String, items: [CartLineItem], deliveryFee: Double) async -> Result<Void, OrderRepositoryError>
     func getActiveOrders() async -> Result<[ActiveOrder], OrderRepositoryError>
+    func getOrderHistory() async -> Result<[OrderHistoryItem], OrderRepositoryError>
     func getOrderTracking(orderId: String) async -> Result<OrderTrackingDetail?, OrderRepositoryError>
     func rateDelivery(orderId: String, stars: Int) async -> Result<Void, OrderRepositoryError>
     func rateShop(orderId: String, stars: Int) async -> Result<Void, OrderRepositoryError>
@@ -56,6 +57,33 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))
         }
+    }
+
+    func getOrderHistory() async -> Result<[OrderHistoryItem], OrderRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            return .success([])
+        }
+        let result: Result<[OrderHistoryDTO], HTTPClientError> = await api.get("orders/history", bearerToken: token)
+        switch result {
+        case .success(let list):
+            return .success(list.map(Self.mapOrderHistoryItem))
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
+    private static func mapOrderHistoryItem(_ dto: OrderHistoryDTO) -> OrderHistoryItem {
+        OrderHistoryItem(
+            id: dto.id,
+            status: dto.status,
+            total: dto.total,
+            createdAt: dto.createdAt,
+            shopName: dto.shopName,
+            productLines: (dto.items ?? []).map {
+                ActiveOrderProductLine(name: $0.productName, quantity: $0.quantity)
+            }
+        )
     }
 
     func getActiveOrders() async -> Result<[ActiveOrder], OrderRepositoryError> {

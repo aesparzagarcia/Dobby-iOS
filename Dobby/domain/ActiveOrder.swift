@@ -49,6 +49,43 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
     }
 }
 
+struct OrderHistoryItem: Identifiable, Hashable, Sendable {
+    let id: String
+    let status: String
+    var total: Double
+    var createdAt: String?
+    var shopName: String?
+    var productLines: [ActiveOrderProductLine]
+
+    init(
+        id: String,
+        status: String,
+        total: Double = 0,
+        createdAt: String? = nil,
+        shopName: String? = nil,
+        productLines: [ActiveOrderProductLine] = []
+    ) {
+        self.id = id
+        self.status = status
+        self.total = total
+        self.createdAt = createdAt
+        self.shopName = shopName
+        self.productLines = productLines
+    }
+
+    var productSummary: String {
+        productLines.map { line in
+            line.quantity > 1 ? "\(line.name) ×\(line.quantity)" : line.name
+        }.joined(separator: ", ")
+    }
+
+    var displayTitle: String {
+        if let shopName, !shopName.isEmpty { return shopName }
+        if !productSummary.isEmpty { return productSummary }
+        return "Pedido"
+    }
+}
+
 func orderStatusToTrackingStep(_ status: String) -> Int {
     switch status.uppercased() {
     case "PENDING": return 0

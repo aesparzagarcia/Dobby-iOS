@@ -89,6 +89,8 @@
 		G2G2G2G2G2G2G443893848901 /* ProfileRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */; };
 		G3G3G3G3G3G3G443893848901 /* ProfileTabViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */; };
 		G4G4G4G4G4G4G443893848901 /* ProfileTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */; };
+		OH01OH01OH0144389384901 /* OrderHistoryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */; };
+		OH02OH02OH0244389384901 /* OrderHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */; };
 		H1H1H1H1H1H1H443893848901 /* AccessTokenJwtParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = H1H1H1H1H1H1H443893848902 /* AccessTokenJwtParser.swift */; };
 		J1J1J1J1J1J1J443893848901 /* AuthSessionNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = J1J1J1J1J1J1J443893848902 /* AuthSessionNavigation.swift */; };
 		K1K1K1K1K1K144389384901 /* OrderDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = K1K1K1K1K1K144389384902 /* OrderDTOs.swift */; };
@@ -96,6 +98,7 @@
 		K3K3K3K3K3K344389384901 /* ActiveOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3K3K3K3K3K344389384902 /* ActiveOrder.swift */; };
 		K4K4K4K4K4K444389384901 /* HomeOrderViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */; };
 		K5K5K5K5K5K544389384901 /* OrderTracking.swift in Sources */ = {isa = PBXBuildFile; fileRef = K5K5K5K5K5K544389384902 /* OrderTracking.swift */; };
+		K8K8K8K8K8K844389384901 /* OrderPushNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */; };
 		K6K6K6K6K6K644389384901 /* OrderTrackingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */; };
 		K7K7K7K7K7K744389384901 /* OrderTrackingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */; };
 		DR01DR01DR0144389384901 /* PolylineDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DR01DR01DR0144389384902 /* PolylineDecoder.swift */; };
@@ -204,6 +207,8 @@
 		G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepositories.swift; sourceTree = "<group>"; };
 		G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabViewModel.swift; sourceTree = "<group>"; };
 		G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabScreen.swift; sourceTree = "<group>"; };
+		OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderHistoryScreen.swift; sourceTree = "<group>"; };
+		OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderHistoryViewModel.swift; sourceTree = "<group>"; };
 		H1H1H1H1H1H1H443893848902 /* AccessTokenJwtParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessTokenJwtParser.swift; sourceTree = "<group>"; };
 		J1J1J1J1J1J1J443893848902 /* AuthSessionNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSessionNavigation.swift; sourceTree = "<group>"; };
 		K1K1K1K1K1K144389384902 /* OrderDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderDTOs.swift; sourceTree = "<group>"; };
@@ -211,6 +216,7 @@
 		K3K3K3K3K3K344389384902 /* ActiveOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveOrder.swift; sourceTree = "<group>"; };
 		K4K4K4K4K4K444389384902 /* HomeOrderViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeOrderViews.swift; sourceTree = "<group>"; };
 		K5K5K5K5K5K544389384902 /* OrderTracking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTracking.swift; sourceTree = "<group>"; };
+		K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderPushNavigation.swift; sourceTree = "<group>"; };
 		K6K6K6K6K6K644389384902 /* OrderTrackingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTrackingViewModel.swift; sourceTree = "<group>"; };
 		K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTrackingScreen.swift; sourceTree = "<group>"; };
 		DR01DR01DR0144389384902 /* PolylineDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolylineDecoder.swift; sourceTree = "<group>"; };
@@ -331,6 +337,7 @@
 				1161CEE73B9D443893848921 /* HomeModels.swift */,
 				K3K3K3K3K3K344389384902 /* ActiveOrder.swift */,
 				K5K5K5K5K5K544389384902 /* OrderTracking.swift */,
+				K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */,
 				A8A8A8A88B9D443893848902 /* UserAddress.swift */,
 			);
 			path = domain;
@@ -475,6 +482,8 @@
 			children = (
 				G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */,
 				G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */,
+				OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */,
+				OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */,
 			);
 			path = profile;
 			sourceTree = "<group>";
@@ -715,6 +724,7 @@
 				K3K3K3K3K3K344389384901 /* ActiveOrder.swift in Sources */,
 				K4K4K4K4K4K444389384901 /* HomeOrderViews.swift in Sources */,
 				K5K5K5K5K5K544389384901 /* OrderTracking.swift in Sources */,
+				K8K8K8K8K8K844389384901 /* OrderPushNavigation.swift in Sources */,
 				K6K6K6K6K6K644389384901 /* OrderTrackingViewModel.swift in Sources */,
 				K7K7K7K7K7K744389384901 /* OrderTrackingScreen.swift in Sources */,
 				4A4A4A4A4B9D443893848901 /* HomeTabViewModel.swift in Sources */,
@@ -732,6 +742,8 @@
 				G2G2G2G2G2G2G443893848901 /* ProfileRepositories.swift in Sources */,
 				G3G3G3G3G3G3G443893848901 /* ProfileTabViewModel.swift in Sources */,
 				G4G4G4G4G4G4G443893848901 /* ProfileTabScreen.swift in Sources */,
+				OH01OH01OH0144389384901 /* OrderHistoryScreen.swift in Sources */,
+				OH02OH02OH0244389384901 /* OrderHistoryViewModel.swift in Sources */,
 				D2D2D2D2D2D2D443893848901 /* CartScreen.swift in Sources */,
 				E5E5E5E5E5E5E443893848901 /* ShopDetailScreen.swift in Sources */,
 				SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */,

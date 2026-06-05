@@ -183,9 +183,22 @@ struct HomeTabScreen: View {
     private func openOrderTrackingIfNeeded(_ orderId: String?) {
         guard let orderId = orderId?.trimmingCharacters(in: .whitespacesAndNewlines),
               !orderId.isEmpty else { return }
-        navigationPath.append(.orderTracking(orderId: orderId))
         pendingOpenOrderTrackingId = nil
-        Task { await viewModel.loadActiveOrder() }
+        Task {
+            switch await orderRepository.getOrderTracking(orderId: orderId) {
+            case .success(let detail):
+                guard let detail, OrderPushNavigation.canOpenTracking(status: detail.status) else {
+                    navigationPath.removeAll()
+                    await viewModel.loadActiveOrder()
+                    return
+                }
+                navigationPath.append(.orderTracking(orderId: orderId))
+                await viewModel.loadActiveOrder()
+            case .failure:
+                navigationPath.removeAll()
+                await viewModel.loadActiveOrder()
+            }
+        }
     }
 
     private func scheduleOpenProductPromotionIfNeeded(
@@ -234,7 +247,11 @@ struct HomeTabScreen: View {
                 promotionPush: productId,
                 shopId: resolvedShop,
                 productName: resolvedName,
-                discountPercent: resolvedDiscount
+                discountPercent: resolvedDiscount,
+                isShopAvailableForOrders: HomeShopHours.isProductShopAvailableForOrders(
+                    shopId: resolvedShop,
+                    featuredPlaces: viewModel.featuredPlaces
+                )
             )
             navigationPath.append(.product(route))
         }
@@ -327,10 +344,18 @@ struct HomeTabScreen: View {
         let categoryPlaces = filterPlacesByCategory(viewModel.featuredPlaces, category: quickCategory)
         let filteredPlaces = categoryPlaces.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let categoryProducts: [BestSellerProduct] = {
+            let base: [BestSellerProduct]
             if quickCategory == .offers {
-                return viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
+                base = viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
+            } else {
+                base = viewModel.bestSellerProducts
             }
-            return viewModel.bestSellerProducts
+            return base.filter {
+                HomeShopHours.isProductShopAvailableForOrders(
+                    shopId: $0.shopId,
+                    featuredPlaces: viewModel.featuredPlaces
+                )
+            }
         }()
         let filteredProducts = categoryProducts.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let destacadosPreview = Array(filteredPlaces.prefix(HomeLayoutConstants.destacadosPreviewLimit))
@@ -339,50 +364,53 @@ struct HomeTabScreen: View {
         let servicesOnly = filteredPlaces.filter(\.isService)
 
         return ZStack(alignment: .topTrailing) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let warn = viewModel.warningMessage {
-                        warningBanner(warn)
+            VStack(spacing: 0) {
+                if let warn = viewModel.warningMessage {
+                    warningBanner(warn)
+                }
+
+                HomeAddressSearchHeader(
+                    addressLabel: viewModel.addressLabel,
+                    address: viewModel.address,
+                    searchQuery: $viewModel.searchQuery,
+                    onAddressClick: { showCurrentAddress = true }
+                )
+
+                if viewModel.addressFetchCompleted,
+                   viewModel.needsDeliveryAddressCallout,
+                   viewModel.warningMessage == nil {
+                    DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
+                        .padding(.horizontal, 13)
+                        .padding(.top, 5)
+                        .padding(.bottom, 3)
+                }
+
+                HomeCategoryRow(selected: quickCategory) { category in
+                    quickCategory = category
+                    if category == .offers {
+                        onPromotionsTabClick()
                     }
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 8)
 
-                    HomeAddressSearchHeader(
-                        addressLabel: viewModel.addressLabel,
-                        address: viewModel.address,
-                        searchQuery: $viewModel.searchQuery,
-                        onAddressClick: { showCurrentAddress = true }
-                    )
-
-                    if viewModel.addressFetchCompleted,
-                       viewModel.needsDeliveryAddressCallout,
-                       viewModel.warningMessage == nil {
-                        DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
-                            .padding(.horizontal, 13)
-                            .padding(.top, 5)
-                            .padding(.bottom, 3)
-                    }
-
-                    if !viewModel.activeOrders.isEmpty {
-                        ActiveOrdersHomeSectionView(
-                            activeOrders: viewModel.activeOrders,
-                            onTrackOrder: { orderId in
-                                navigationPath.append(.orderTracking(orderId: orderId))
-                            },
-                            onMultipleOrdersTap: {
-                                navigationPath.append(.activeOrders)
-                            }
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                    }
-
-                    HomeCategoryRow(selected: quickCategory) { category in
-                        quickCategory = category
-                        if category == .offers {
-                            onPromotionsTabClick()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if !viewModel.activeOrders.isEmpty {
+                            ActiveOrdersHomeSectionView(
+                                activeOrders: viewModel.activeOrders,
+                                onTrackOrder: { orderId in
+                                    navigationPath.append(.orderTracking(orderId: orderId))
+                                },
+                                onMultipleOrdersTap: {
+                                    navigationPath.append(.activeOrders)
+                                }
+                            )
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
                         }
-                    }
 
-                    if !destacadosPreview.isEmpty {
+                        if !destacadosPreview.isEmpty {
                         HomeSectionHeader(title: "Destacados")
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
@@ -409,7 +437,12 @@ struct HomeTabScreen: View {
                             HStack(spacing: 12) {
                                 ForEach(bestSellersPreview) { product in
                                     Button {
-                                        navigationPath.append(.product(ProductDetailRoute(bestSeller: product)))
+                                        navigationPath.append(
+                                            .product(ProductDetailRoute(
+                                                bestSeller: product,
+                                                featuredPlaces: viewModel.featuredPlaces
+                                            ))
+                                        )
                                     } label: {
                                         UniversalProductCard(product: product, width: productWidth)
                                     }
@@ -475,11 +508,15 @@ struct HomeTabScreen: View {
                     }
 
                     Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .refreshable {
+                    await viewModel.refresh()
                 }
             }
-            .refreshable {
-                await viewModel.refresh()
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.white)
 
             Button {
                 navigationPath.append(.cart)

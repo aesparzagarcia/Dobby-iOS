@@ -141,7 +141,7 @@ struct ProductDetailRoute: Hashable, Sendable {
     let ratingCount: Int
     let isShopAvailableForOrders: Bool
 
-    init(bestSeller: BestSellerProduct) {
+    init(bestSeller: BestSellerProduct, featuredPlaces: [FeaturedPlace] = []) {
         id = bestSeller.id
         name = bestSeller.name
         description = nil
@@ -154,7 +154,10 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLongitude = nil
         shopId = bestSeller.shopId
         ratingCount = 0
-        isShopAvailableForOrders = true
+        isShopAvailableForOrders = HomeShopHours.isProductShopAvailableForOrders(
+            shopId: bestSeller.shopId,
+            featuredPlaces: featuredPlaces
+        )
     }
 
     init(
@@ -199,7 +202,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         promotionPush productId: String,
         shopId: String?,
         productName: String? = nil,
-        discountPercent: Int? = nil
+        discountPercent: Int? = nil,
+        isShopAvailableForOrders: Bool = true
     ) {
         id = productId
         let trimmedName = productName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -215,7 +219,7 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLongitude = nil
         self.shopId = shopId
         ratingCount = 0
-        isShopAvailableForOrders = true
+        self.isShopAvailableForOrders = isShopAvailableForOrders
     }
 
     /// Route from push before API returns full product (price still loads from server).

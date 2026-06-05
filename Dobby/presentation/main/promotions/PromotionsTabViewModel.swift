@@ -10,6 +10,7 @@ import Foundation
 /// Parity with Android `PromotionsUiState`.
 struct PromotionsUiState: Sendable {
     var products: [BestSellerProduct] = []
+    var featuredPlaces: [FeaturedPlace] = []
     var isLoading: Bool = false
     var errorMessage: String?
 }
@@ -40,11 +41,26 @@ final class PromotionsTabViewModel {
     private func fetchPromotions() async {
         uiState.isLoading = true
         uiState.errorMessage = nil
+        let featuredPlaces: [FeaturedPlace]
+        switch await placesRepository.getHome() {
+        case .success(let data):
+            featuredPlaces = data.featuredPlaces
+        case .failure:
+            featuredPlaces = []
+        }
         switch await placesRepository.getPromotions() {
         case .success(let list):
-            let promotions = list.filter { $0.hasPromotion && $0.discount > 0 }
+            let promotions = list
+                .filter { $0.hasPromotion && $0.discount > 0 }
+                .filter {
+                    HomeShopHours.isProductShopAvailableForOrders(
+                        shopId: $0.shopId,
+                        featuredPlaces: featuredPlaces
+                    )
+                }
             uiState = PromotionsUiState(
                 products: promotions,
+                featuredPlaces: featuredPlaces,
                 isLoading: false,
                 errorMessage: nil
             )

@@ -32,7 +32,7 @@ final class FavoritesStore {
             productId: route.id,
             name: route.name,
             price: route.price,
-            imageUrl: route.imageUrl,
+            imageUrl: AppConfiguration.normalizeImageURLForStorage(route.imageUrl),
             rate: route.rate,
             hasPromotion: route.hasPromotion,
             discount: route.discount

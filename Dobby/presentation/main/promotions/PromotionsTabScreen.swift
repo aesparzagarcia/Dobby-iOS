@@ -142,7 +142,12 @@ struct PromotionsTabScreen: View {
                 ) {
                     ForEach(products) { product in
                         Button {
-                            navigationPath.append(.product(ProductDetailRoute(bestSeller: product)))
+                            navigationPath.append(
+                                .product(ProductDetailRoute(
+                                    bestSeller: product,
+                                    featuredPlaces: promotionsViewModel.uiState.featuredPlaces
+                                ))
+                            )
                         } label: {
                             UniversalProductCard(product: product, width: cardW)
                         }
