@@ -16,7 +16,7 @@ struct RootView: View {
         Group {
             switch route {
             case .splash:
-                SplashView(viewModel: SplashViewModel(authRepository: deps.authRepository)) { openHome in
+                SplashView(viewModel: SplashViewModel(deps: deps)) { openHome in
                     route = openHome ? .home : .phone
                 }
             case .phone:

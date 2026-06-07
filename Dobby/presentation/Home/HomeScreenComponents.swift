@@ -117,6 +117,8 @@ struct HomeAddressSearchHeader: View {
 struct HomeCategoryRow: View {
     let selected: HomeQuickCategory
     let onCategorySelected: (HomeQuickCategory) -> Void
+    var includeOffers: Bool = true
+    var scale: CGFloat = HomeLayoutConstants.categoryRowScale
 
     private struct Item {
         let category: HomeQuickCategory
@@ -125,16 +127,21 @@ struct HomeCategoryRow: View {
         let background: Color
     }
 
-    private let items: [Item] = [
-        Item(category: .restaurants, label: "Restaurantes", systemImage: "fork.knife", background: Color(red: 0.93, green: 0.95, blue: 1)),
-        Item(category: .shops, label: "Tiendas", systemImage: "bag.fill", background: Color(red: 0.93, green: 0.99, blue: 0.96)),
-        Item(category: .services, label: "Servicios", systemImage: "wrench.and.screwdriver.fill", background: Color(red: 0.94, green: 0.97, blue: 1)),
-        Item(category: .offers, label: "Ofertas", systemImage: "tag.fill", background: Color(red: 1, green: 0.97, blue: 0.93)),
-        Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill", background: Color(red: 0.96, green: 0.95, blue: 1)),
-    ]
+    private var items: [Item] {
+        var list: [Item] = [
+            Item(category: .restaurants, label: "Restaurantes", systemImage: "fork.knife", background: Color(red: 0.93, green: 0.95, blue: 1)),
+            Item(category: .shops, label: "Tiendas", systemImage: "bag.fill", background: Color(red: 0.93, green: 0.99, blue: 0.96)),
+            Item(category: .services, label: "Servicios", systemImage: "wrench.and.screwdriver.fill", background: Color(red: 0.94, green: 0.97, blue: 1)),
+        ]
+        if includeOffers {
+            list.append(Item(category: .offers, label: "Ofertas", systemImage: "tag.fill", background: Color(red: 1, green: 0.97, blue: 0.93)))
+        }
+        list.append(Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill", background: Color(red: 0.96, green: 0.95, blue: 1)))
+        return list
+    }
 
     var body: some View {
-        let s = HomeLayoutConstants.categoryRowScale
+        let s = scale
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12 * s) {
                 ForEach(items, id: \.label) { item in
@@ -220,10 +227,11 @@ struct HomeFeaturedPlaceCard: View {
     let place: FeaturedPlace
     let width: CGFloat
     let onTap: () -> Void
+    var cardScale: CGFloat = HomeLayoutConstants.featuredPlaceCardScale
 
-    private let scale = HomeLayoutConstants.featuredPlaceCardScale
-    private var corner: CGFloat { 12 * scale }
-    private var imageHeight: CGFloat { width / (1.85 / scale) }
+    private var scale: CGFloat { cardScale }
+    private var corner: CGFloat { 16 * scale }
+    private var imageHeight: CGFloat { width / (1.65 / max(scale, 0.8)) }
 
     var body: some View {
         let isOpen = HomeShopHours.isPlaceOpenNow(openingHour: place.openingHour, closingHour: place.closingHour)
@@ -234,7 +242,12 @@ struct HomeFeaturedPlaceCard: View {
                 ZStack(alignment: .topLeading) {
                     featuredImage
                         .frame(width: width, height: imageHeight)
-                        .clipped()
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: corner,
+                                topTrailingRadius: corner
+                            )
+                        )
                     if let isOpen {
                         Text(isOpen ? "Abierto" : "Cerrado")
                             .font(.caption2.weight(.semibold))
@@ -248,42 +261,42 @@ struct HomeFeaturedPlaceCard: View {
                 }
 
                 Text(place.name)
-                    .font(.caption.weight(.bold))
+                    .font(.subheadline.weight(.bold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .padding(.horizontal, 8 * scale)
-                    .padding(.top, 5 * scale)
+                    .padding(.horizontal, 10 * scale)
+                    .padding(.top, 6 * scale)
 
                 Text(placeSubtitle(place))
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(HomeScreenPalette.mutedText)
                     .lineLimit(1)
-                    .padding(.horizontal, 8 * scale)
+                    .padding(.horizontal, 10 * scale)
 
                 HStack(spacing: 6 * scale) {
                     HomeRatingDisplay(rate: place.rate)
                     if let hoursLabel {
-                        HStack(spacing: 3 * scale) {
+                        HStack(spacing: 4 * scale) {
                             Image(systemName: "clock")
-                                .font(.system(size: 10))
+                                .font(.system(size: 11))
                                 .foregroundStyle(HomeScreenPalette.mutedText)
                             Text(hoursLabel)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(HomeScreenPalette.mutedText)
                                 .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.horizontal, 8 * scale)
-                .padding(.vertical, 3 * scale)
-                .padding(.bottom, 6 * scale)
+                .padding(.horizontal, 10 * scale)
+                .padding(.vertical, 4 * scale)
+                .padding(.bottom, 8 * scale)
             }
             .frame(width: width)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
-            .shadow(color: HomeScreenPalette.cardShadow, radius: 4, x: 0, y: 2)
-            .padding(.vertical, 6)
+            .shadow(color: HomeScreenPalette.cardShadow, radius: cardScale >= 1 ? 3 : 4, x: 0, y: 2)
+            .padding(.vertical, cardScale >= 1 ? 0 : 6)
         }
         .buttonStyle(.plain)
     }

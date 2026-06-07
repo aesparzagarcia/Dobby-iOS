@@ -60,6 +60,9 @@
 		D38A27B5D5D54569A8AB54A9 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77756B392EDB4F0C9287280E /* SplashView.swift */; };
 		D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */; };
 		FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */; };
+		DS01DS01DS0144389384901 /* DobbySplashLottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DS02DS02DS0244389384902 /* DobbySplashLottieView.swift */; };
+		MS01MS01MS0144389384901 /* MarketplaceSkeletonLottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MS02MS02MS0244389384902 /* MarketplaceSkeletonLottieView.swift */; };
+		CL01CL01CL0144389384901 /* CouponsLottiePreviewScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = CL02CL02CL0244389384902 /* CouponsLottiePreviewScreen.swift */; };
 		D5D5D5D5D5D5D443893848901 /* PromotionsTabViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D5D5D5D5D5D443893848902 /* PromotionsTabViewModel.swift */; };
 		D6D6D6D6D6D6D443893848901 /* PromotionsTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D6D6D6D6D6D443893848902 /* PromotionsTabScreen.swift */; };
 		D705109EA661463D938B10B1 /* SplashViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B011F5514844F68B2AC6536 /* SplashViewModel.swift */; };
@@ -68,11 +71,23 @@
 		E3E3E3E3E3E3E443893848901 /* GooglePlacesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E3E3E3E3E3E443893848902 /* GooglePlacesClient.swift */; };
 		E4E4E4E4E4E4E443893848901 /* PlacesAutocompleteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4E4E4E4E4E4E443893848902 /* PlacesAutocompleteRepository.swift */; };
 		E5E5E5E5E5E5E443893848901 /* ShopDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E5E5E5E5E5E443893848902 /* ShopDetailScreen.swift */; };
+		BS01BS01BS0144389384901 /* BestSellersScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BS01BS01BS0144389384902 /* BestSellersScreen.swift */; };
+		BS02BS02BS0244389384901 /* BestSellersViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BS02BS02BS0244389384902 /* BestSellersViewModel.swift */; };
+		FP01FP01FP0144389384901 /* FeaturedPlacesScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FP01FP01FP0144389384902 /* FeaturedPlacesScreen.swift */; };
+		FP02FP02FP0244389384901 /* FeaturedPlacesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FP02FP02FP0244389384902 /* FeaturedPlacesViewModel.swift */; };
+		FP03FP03FP0344389384901 /* FeaturedPlacesComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */; };
+		HB01HB01HB0144389384901 /* HomeBootstrapSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = HB02HB02HB0244389384902 /* HomeBootstrapSnapshot.swift */; };
+		HB03HB03HB0344389384901 /* HomeBootstrapCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = HB04HB04HB0444389384902 /* HomeBootstrapCache.swift */; };
+		HB05HB05HB0544389384901 /* HomeBootstrapLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = HB06HB06HB0644389384902 /* HomeBootstrapLoader.swift */; };
+		CSS1CSS1CSS144389384901 /* CartShopSwitchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */; };
+		SP01SP01SP0144389384901 /* dobby_splash.json in Resources */ = {isa = PBXBuildFile; fileRef = SP02SP02SP0244389384902 /* dobby_splash.json */; };
+		SK01SK01SK0144389384901 /* marketplace_skeleton_loader.json in Resources */ = {isa = PBXBuildFile; fileRef = SK02SK02SK0244389384902 /* marketplace_skeleton_loader.json */; };
 		SDS1SDS1SDS144389384901 /* ServiceDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */; };
 		SDS2SDS2SDS244389384901 /* ServiceDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */; };
 		AD01AD01AD0144389384901 /* AdDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD01AD01AD0144389384902 /* AdDetailScreen.swift */; };
 		AD02AD02AD0244389384901 /* AdDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD02AD02AD0244389384902 /* AdDetailViewModel.swift */; };
 		E6823BC72FAD4F99001E475E /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000100000000000A /* FirebaseCore */; };
+		LT03LT03LT0344389384901 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = LT02LT02LT0244389384902 /* Lottie */; };
 		E6823BC82FAD4F99001E475E /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000200000000000A /* FirebaseMessaging */; };
 		4CF8A200000C00000000000A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000300000000000A /* FirebaseFirestore */; };
 		4CF8A200000D00000000000A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000400000000000A /* FirebaseAuth */; };
@@ -173,6 +188,9 @@
 		D2D2D2D2D2D2D443893848902 /* CartScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartScreen.swift; sourceTree = "<group>"; };
 		D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalProductCard.swift; sourceTree = "<group>"; };
 		FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingScreenHeader.swift; sourceTree = "<group>"; };
+		DS02DS02DS0244389384902 /* DobbySplashLottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbySplashLottieView.swift; sourceTree = "<group>"; };
+		MS02MS02MS0244389384902 /* MarketplaceSkeletonLottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketplaceSkeletonLottieView.swift; sourceTree = "<group>"; };
+		CL02CL02CL0244389384902 /* CouponsLottiePreviewScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CouponsLottiePreviewScreen.swift; sourceTree = "<group>"; };
 		D5D5D5D5D5D5D443893848902 /* PromotionsTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabViewModel.swift; sourceTree = "<group>"; };
 		D6D6D6D6D6D6D443893848902 /* PromotionsTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionsTabScreen.swift; sourceTree = "<group>"; };
 		DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -187,6 +205,17 @@
 		E4E4E4E4E4E4E443893848902 /* PlacesAutocompleteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesAutocompleteRepository.swift; sourceTree = "<group>"; };
 		E50810FB3FDE4E649C683C80 /* DobbyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyApp.swift; sourceTree = "<group>"; };
 		E5E5E5E5E5E5E443893848902 /* ShopDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopDetailScreen.swift; sourceTree = "<group>"; };
+		BS01BS01BS0144389384902 /* BestSellersScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestSellersScreen.swift; sourceTree = "<group>"; };
+		BS02BS02BS0244389384902 /* BestSellersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BestSellersViewModel.swift; sourceTree = "<group>"; };
+		FP01FP01FP0144389384902 /* FeaturedPlacesScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedPlacesScreen.swift; sourceTree = "<group>"; };
+		FP02FP02FP0244389384902 /* FeaturedPlacesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedPlacesViewModel.swift; sourceTree = "<group>"; };
+		FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedPlacesComponents.swift; sourceTree = "<group>"; };
+		HB02HB02HB0244389384902 /* HomeBootstrapSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBootstrapSnapshot.swift; sourceTree = "<group>"; };
+		HB04HB04HB0444389384902 /* HomeBootstrapCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBootstrapCache.swift; sourceTree = "<group>"; };
+		HB06HB06HB0644389384902 /* HomeBootstrapLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBootstrapLoader.swift; sourceTree = "<group>"; };
+		CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartShopSwitchPolicy.swift; sourceTree = "<group>"; };
+		SP02SP02SP0244389384902 /* dobby_splash.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dobby_splash.json; sourceTree = "<group>"; };
+		SK02SK02SK0244389384902 /* marketplace_skeleton_loader.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = marketplace_skeleton_loader.json; sourceTree = "<group>"; };
 		SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopDetailComponents.swift; sourceTree = "<group>"; };
 		SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailScreen.swift; sourceTree = "<group>"; };
 		SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailViewModel.swift; sourceTree = "<group>"; };
@@ -247,6 +276,7 @@
 				4CF8A200000C00000000000A /* FirebaseFirestore in Frameworks */,
 				4CF8A200000D00000000000A /* FirebaseAuth in Frameworks */,
 				E6823BC72FAD4F99001E475E /* FirebaseCore in Frameworks */,
+				LT03LT03LT0344389384901 /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,6 +369,10 @@
 				K5K5K5K5K5K544389384902 /* OrderTracking.swift */,
 				K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */,
 				A8A8A8A88B9D443893848902 /* UserAddress.swift */,
+				HB02HB02HB0244389384902 /* HomeBootstrapSnapshot.swift */,
+				HB04HB04HB0444389384902 /* HomeBootstrapCache.swift */,
+				HB06HB06HB0644389384902 /* HomeBootstrapLoader.swift */,
+				CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */,
 			);
 			path = domain;
 			sourceTree = "<group>";
@@ -360,6 +394,8 @@
 			isa = PBXGroup;
 			children = (
 				FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */,
+				DS02DS02DS0244389384902 /* DobbySplashLottieView.swift */,
+				MS02MS02MS0244389384902 /* MarketplaceSkeletonLottieView.swift */,
 			);
 			path = components;
 			sourceTree = "<group>";
@@ -410,6 +446,11 @@
 				D2D2D2D2D2D2D443893848902 /* CartScreen.swift */,
 				C7C7C7C7C7C7C443893848902 /* ProductDetailScreen.swift */,
 				E5E5E5E5E5E5E443893848902 /* ShopDetailScreen.swift */,
+				BS01BS01BS0144389384902 /* BestSellersScreen.swift */,
+				BS02BS02BS0244389384902 /* BestSellersViewModel.swift */,
+				FP01FP01FP0144389384902 /* FeaturedPlacesScreen.swift */,
+				FP02FP02FP0244389384902 /* FeaturedPlacesViewModel.swift */,
+				FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */,
 				SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */,
 				SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */,
 				SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */,
@@ -482,6 +523,7 @@
 			children = (
 				G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */,
 				G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */,
+				CL02CL02CL0244389384902 /* CouponsLottiePreviewScreen.swift */,
 				OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */,
 				OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */,
 			);
@@ -521,6 +563,8 @@
 				444444444444444444444444 /* Info.plist */,
 				4CF8A100000400000000000A /* GoogleService-Info.plist */,
 				4CF8A100000500000000000A /* service_area.kml */,
+				SP02SP02SP0244389384902 /* dobby_splash.json */,
+				SK02SK02SK0244389384902 /* marketplace_skeleton_loader.json */,
 			);
 			path = Dobby;
 			sourceTree = "<group>";
@@ -546,6 +590,7 @@
 				4CF8A400000200000000000A /* FirebaseMessaging */,
 				4CF8A400000300000000000A /* FirebaseFirestore */,
 				4CF8A400000400000000000A /* FirebaseAuth */,
+				LT02LT02LT0244389384902 /* Lottie */,
 			);
 			productName = Dobby;
 			productReference = E63673892F7F0C7300140ABA /* Dobby.app */;
@@ -631,6 +676,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				LT01LT01LT0144389384901 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E636738A2F7F0C7300140ABA /* Products */;
@@ -652,6 +698,8 @@
 				333333333333333333333333 /* Assets.xcassets in Resources */,
 				4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */,
 				4CF8A200000500000000000A /* service_area.kml in Resources */,
+				SP01SP01SP0144389384901 /* dobby_splash.json in Resources */,
+				SK01SK01SK0144389384901 /* marketplace_skeleton_loader.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -731,6 +779,8 @@
 				5A5A5A5A5B9D443893848901 /* HomeTabScreen.swift in Sources */,
 				D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */,
 				FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */,
+				DS01DS01DS0144389384901 /* DobbySplashLottieView.swift in Sources */,
+				MS01MS01MS0144389384901 /* MarketplaceSkeletonLottieView.swift in Sources */,
 				C7C7C7C7C7C7C443893848901 /* ProductDetailScreen.swift in Sources */,
 				D5D5D5D5D5D5D443893848901 /* PromotionsTabViewModel.swift in Sources */,
 				D6D6D6D6D6D6D443893848901 /* PromotionsTabScreen.swift in Sources */,
@@ -742,10 +792,16 @@
 				G2G2G2G2G2G2G443893848901 /* ProfileRepositories.swift in Sources */,
 				G3G3G3G3G3G3G443893848901 /* ProfileTabViewModel.swift in Sources */,
 				G4G4G4G4G4G4G443893848901 /* ProfileTabScreen.swift in Sources */,
+				CL01CL01CL0144389384901 /* CouponsLottiePreviewScreen.swift in Sources */,
 				OH01OH01OH0144389384901 /* OrderHistoryScreen.swift in Sources */,
 				OH02OH02OH0244389384901 /* OrderHistoryViewModel.swift in Sources */,
 				D2D2D2D2D2D2D443893848901 /* CartScreen.swift in Sources */,
 				E5E5E5E5E5E5E443893848901 /* ShopDetailScreen.swift in Sources */,
+				BS01BS01BS0144389384901 /* BestSellersScreen.swift in Sources */,
+				BS02BS02BS0244389384901 /* BestSellersViewModel.swift in Sources */,
+				FP01FP01FP0144389384901 /* FeaturedPlacesScreen.swift in Sources */,
+				FP02FP02FP0244389384901 /* FeaturedPlacesViewModel.swift in Sources */,
+				FP03FP03FP0344389384901 /* FeaturedPlacesComponents.swift in Sources */,
 				SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */,
 				SDS1SDS1SDS144389384901 /* ServiceDetailScreen.swift in Sources */,
 				SDS2SDS2SDS244389384901 /* ServiceDetailViewModel.swift in Sources */,
@@ -763,6 +819,10 @@
 				E2E2E2E2E2E2E443893848901 /* PlacesAutocompleteDTOs.swift in Sources */,
 				E3E3E3E3E3E3E443893848901 /* GooglePlacesClient.swift in Sources */,
 				E4E4E4E4E4E4E443893848901 /* PlacesAutocompleteRepository.swift in Sources */,
+				HB01HB01HB0144389384901 /* HomeBootstrapSnapshot.swift in Sources */,
+				HB03HB03HB0344389384901 /* HomeBootstrapCache.swift in Sources */,
+				HB05HB05HB0544389384901 /* HomeBootstrapLoader.swift in Sources */,
+				CSS1CSS1CSS144389384901 /* CartShopSwitchPolicy.swift in Sources */,
 				D38A27B5D5D54569A8AB54A9 /* SplashView.swift in Sources */,
 				D705109EA661463D938B10B1 /* SplashViewModel.swift in Sources */,
 				757C93BB846A4502BFEC4453 /* AppRoute.swift in Sources */,
@@ -1107,6 +1167,14 @@
 				minimumVersion = 12.13.0;
 			};
 		};
+		LT01LT01LT0144389384901 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1129,6 +1197,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAuth;
+		};
+		LT02LT02LT0244389384902 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = LT01LT01LT0144389384901 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

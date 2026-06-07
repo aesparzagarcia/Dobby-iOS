@@ -42,6 +42,7 @@ private struct ProfileBadge: Identifiable {
 private enum ProfileStackRoute: Hashable {
     case orderHistory
     case orderTracking(orderId: String)
+    case couponsLottiePreview
 }
 
 struct ProfileTabScreen: View {
@@ -78,6 +79,8 @@ struct ProfileTabScreen: View {
                             onBack: { popNavigation() },
                             onFinish: { popNavigation() }
                         )
+                    case .couponsLottiePreview:
+                        CouponsLottiePreviewScreen(onBack: { popNavigation() })
                     }
                 }
         }
@@ -241,7 +244,12 @@ struct ProfileTabScreen: View {
             whiteCard {
                 menuRow(title: "Métodos de pago", systemImage: "creditcard.fill")
                 menuDivider
-                menuRow(title: "Cupones", systemImage: "ticket.fill")
+                Button {
+                    navigationPath.append(.couponsLottiePreview)
+                } label: {
+                    menuRow(title: "Cupones", systemImage: "ticket.fill")
+                }
+                .buttonStyle(.plain)
                 menuDivider
                 menuRow(title: "Notificaciones", systemImage: "bell.fill")
                 menuDivider

@@ -189,6 +189,15 @@ final class HomeTabViewModel {
         cartLocalStore.persist(lines: cartLines)
     }
 
+    func clearCart() {
+        cartLines = []
+        cartLocalStore.persist(lines: cartLines)
+    }
+
+    func needsShopSwitchConfirmation(for targetShopId: String) -> Bool {
+        CartShopSwitchPolicy.needsConfirmation(lines: cartLines, targetShopId: targetShopId)
+    }
+
     init(
         placesRepository: PlacesRepository,
         adsRepository: AdsRepository,
@@ -278,6 +287,10 @@ final class HomeTabViewModel {
     }
 
     func loadInitial() {
+        if let snapshot = HomeBootstrapCache.shared.consume() {
+            applyBootstrap(snapshot)
+            return
+        }
         isLoading = true
         errorMessage = nil
         warningMessage = nil
@@ -300,6 +313,26 @@ final class HomeTabViewModel {
             await loadAds()
             await loadActiveOrder()
         }
+    }
+
+    private func applyBootstrap(_ snapshot: HomeBootstrapSnapshot) {
+        featuredPlaces = snapshot.featuredPlaces
+        bestSellerProducts = snapshot.bestSellerProducts
+        ads = snapshot.ads
+        activeOrders = snapshot.activeOrders
+        addressLabel = snapshot.addressLabel
+        address = snapshot.address
+        addressDetails = snapshot.addressDetails
+        defaultAddressId = snapshot.defaultAddressId
+        deliveryLatitude = snapshot.deliveryLatitude
+        deliveryLongitude = snapshot.deliveryLongitude
+        addressFetchCompleted = snapshot.addressFetchCompleted
+        needsDeliveryAddressCallout = snapshot.needsDeliveryAddressCallout
+        warningMessage = snapshot.warningMessage
+        errorMessage = snapshot.errorMessage
+        deliveryPricingSettings = snapshot.deliveryPricingSettings
+        shopCoordsByShopId = snapshot.shopCoordsByShopId
+        isLoading = false
     }
 
     func loadHome() {
@@ -381,12 +414,20 @@ final class HomeTabViewModel {
         }
     }
 
+    func recordAdView(adId: String) {
+        Task { await adsRepository.recordAdView(id: adId) }
+    }
+
+    func recordAdClick(adId: String) {
+        Task { await adsRepository.recordAdClick(id: adId) }
+    }
+
     func refresh() async {
         isRefreshing = true
         defer { isRefreshing = false }
         errorMessage = nil
 
-        // Pedidos y direcciones: detached para que no se cancelen al soltar el pull-to-refresh.
+        // Pedidos, direcciones y anuncios: detached para que no se cancelen al soltar el pull-to-refresh.
         Task.detached { @MainActor [weak self] in
             await self?.loadActiveOrder(clearOnFailure: false)
         }
@@ -396,11 +437,13 @@ final class HomeTabViewModel {
         Task.detached { @MainActor [weak self] in
             await self?.refreshHome()
         }
+        Task.detached { @MainActor [weak self] in
+            await self?.loadAds(clearOnFailure: false)
+        }
 
-        async let adsTask: Void = loadAds(clearOnFailure: false)
         async let shopCoordsTask: Void = refreshShopCoords()
         async let pricingTask: Void = refreshDeliveryPricing()
-        _ = await (adsTask, shopCoordsTask, pricingTask)
+        _ = await (shopCoordsTask, pricingTask)
     }
 
     private func refreshShopCoords() async {

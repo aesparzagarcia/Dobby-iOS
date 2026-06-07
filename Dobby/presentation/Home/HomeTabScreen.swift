@@ -13,6 +13,8 @@ private enum HomePalette {
 /// Single navigation stack so Back always pops one level (shop → product → cart), never jumps to home.
 private enum HomeStackRoute: Hashable {
     case shop(ShopDetailRoute)
+    case featuredPlaces
+    case bestSellers
     case product(ProductDetailRoute)
     case service(serviceId: String)
     case ad(adId: String)
@@ -48,6 +50,8 @@ struct HomeTabScreen: View {
     @State private var navigationPath: [HomeStackRoute] = []
     @State private var quickCategory: HomeQuickCategory = .all
     @State private var productPromotionDeepLinkTask: Task<Void, Never>?
+    @State private var showShopSwitchAlert = false
+    @State private var pendingShopPlace: FeaturedPlace?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -80,6 +84,48 @@ struct HomeTabScreen: View {
                                     pickupLatitude: r.pickupLatitude,
                                     pickupLongitude: r.pickupLongitude,
                                     shopId: r.shopId
+                                )
+                            },
+                            onCartClick: {
+                                navigationPath.append(.cart)
+                            }
+                        )
+                    case .featuredPlaces:
+                        FeaturedPlacesScreen(
+                            placesRepository: placesRepository,
+                            httpClient: httpClient,
+                            onBack: { popNavigation() },
+                            onPlaceTap: { onFeaturedPlaceTap($0) }
+                        )
+                    case .bestSellers:
+                        BestSellersScreen(
+                            placesRepository: placesRepository,
+                            httpClient: httpClient,
+                            cartItemCount: viewModel.cartItemCount,
+                            onBack: { popNavigation() },
+                            onProductTap: { product, isAvailable in
+                                let place = viewModel.featuredPlaces.first {
+                                    $0.id == product.shopId && !$0.isService
+                                }
+                                navigationPath.append(
+                                    .product(
+                                        ProductDetailRoute(
+                                            shopProduct: product,
+                                            pickupLatitude: place?.latitude,
+                                            pickupLongitude: place?.longitude,
+                                            isShopAvailableForOrders: isAvailable
+                                        )
+                                    )
+                                )
+                            },
+                            onAddToCart: { product in
+                                let shopId = product.shopId ?? ""
+                                let place = viewModel.featuredPlaces.first { $0.id == shopId && !$0.isService }
+                                viewModel.addShopProductToCart(
+                                    product,
+                                    pickupLatitude: place?.latitude,
+                                    pickupLongitude: place?.longitude,
+                                    shopId: shopId
                                 )
                             },
                             onCartClick: {
@@ -316,13 +362,23 @@ struct HomeTabScreen: View {
                 )
             }
         }
+        .alert("¿Cambiar de tienda?", isPresented: $showShopSwitchAlert) {
+            Button("Cancelar", role: .cancel) {
+                pendingShopPlace = nil
+            }
+            Button("Continuar", role: .destructive) {
+                viewModel.clearCart()
+                if let place = pendingShopPlace {
+                    navigateToShop(place)
+                }
+                pendingShopPlace = nil
+            }
+        } message: {
+            Text("Si entras a otra tienda perderás los productos de tu carrito actual.")
+        }
     }
 
-    private func onFeaturedPlaceTap(_ place: FeaturedPlace) {
-        if place.isService {
-            navigationPath.append(.service(serviceId: place.id))
-            return
-        }
+    private func navigateToShop(_ place: FeaturedPlace) {
         navigationPath.append(
             .shop(
                 ShopDetailRoute(
@@ -335,6 +391,19 @@ struct HomeTabScreen: View {
         )
     }
 
+    private func onFeaturedPlaceTap(_ place: FeaturedPlace) {
+        if place.isService {
+            navigationPath.append(.service(serviceId: place.id))
+            return
+        }
+        if viewModel.needsShopSwitchConfirmation(for: place.id) {
+            pendingShopPlace = place
+            showShopSwitchAlert = true
+        } else {
+            navigateToShop(place)
+        }
+    }
+
     private var content: some View {
         let screenW = UIScreen.main.bounds.width
         let featuredCardWidth = HomeLayoutConstants.featuredCardWidth(screenWidth: screenW)
@@ -344,18 +413,10 @@ struct HomeTabScreen: View {
         let categoryPlaces = filterPlacesByCategory(viewModel.featuredPlaces, category: quickCategory)
         let filteredPlaces = categoryPlaces.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let categoryProducts: [BestSellerProduct] = {
-            let base: [BestSellerProduct]
             if quickCategory == .offers {
-                base = viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
-            } else {
-                base = viewModel.bestSellerProducts
+                return viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
             }
-            return base.filter {
-                HomeShopHours.isProductShopAvailableForOrders(
-                    shopId: $0.shopId,
-                    featuredPlaces: viewModel.featuredPlaces
-                )
-            }
+            return viewModel.bestSellerProducts
         }()
         let filteredProducts = categoryProducts.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let destacadosPreview = Array(filteredPlaces.prefix(HomeLayoutConstants.destacadosPreviewLimit))
@@ -411,103 +472,110 @@ struct HomeTabScreen: View {
                         }
 
                         if !destacadosPreview.isEmpty {
-                        HomeSectionHeader(title: "Destacados")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(destacadosPreview) { place in
-                                    HomeFeaturedPlaceCard(
-                                        place: place,
-                                        width: featuredCardWidth,
-                                        onTap: { onFeaturedPlaceTap(place) }
-                                    )
-                                }
-                                HomeFeaturedSeeMoreCard(width: featuredCardWidth) {
-                                    quickCategory = .all
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-                        }
-                        .padding(.bottom, 10)
-                    }
-
-                    if !bestSellersPreview.isEmpty {
-                        HomeSectionHeader(title: "Más vendidos")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(bestSellersPreview) { product in
-                                    Button {
-                                        navigationPath.append(
-                                            .product(ProductDetailRoute(
-                                                bestSeller: product,
-                                                featuredPlaces: viewModel.featuredPlaces
-                                            ))
+                            HomeSectionHeader(title: "Destacados")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(destacadosPreview) { place in
+                                        HomeFeaturedPlaceCard(
+                                            place: place,
+                                            width: featuredCardWidth,
+                                            onTap: { onFeaturedPlaceTap(place) }
                                         )
-                                    } label: {
-                                        UniversalProductCard(product: product, width: productWidth)
                                     }
-                                    .buttonStyle(.plain)
-                                }
-                                HomeProductSeeMoreCard(width: productWidth, onTap: onPromotionsTabClick)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-                        }
-                        .padding(.bottom, 10)
-                    }
-
-                    if !query.isEmpty && filteredPlaces.isEmpty && filteredProducts.isEmpty {
-                        Text("Sin resultados para \"\(query)\"")
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 24)
-                    }
-
-                    if viewModel.ads.isEmpty {
-                        HomePromoBanner()
-                    }
-
-                    if !viewModel.ads.isEmpty {
-                        AdsCarousel(ads: viewModel.ads) { adId in
-                            navigationPath.append(.ad(adId: adId))
-                        }
-                    }
-
-                    if !restaurantsOnly.isEmpty {
-                        HomeSectionHeader(title: "Restaurantes populares")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(restaurantsOnly) { place in
-                                    HomeFeaturedPlaceCard(
-                                        place: place,
-                                        width: featuredCardWidth,
-                                        onTap: { onFeaturedPlaceTap(place) }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                        }
-                        .padding(.bottom, 20)
-                    }
-
-                    if !servicesOnly.isEmpty {
-                        HomeSectionHeader(title: "Servicios destacados")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(servicesOnly) { place in
-                                    HomeServicePlaceRow(place: place) {
-                                        onFeaturedPlaceTap(place)
+                                    HomeFeaturedSeeMoreCard(width: featuredCardWidth) {
+                                        navigationPath.append(.featuredPlaces)
                                     }
                                 }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
+                            .padding(.bottom, 10)
                         }
-                        .padding(.bottom, 8)
-                    }
 
-                    Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
+                        if !bestSellersPreview.isEmpty {
+                            HomeSectionHeader(title: "Más vendidos")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(bestSellersPreview) { product in
+                                        Button {
+                                            navigationPath.append(
+                                                .product(ProductDetailRoute(
+                                                    bestSeller: product,
+                                                    featuredPlaces: viewModel.featuredPlaces
+                                                ))
+                                            )
+                                        } label: {
+                                            UniversalProductCard(product: product, width: productWidth)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    HomeProductSeeMoreCard(width: productWidth, onTap: {
+                                        navigationPath.append(.bestSellers)
+                                    })
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
+                            }
+                            .padding(.bottom, 10)
+                        }
+
+                        if !query.isEmpty && filteredPlaces.isEmpty && filteredProducts.isEmpty {
+                            Text("Sin resultados para \"\(query)\"")
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 24)
+                        }
+
+                        if viewModel.ads.isEmpty {
+                            HomePromoBanner()
+                        }
+
+                        if !viewModel.ads.isEmpty {
+                            AdsCarousel(
+                                slides: AdCarouselSlide.weighted(from: viewModel.ads),
+                                onAdVisible: { viewModel.recordAdView(adId: $0) },
+                                onAdTap: { adId in
+                                    viewModel.recordAdClick(adId: adId)
+                                    navigationPath.append(.ad(adId: adId))
+                                }
+                            )
+                        }
+
+                        if !restaurantsOnly.isEmpty {
+                            HomeSectionHeader(title: "Restaurantes populares")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(restaurantsOnly) { place in
+                                        HomeFeaturedPlaceCard(
+                                            place: place,
+                                            width: featuredCardWidth,
+                                            onTap: { onFeaturedPlaceTap(place) }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 8)
+                            }
+                            .padding(.bottom, 20)
+                        }
+
+                        if !servicesOnly.isEmpty {
+                            HomeSectionHeader(title: "Servicios destacados")
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(servicesOnly) { place in
+                                        HomeServicePlaceRow(place: place) {
+                                            onFeaturedPlaceTap(place)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 8)
+                            }
+                            .padding(.bottom, 8)
+                        }
+
+                        Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -610,9 +678,10 @@ private struct DeliveryAddressCalloutView: View {
 // MARK: - Ads (paridad con Android `LazyRow` + auto-scroll ~ViewPager)
 
 private struct AdsCarousel: View {
-    let ads: [Ad]
+    let slides: [AdCarouselSlide]
+    let onAdVisible: (String) -> Void
     let onAdTap: (String) -> Void
-    @State private var visibleAdId: String?
+    @State private var visibleSlideId: String?
 
     private let cardHeight: CGFloat = 160
     private let autoAdvanceNanos: UInt64 = 2_000_000_000
@@ -620,43 +689,48 @@ private struct AdsCarousel: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(ads) { ad in
+                ForEach(slides) { slide in
                     Button {
-                        onAdTap(ad.id)
+                        onAdTap(slide.ad.id)
                     } label: {
-                        adPageView(ad: ad)
+                        adPageView(ad: slide.ad)
                     }
                     .buttonStyle(.plain)
                     .containerRelativeFrame(.horizontal, count: 1, spacing: 12)
-                    .id(ad.id)
+                    .id(slide.id)
                 }
             }
             .scrollTargetLayout()
         }
         .contentMargins(.horizontal, 16, for: .scrollContent)
         .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $visibleAdId)
+        .scrollPosition(id: $visibleSlideId)
         .frame(height: cardHeight)
         .padding(.vertical, 12)
         .onAppear {
-            if visibleAdId == nil { visibleAdId = ads.first?.id }
+            if visibleSlideId == nil { visibleSlideId = slides.first?.id }
         }
-        .task(id: ads.map(\.id).joined(separator: "|")) {
-            guard !ads.isEmpty else { return }
-            if visibleAdId == nil || !ads.contains(where: { $0.id == visibleAdId }) {
-                visibleAdId = ads.first?.id
+        .onChange(of: visibleSlideId) { _, newId in
+            guard let newId,
+                  let slide = slides.first(where: { $0.id == newId }) else { return }
+            onAdVisible(slide.ad.id)
+        }
+        .task(id: slides.map(\.id).joined(separator: "|")) {
+            guard !slides.isEmpty else { return }
+            if visibleSlideId == nil || !slides.contains(where: { $0.id == visibleSlideId }) {
+                visibleSlideId = slides.first?.id
             }
-            guard ads.count > 1 else { return }
+            guard slides.count > 1 else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: autoAdvanceNanos)
-                guard let current = visibleAdId,
-                      let idx = ads.firstIndex(where: { $0.id == current }) else {
-                    visibleAdId = ads.first?.id
+                guard let current = visibleSlideId,
+                      let idx = slides.firstIndex(where: { $0.id == current }) else {
+                    visibleSlideId = slides.first?.id
                     continue
                 }
-                let nextIdx = (idx + 1) % ads.count
+                let nextIdx = (idx + 1) % slides.count
                 withAnimation(.easeInOut(duration: 0.45)) {
-                    visibleAdId = ads[nextIdx].id
+                    visibleSlideId = slides[nextIdx].id
                 }
             }
         }

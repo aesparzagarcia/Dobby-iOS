@@ -12,12 +12,11 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
-            ProgressView()
-                .controlSize(.large)
+            DobbySplashLottieView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .task {
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            let openHome = await viewModel.shouldOpenHomeAfterSplash()
+            let openHome = await viewModel.resolveSplashDestination()
             onDecide(openHome)
         }
     }

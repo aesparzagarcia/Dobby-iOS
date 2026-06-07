@@ -136,6 +136,7 @@ struct AdDTO: Decodable {
     let email: String?
     let facebookUrl: String?
     let instagramUrl: String?
+    let priority: Int?
 }
 
 struct CreateAddressRequest: Encodable {

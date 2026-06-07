@@ -9,6 +9,7 @@ import Foundation
 
 enum ProductCategory {
     static let bebidas = "bebidas"
+    static let alcohol = "alcohol"
     static let postres = "postres"
     static let comidas = "comidas"
     static let snacks = "snacks"
@@ -27,7 +28,8 @@ enum ProductCategory {
 
     static let filterChips: [Chip] = [
         Chip(filterId: nil, label: "Todos", systemImage: "square.grid.2x2.fill"),
-        Chip(filterId: bebidas, label: "Bebidas", systemImage: "wineglass.fill"),
+        Chip(filterId: bebidas, label: "Bebidas", systemImage: "cup.and.saucer.fill"),
+        Chip(filterId: alcohol, label: "Alcohol", systemImage: "wineglass.fill"),
         Chip(filterId: comidas, label: "Comidas", systemImage: "fork.knife"),
         Chip(filterId: postres, label: "Postres", systemImage: "birthday.cake.fill"),
         Chip(filterId: otros, label: "Otros", systemImage: "ellipsis"),
@@ -36,7 +38,7 @@ enum ProductCategory {
     static func normalize(_ raw: String?) -> String {
         let slug = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
         switch slug {
-        case bebidas, postres, comidas, snacks, miscelaneos:
+        case bebidas, alcohol, postres, comidas, snacks, miscelaneos:
             return slug
         default:
             return `default`

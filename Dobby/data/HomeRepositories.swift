@@ -23,6 +23,10 @@ protocol PlacesRepository: Sendable {
     func getHome() async -> Result<HomeData, HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getPromotions` → `GET app/promotions`.
     func getPromotions() async -> Result<[BestSellerProduct], HomeRepositoryError>
+    /// Parity with Android `PlacesRepository.getBestSellers` → `GET app/best-sellers`.
+    func getBestSellers() async -> Result<[ShopProduct], HomeRepositoryError>
+    /// Parity with Android `PlacesRepository.getFeaturedPlaces` → `GET app/featured-places`.
+    func getFeaturedPlaces() async -> Result<[FeaturedPlace], HomeRepositoryError>
     func getShopProducts(shopId: String) async -> Result<ShopProductsPage, HomeRepositoryError>
     /// Parity with Android `PlacesRepository.getProduct` → `GET app/products/:id`.
     func getProduct(id: String) async -> Result<ProductDetail, HomeRepositoryError>
@@ -36,6 +40,8 @@ protocol AdsRepository: Sendable {
     func getAds() async -> Result<[Ad], HomeRepositoryError>
     /// Parity with Android `AdsRepository.getAd` → `GET app/ads/:id` (404 → `nil`).
     func getAd(id: String) async -> Result<Ad?, HomeRepositoryError>
+    func recordAdView(id: String) async
+    func recordAdClick(id: String) async
 }
 
 protocol UserAddressRepository: Sendable {
@@ -193,6 +199,36 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         }
     }
 
+    func getBestSellers() async -> Result<[ShopProduct], HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            AuthSessionNavigation.notifyIfMissingAccessToken()
+            return .failure(.notAuthenticated)
+        }
+        let result: Result<[ShopProductDTO], HTTPClientError> = await api.get("app/best-sellers", bearerToken: token)
+        switch result {
+        case .success(let list):
+            return .success(list.map { mapShopProduct($0, fallbackShopId: $0.shopId ?? "") })
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
+    func getFeaturedPlaces() async -> Result<[FeaturedPlace], HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            AuthSessionNavigation.notifyIfMissingAccessToken()
+            return .failure(.notAuthenticated)
+        }
+        let result: Result<[FeaturedPlaceDTO], HTTPClientError> = await api.get("app/featured-places", bearerToken: token)
+        switch result {
+        case .success(let list):
+            return .success(list.map(mapFeaturedPlace))
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
     func getShopProducts(shopId: String) async -> Result<ShopProductsPage, HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
             AuthSessionNavigation.notifyIfMissingAccessToken()
@@ -282,8 +318,15 @@ private func mapAd(_ dto: AdDTO) -> Ad {
         whatsapp: dto.whatsapp,
         email: dto.email,
         facebookUrl: dto.facebookUrl,
-        instagramUrl: dto.instagramUrl
+        instagramUrl: dto.instagramUrl,
+        priority: min(max(dto.priority ?? 0, 0), 3)
     )
+}
+
+private struct EmptyJSON: Encodable {}
+
+private struct TrackAdResponse: Decodable {
+    let ok: Bool?
 }
 
 final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
@@ -327,6 +370,24 @@ final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))
         }
+    }
+
+    func recordAdView(id: String) async {
+        guard let token = sessionStore.accessToken() else { return }
+        _ = await api.post(
+            "app/ads/\(id)/view",
+            body: EmptyJSON(),
+            bearerToken: token
+        ) as Result<TrackAdResponse, HTTPClientError>
+    }
+
+    func recordAdClick(id: String) async {
+        guard let token = sessionStore.accessToken() else { return }
+        _ = await api.post(
+            "app/ads/\(id)/click",
+            body: EmptyJSON(),
+            bearerToken: token
+        ) as Result<TrackAdResponse, HTTPClientError>
     }
 }
 

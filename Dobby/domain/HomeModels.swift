@@ -298,4 +298,25 @@ struct Ad: Identifiable, Hashable {
     let email: String?
     let facebookUrl: String?
     let instagramUrl: String?
+    /// 0 = normal … 3 = premium (más apariciones en carrusel).
+    let priority: Int
+}
+
+/// Slide único en carrusel (anuncios de alta prioridad se repiten más).
+struct AdCarouselSlide: Identifiable, Hashable {
+    let id: String
+    let ad: Ad
+
+    static func weighted(from ads: [Ad]) -> [AdCarouselSlide] {
+        let sorted = ads.sorted { lhs, rhs in
+            if lhs.priority != rhs.priority { return lhs.priority > rhs.priority }
+            return lhs.id > rhs.id
+        }
+        return sorted.flatMap { ad -> [AdCarouselSlide] in
+            let weight = min(max(ad.priority, 0), 3) + 1
+            return (0 ..< weight).map { index in
+                AdCarouselSlide(id: "\(ad.id)-\(index)", ad: ad)
+            }
+        }
+    }
 }
