@@ -325,7 +325,7 @@ struct HomeTabScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white)
+        .background(HomeScreenPalette.screenBackground)
         .onAppear {
             viewModel.loadInitial()
         }
@@ -435,15 +435,15 @@ struct HomeTabScreen: View {
                     address: viewModel.address,
                     searchQuery: $viewModel.searchQuery,
                     onAddressClick: { showCurrentAddress = true }
-                )
-
-                if viewModel.addressFetchCompleted,
-                   viewModel.needsDeliveryAddressCallout,
-                   viewModel.warningMessage == nil {
-                    DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
-                        .padding(.horizontal, 13)
-                        .padding(.top, 5)
-                        .padding(.bottom, 3)
+                ) {
+                    if viewModel.addressFetchCompleted,
+                       viewModel.needsDeliveryAddressCallout,
+                       viewModel.warningMessage == nil {
+                        DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
+                            .padding(.horizontal, 13)
+                            .padding(.top, 0)
+                            .padding(.bottom, 4)
+                    }
                 }
 
                 HomeCategoryRow(selected: quickCategory) { category in
@@ -489,6 +489,7 @@ struct HomeTabScreen: View {
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 4)
                             }
+                            .background(DobbyPureScale.pure)
                             .padding(.bottom, 10)
                         }
 
@@ -516,6 +517,7 @@ struct HomeTabScreen: View {
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 4)
                             }
+                            .background(DobbyPureScale.pure)
                             .padding(.bottom, 10)
                         }
 
@@ -533,7 +535,6 @@ struct HomeTabScreen: View {
                         if !viewModel.ads.isEmpty {
                             AdsCarousel(
                                 slides: AdCarouselSlide.weighted(from: viewModel.ads),
-                                onAdVisible: { viewModel.recordAdView(adId: $0) },
                                 onAdTap: { adId in
                                     viewModel.recordAdClick(adId: adId)
                                     navigationPath.append(.ad(adId: adId))
@@ -556,6 +557,7 @@ struct HomeTabScreen: View {
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 8)
                             }
+                            .background(DobbyPureScale.pure)
                             .padding(.bottom, 20)
                         }
 
@@ -572,19 +574,24 @@ struct HomeTabScreen: View {
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 8)
                             }
+                            .background(DobbyPureScale.pure)
                             .padding(.bottom, 8)
                         }
 
                         Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DobbyPureScale.pure)
                 }
+                .scrollIndicators(.hidden)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DobbyPureScale.pure)
                 .refreshable {
                     await viewModel.refresh()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.white)
+            .background(HomeScreenPalette.screenBackground)
 
             Button {
                 navigationPath.append(.cart)
@@ -679,7 +686,6 @@ private struct DeliveryAddressCalloutView: View {
 
 private struct AdsCarousel: View {
     let slides: [AdCarouselSlide]
-    let onAdVisible: (String) -> Void
     let onAdTap: (String) -> Void
     @State private var visibleSlideId: String?
 
@@ -709,11 +715,6 @@ private struct AdsCarousel: View {
         .padding(.vertical, 12)
         .onAppear {
             if visibleSlideId == nil { visibleSlideId = slides.first?.id }
-        }
-        .onChange(of: visibleSlideId) { _, newId in
-            guard let newId,
-                  let slide = slides.first(where: { $0.id == newId }) else { return }
-            onAdVisible(slide.ad.id)
         }
         .task(id: slides.map(\.id).joined(separator: "|")) {
             guard !slides.isEmpty else { return }

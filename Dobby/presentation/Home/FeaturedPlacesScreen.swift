@@ -60,8 +60,10 @@ struct FeaturedPlacesScreen: View {
 
                     HomeCategoryRow(
                         selected: viewModel.uiState.selectedCategory,
-                        onCategorySelected: { viewModel.onCategorySelected($0) }, includeOffers: false,
-                        scale: 1
+                        onCategorySelected: { viewModel.onCategorySelected($0) },
+                        includeOffers: false,
+                        scale: 0.9,
+                        spreadToEdges: true
                     )
                     .padding(.bottom, 4)
 

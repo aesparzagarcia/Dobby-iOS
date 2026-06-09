@@ -14,6 +14,7 @@ struct SplashView: View {
             Color.white.ignoresSafeArea()
             DobbySplashLottieView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scaleEffect(0.9)
         }
         .task {
             let openHome = await viewModel.resolveSplashDestination()

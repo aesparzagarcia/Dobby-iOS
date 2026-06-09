@@ -17,11 +17,13 @@ enum HomeQuickCategory: Hashable {
 
 enum HomeScreenPalette {
     static let primary = DobbyBrandColor.primary
-    static let searchBackground = DobbyBrandColor.light
-    static let mutedText = Color(red: 0.56, green: 0.56, blue: 0.58)
+    static let searchBackground = DobbyBrandColor.surfaceMuted
+    static let mutedText = DobbyBrandColor.textSecondary
+    static let screenBackground = DobbyPureScale.pure
+    static let cardSurface = DobbyBrandColor.cardSurface
     static let openGreen = Color(red: 0.13, green: 0.77, blue: 0.37)
-    static let closedGray = Color(red: 0.42, green: 0.45, blue: 0.50)
-    static let cardShadow = Color.black.opacity(0.08)
+    static let closedGray = DobbyBrandColor.textSecondary
+    static let cardShadow = DobbyPureScale.onyx.opacity(0.08)
 }
 
 func filterPlacesByCategory(_ places: [FeaturedPlace], category: HomeQuickCategory) -> [FeaturedPlace] {
@@ -56,6 +58,21 @@ struct HomeAddressSearchHeader: View {
     let address: String?
     @Binding var searchQuery: String
     let onAddressClick: () -> Void
+    private let addressCallout: AnyView
+
+    init(
+        addressLabel: String?,
+        address: String?,
+        searchQuery: Binding<String>,
+        onAddressClick: @escaping () -> Void,
+        @ViewBuilder addressCallout: () -> some View = { EmptyView() }
+    ) {
+        self.addressLabel = addressLabel
+        self.address = address
+        self._searchQuery = searchQuery
+        self.onAddressClick = onAddressClick
+        self.addressCallout = AnyView(addressCallout())
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,6 +104,8 @@ struct HomeAddressSearchHeader: View {
             }
             .buttonStyle(.plain)
 
+            addressCallout
+
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(HomeScreenPalette.mutedText)
@@ -108,7 +127,7 @@ struct HomeAddressSearchHeader: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
         }
-        .background(Color.white)
+        .background(HomeScreenPalette.cardSurface)
     }
 }
 
@@ -119,66 +138,92 @@ struct HomeCategoryRow: View {
     let onCategorySelected: (HomeQuickCategory) -> Void
     var includeOffers: Bool = true
     var scale: CGFloat = HomeLayoutConstants.categoryRowScale
+    var spreadToEdges: Bool = false
 
     private struct Item {
         let category: HomeQuickCategory
         let label: String
         let systemImage: String
-        let background: Color
     }
 
     private var items: [Item] {
         var list: [Item] = [
-            Item(category: .restaurants, label: "Restaurantes", systemImage: "fork.knife", background: Color(red: 0.93, green: 0.95, blue: 1)),
-            Item(category: .shops, label: "Tiendas", systemImage: "bag.fill", background: Color(red: 0.93, green: 0.99, blue: 0.96)),
-            Item(category: .services, label: "Servicios", systemImage: "wrench.and.screwdriver.fill", background: Color(red: 0.94, green: 0.97, blue: 1)),
+            Item(category: .restaurants, label: "Restaurantes", systemImage: "fork.knife"),
+            Item(category: .shops, label: "Tiendas", systemImage: "bag.fill"),
+            Item(category: .services, label: "Servicios", systemImage: "wrench.and.screwdriver.fill"),
         ]
         if includeOffers {
-            list.append(Item(category: .offers, label: "Ofertas", systemImage: "tag.fill", background: Color(red: 1, green: 0.97, blue: 0.93)))
+            list.append(Item(category: .offers, label: "Ofertas", systemImage: "tag.fill"))
         }
-        list.append(Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill", background: Color(red: 0.96, green: 0.95, blue: 1)))
+        list.append(Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill"))
         return list
     }
 
     var body: some View {
         let s = scale
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12 * s) {
-                ForEach(items, id: \.label) { item in
-                    let isSelected = selected == item.category
-                    Button {
-                        onCategorySelected(item.category)
-                    } label: {
-                        VStack(spacing: 6 * s) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 16 * s, style: .continuous)
-                                    .fill(item.background)
-                                    .frame(width: 56 * s, height: 56 * s)
-                                    .overlay {
-                                        if isSelected {
-                                            RoundedRectangle(cornerRadius: 16 * s, style: .continuous)
-                                                .stroke(HomeScreenPalette.primary, lineWidth: 2 * s)
-                                        }
-                                    }
-                                Image(systemName: item.systemImage)
-                                    .font(.system(size: 26 * s))
-                                    .foregroundStyle(isSelected ? HomeScreenPalette.primary : Color(red: 0.29, green: 0.33, blue: 0.39))
-                            }
-                            Text(item.label)
-                                .font(.caption2)
-                                .foregroundStyle(isSelected ? HomeScreenPalette.primary : Color.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.85)
+        let itemWidth = 78 * s
+        let edgePadding = 16 * s
+
+        Group {
+            if spreadToEdges {
+                HStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.label) { index, item in
+                        categoryItemButton(item: item, scale: s, itemWidth: itemWidth)
+                        if index < items.count - 1 {
+                            Spacer(minLength: 0)
                         }
-                        .frame(width: 78 * s)
                     }
-                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, edgePadding)
+                .padding(.vertical, 6)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12 * s) {
+                        ForEach(items, id: \.label) { item in
+                            categoryItemButton(item: item, scale: s, itemWidth: itemWidth)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 6)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 6)
         }
+        .background(DobbyPureScale.pure)
         .padding(.vertical, 8)
+    }
+
+    @ViewBuilder
+    private func categoryItemButton(item: Item, scale s: CGFloat, itemWidth: CGFloat) -> some View {
+        let isSelected = selected == item.category
+        let boxBackground = isSelected ? DobbyPureScale.pure : DobbyPureScale.onyx
+        let iconColor = isSelected ? DobbyPureScale.onyx : DobbyPureScale.pure
+        Button {
+            onCategorySelected(item.category)
+        } label: {
+            VStack(spacing: 6 * s) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16 * s, style: .continuous)
+                        .fill(boxBackground)
+                        .frame(width: 56 * s, height: 56 * s)
+                        .overlay {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 16 * s, style: .continuous)
+                                    .stroke(DobbyPureScale.onyx, lineWidth: 2 * s)
+                            }
+                        }
+                    Image(systemName: item.systemImage)
+                        .font(.system(size: 26 * s))
+                        .foregroundStyle(iconColor)
+                }
+                Text(item.label)
+                    .font(.caption2)
+                    .foregroundStyle(isSelected ? DobbyPureScale.onyx : Color.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(width: itemWidth)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -195,6 +240,7 @@ struct HomeSectionHeader: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 4)
+            .background(DobbyPureScale.pure)
     }
 }
 
@@ -334,37 +380,29 @@ struct HomeFeaturedPlaceCard: View {
 struct HomeFeaturedSeeMoreCard: View {
     let width: CGFloat
     let onTap: () -> Void
+    var cardScale: CGFloat = HomeLayoutConstants.featuredPlaceCardScale
 
-    private let scale = HomeLayoutConstants.featuredPlaceCardScale
-    private var corner: CGFloat { 12 * scale }
-    private var imageHeight: CGFloat { width / (1.85 / scale) }
+    private var scale: CGFloat { cardScale }
+    private var corner: CGFloat { 16 * scale }
+    private var cardHeight: CGFloat {
+        HomeLayoutConstants.featuredPlaceCardHeight(width: width, cardScale: cardScale)
+    }
 
     var body: some View {
         Button(action: onTap) {
-            ZStack {
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: imageHeight)
-                    VStack(spacing: 0) {
-                        Text(" ").font(.caption.weight(.bold)).opacity(0)
-                        Text(" ").font(.caption2).opacity(0)
-                        HStack { Text(" ").font(.caption2).opacity(0) }
-                            .padding(.vertical, 3 * scale)
-                    }
-                    .padding(.bottom, 6 * scale)
-                }
-                HStack(spacing: 8 * scale) {
-                    Image(systemName: "square.grid.2x2.fill")
-                    Text("Ver más").font(.caption.weight(.bold))
-                    Image(systemName: "chevron.right")
-                }
-                .font(.caption)
-                .foregroundStyle(HomeScreenPalette.primary)
+            HStack(spacing: 8 * scale) {
+                Image(systemName: "square.grid.2x2.fill")
+                Text("Ver más")
+                    .font(.caption.weight(.bold))
+                Image(systemName: "chevron.right")
             }
-            .frame(width: width)
-            .background(Color.white)
+            .font(.caption)
+            .foregroundStyle(HomeScreenPalette.primary)
+            .frame(width: width, height: cardHeight)
+            .background(DobbyPureScale.pure)
             .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
-            .shadow(color: HomeScreenPalette.cardShadow, radius: 4, x: 0, y: 2)
-            .padding(.vertical, 6)
+            .shadow(color: HomeScreenPalette.cardShadow, radius: cardScale >= 1 ? 3 : 4, x: 0, y: 2)
+            .padding(.vertical, cardScale >= 1 ? 0 : 6)
         }
         .buttonStyle(.plain)
     }

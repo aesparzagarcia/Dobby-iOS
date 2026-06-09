@@ -5,7 +5,6 @@
 
 import SwiftUI
 
-private let brandGreen = Color(red: 0x2E / 255, green: 0xCC / 255, blue: 0x71 / 255)
 private let subtitleBlack = Color(red: 0x11 / 255, green: 0x11 / 255, blue: 0x11 / 255)
 private let backSurface = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
 /// Placeholder del celular: más oscuro que el gris secundario del sistema.
@@ -97,7 +96,7 @@ struct PhoneScreen: View {
             if viewModel.isLoading {
                 HStack {
                     Spacer()
-                    ProgressView().tint(brandGreen)
+                    ProgressView().tint(DobbyPureScale.onyx)
                     Spacer()
                 }
             } else {
@@ -114,11 +113,11 @@ struct PhoneScreen: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(brandGreen)
+                    .background(DobbyPureScale.onyx)
                     .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 27, style: .continuous)
-                            .stroke(brandGreen, lineWidth: 1)
+                            .stroke(DobbyPureScale.onyx, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -135,14 +134,14 @@ struct PhoneScreen: View {
                         Text("Recibir código por WhatsApp")
                             .font(.system(.subheadline, design: .default, weight: .semibold))
                     }
-                    .foregroundStyle(brandGreen)
+                    .foregroundStyle(DobbyPureScale.onyx)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 27, style: .continuous)
-                            .stroke(brandGreen, lineWidth: 1)
+                            .stroke(DobbyPureScale.onyx, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)

@@ -11,7 +11,7 @@ private enum ProfilePalette {
     static let primary = DobbyBrandColor.primary
     static let light = DobbyBrandColor.light
     static let dark = DobbyBrandColor.dark
-    static let muted = Color(red: 0.42, green: 0.45, blue: 0.50)
+    static let muted = DobbyBrandColor.textSecondary
     static let card = Color.white
     static let logoutBg = Color(red: 0.95, green: 0.95, blue: 0.97)
     static let logoutText = Color(red: 0.94, green: 0.27, blue: 0.27)
@@ -42,7 +42,6 @@ private struct ProfileBadge: Identifiable {
 private enum ProfileStackRoute: Hashable {
     case orderHistory
     case orderTracking(orderId: String)
-    case couponsLottiePreview
 }
 
 struct ProfileTabScreen: View {
@@ -79,8 +78,6 @@ struct ProfileTabScreen: View {
                             onBack: { popNavigation() },
                             onFinish: { popNavigation() }
                         )
-                    case .couponsLottiePreview:
-                        CouponsLottiePreviewScreen(onBack: { popNavigation() })
                     }
                 }
         }
@@ -243,13 +240,6 @@ struct ProfileTabScreen: View {
 
             whiteCard {
                 menuRow(title: "Métodos de pago", systemImage: "creditcard.fill")
-                menuDivider
-                Button {
-                    navigationPath.append(.couponsLottiePreview)
-                } label: {
-                    menuRow(title: "Cupones", systemImage: "ticket.fill")
-                }
-                .buttonStyle(.plain)
                 menuDivider
                 menuRow(title: "Notificaciones", systemImage: "bell.fill")
                 menuDivider

@@ -9,12 +9,12 @@ import SwiftUI
 
 private enum OrderUIPalette {
     static let primary = DobbyBrandColor.primary
-    static let gradientEnd = DobbyBrandColor.dark
-    static let headerTitle = DobbyBrandColor.dark
-    static let currentLabel = DobbyBrandColor.dark
-    static let inactiveBorder = Color(red: 0.82, green: 0.82, blue: 0.84)
-    static let inactiveIcon = Color(red: 0.56, green: 0.56, blue: 0.58)
-    static let inactiveLabel = Color(red: 0.56, green: 0.56, blue: 0.58)
+    static let gradientEnd = DobbyBrandColor.carbon
+    static let headerTitle = DobbyBrandColor.textPrimary
+    static let currentLabel = DobbyBrandColor.textPrimary
+    static let inactiveBorder = DobbyPureScale.mist
+    static let inactiveIcon = DobbyBrandColor.textSecondary
+    static let inactiveLabel = DobbyBrandColor.textSecondary
     static let currentHalo = DobbyBrandColor.primaryHalo
 }
 

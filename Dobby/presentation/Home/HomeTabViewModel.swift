@@ -414,10 +414,6 @@ final class HomeTabViewModel {
         }
     }
 
-    func recordAdView(adId: String) {
-        Task { await adsRepository.recordAdView(id: adId) }
-    }
-
     func recordAdClick(adId: String) {
         Task { await adsRepository.recordAdClick(id: adId) }
     }

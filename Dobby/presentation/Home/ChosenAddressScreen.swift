@@ -2,24 +2,19 @@
 //  ChosenAddressScreen.swift
 //  Dobby
 //
-//  Parity with Android `MapLocationScreen`: full-screen map, center pin, blue floating address card,
-//  green confirm button, “Dirección lejana” alert when pin >200m from start, save sheet.
+//  Parity with Android `MapLocationScreen`: full-screen map, center pin, floating address card,
+//  confirm button (PhoneScreen style), “Dirección lejana” alert when pin >200m from start, save sheet.
 //
 
 import CoreLocation
 import MapKit
 import SwiftUI
-import UIKit
 
-// MARK: - Palette (Android `FloatingAddressCardColor` / `ConfirmButtonColor`)
+// MARK: - Palette (Android `FloatingAddressCardColor`)
 
 private enum MapLocationLikePalette {
     static let cardBlue = DobbyBrandColor.primary
-    static let confirmGreen = Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255)
 }
-
-/// Same order as Android `MapLocationScreen` / `ADDRESS_LABEL_OPTIONS`.
-private let addressLabelOptions = ["Casa", "Apartamento", "Trabajo", "Novia", "Fiesta"]
 
 private func addressCardPreview(_ raw: String) -> String {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -162,6 +157,7 @@ final class ChosenAddressViewModel {
 }
 
 struct ChosenAddressScreen: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ChosenAddressViewModel
     @State private var position: MapCameraPosition
     @State private var lastCenter: CLLocationCoordinate2D
@@ -251,14 +247,31 @@ struct ChosenAddressScreen: View {
         .background(Color.white)
         .navigationTitle(navigateData.isDeviceLocation ? "Mi ubicación" : "Dirección elegida")
         .navigationBarTitleDisplayMode(.inline)
-        .background(MinimalBackButtonDisplayModeBridge())
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(DobbyPureScale.onyx)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Atrás")
+            }
+        }
         .toolbarBackground(Color.white, for: ToolbarPlacement.navigationBar)
         .toolbarBackground(Visibility.visible, for: ToolbarPlacement.navigationBar)
         .sheet(isPresented: $showSaveSheet) {
             saveAddressSheet
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color(red: 0.95, green: 0.94, blue: 0.97))
+                .presentationCornerRadius(saveSheetCornerRadius)
+                .presentationBackground {
+                    RoundedRectangle(cornerRadius: saveSheetCornerRadius, style: .continuous)
+                        .fill(Color.white)
+                }
         }
         .onChange(of: showSaveSheet) { _, open in
             if open {
@@ -400,7 +413,7 @@ struct ChosenAddressScreen: View {
             }
             return "Confirmar ubicación"
         }()
-        let useGreen = canConfirmByArea && !viewModel.isReverseGeocoding
+        let usePrimary = canConfirmByArea && !viewModel.isReverseGeocoding
         return Button {
             let meters = distanceMeters(from: userStartCoordinate, to: lastCenter)
             if meters > 200 {
@@ -410,12 +423,12 @@ struct ChosenAddressScreen: View {
             }
         } label: {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(.system(.subheadline, design: .default, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(useGreen ? MapLocationLikePalette.confirmGreen : Color(.systemGray3))
-                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .frame(height: 54)
+                .background(usePrimary ? DobbyPureScale.onyx : Color(.systemGray3))
+                .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
@@ -426,50 +439,69 @@ struct ChosenAddressScreen: View {
 
     // MARK: - Save sheet (Android `ModalBottomSheet`)
 
+    private enum SaveAddressSheetPalette {
+        static let accent = Color.black
+        static let subtitle = Color(red: 0.45, green: 0.45, blue: 0.48)
+        static let fieldBorder = Color(red: 0.88, green: 0.88, blue: 0.90)
+        static let chipSelectedBg = Color(red: 0.96, green: 0.96, blue: 0.97)
+        static let chipBorder = Color(red: 0.90, green: 0.90, blue: 0.92)
+    }
+
+    /// Grid order matches redesigned bottom sheet (Casa / Novia / Apartamento | Fiesta / Trabajo).
+    private let addressLabelGridColumns: [[String]] = [
+        ["Casa", "Novia", "Apartamento"],
+        ["Fiesta", "Trabajo"],
+    ]
+
+    private let saveSheetCornerRadius: CGFloat = 28
+
     private var saveAddressSheet: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Guardar dirección")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.primary)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 22)
 
                 Text("Descripción")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .padding(.bottom, 8)
 
-                TextField("ej. Casa verde, piso 2", text: $sheetDescription)
-                    .textFieldStyle(.plain)
-                    .padding(14)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color(.systemGray4), lineWidth: 1)
-                    )
-                    .padding(.bottom, 24)
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(SaveAddressSheetPalette.accent)
+                    TextField("ej. Casa verde, piso 2", text: $sheetDescription)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(SaveAddressSheetPalette.fieldBorder, lineWidth: 1)
+                )
+                .padding(.bottom, 22)
 
                 Text("Etiqueta")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 12)
+                    .foregroundStyle(.primary)
+                    .padding(.bottom, 10)
 
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(addressLabelOptions.prefix(3), id: \.self) { option in
-                            labelRadioRow(option: option)
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(Array(addressLabelGridColumns.enumerated()), id: \.offset) { _, column in
+                        VStack(spacing: 10) {
+                            ForEach(column, id: \.self) { option in
+                                labelChipRow(option: option)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(addressLabelOptions.suffix(2), id: \.self) { option in
-                            labelRadioRow(option: option)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.bottom, 24)
+                .padding(.bottom, 20)
 
                 if let err = viewModel.errorMessage, !err.isEmpty {
                     Text(err)
@@ -478,13 +510,25 @@ struct ChosenAddressScreen: View {
                         .padding(.bottom, 8)
                 }
 
-                HStack {
-                    Spacer()
-                    Button("Cancelar") {
+                HStack(spacing: 12) {
+                    Button {
                         showSaveSheet = false
+                    } label: {
+                        Text("Cancelar")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(SaveAddressSheetPalette.accent)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(SaveAddressSheetPalette.accent, lineWidth: 1.5)
+                            )
                     }
-                    .foregroundStyle(.primary)
+                    .buttonStyle(.plain)
                     .disabled(viewModel.isSaving)
+
                     Button {
                         let desc = sheetDescription.trimmingCharacters(in: .whitespacesAndNewlines)
                         viewModel.saveAddress(
@@ -497,65 +541,84 @@ struct ChosenAddressScreen: View {
                             onSaveSuccess()
                         }
                     } label: {
-                        if viewModel.isSaving {
-                            Text("Guardando…")
-                        } else {
-                            Text("Guardar")
+                        HStack(spacing: 8) {
+                            if viewModel.isSaving {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "square.and.arrow.down")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            Text(viewModel.isSaving ? "Guardando…" : "Guardar")
+                                .font(.subheadline.weight(.semibold))
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(SaveAddressSheetPalette.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
-                    .foregroundStyle(MapLocationLikePalette.cardBlue)
-                    .fontWeight(.semibold)
+                    .buttonStyle(.plain)
                     .disabled(viewModel.isSaving)
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 40)
+            .padding(.top, 28)
             .padding(.bottom, 28)
         }
-        .background(Color(red: 0.95, green: 0.94, blue: 0.97))
+        .clipShape(RoundedRectangle(cornerRadius: saveSheetCornerRadius, style: .continuous))
     }
 
-    private func labelRadioRow(option: String) -> some View {
-        Button {
+    private func labelOptionIcon(_ option: String) -> String {
+        switch option {
+        case "Casa": return "house.fill"
+        case "Apartamento": return "building.2.fill"
+        case "Trabajo": return "briefcase.fill"
+        case "Novia": return "heart.fill"
+        case "Fiesta": return "party.popper.fill"
+        default: return "mappin.and.ellipse"
+        }
+    }
+
+    private func labelChipRow(option: String) -> some View {
+        let selected = sheetSelectedLabel == option
+        return Button {
             sheetSelectedLabel = option
         } label: {
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: sheetSelectedLabel == option ? "largecircle.fill.circle" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(sheetSelectedLabel == option ? MapLocationLikePalette.cardBlue : Color.secondary)
+            HStack(spacing: 10) {
+                Image(systemName: labelOptionIcon(option))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(SaveAddressSheetPalette.accent)
+                    .frame(width: 22)
                 Text(option)
-                    .font(.body)
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
                 Spacer(minLength: 0)
+                ZStack {
+                    Circle()
+                        .stroke(selected ? SaveAddressSheetPalette.accent : SaveAddressSheetPalette.chipBorder, lineWidth: selected ? 0 : 1.5)
+                        .frame(width: 22, height: 22)
+                    if selected {
+                        Circle()
+                            .fill(SaveAddressSheetPalette.accent)
+                            .frame(width: 22, height: 22)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
             }
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .background(selected ? SaveAddressSheetPalette.chipSelectedBg : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(selected ? SaveAddressSheetPalette.accent : SaveAddressSheetPalette.chipBorder, lineWidth: selected ? 2 : 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Back chevron only (SwiftUI may omit `navigationBarBackButtonDisplayMode` on newer SDKs)
-
-/// Sets `UINavigationItem.backButtonDisplayMode` on the hosting controller so only the chevron shows.
-private struct MinimalBackButtonDisplayModeBridge: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
-        let vc = UIViewController()
-        vc.view.isUserInteractionEnabled = false
-        vc.view.backgroundColor = .clear
-        return vc
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        DispatchQueue.main.async {
-            var walker: UIViewController? = uiViewController
-            while let c = walker {
-                if let nav = c.navigationController {
-                    nav.topViewController?.navigationItem.backButtonDisplayMode = .minimal
-                    return
-                }
-                walker = c.parent
-            }
-        }
     }
 }

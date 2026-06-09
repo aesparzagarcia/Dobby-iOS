@@ -151,7 +151,7 @@ struct RegisterUserScreen: View {
                         .font(.system(.subheadline, design: .default, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(brandGreen)
+                        .background(Color.black)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
                 }

@@ -21,4 +21,12 @@ enum HomeLayoutConstants {
     static func productCardWidth(featuredWidth: CGFloat) -> CGFloat {
         CGFloat(Int(featuredWidth * 0.9 * productCardScale))
     }
+
+    /// Altura total del card de destacados (imagen + pie), para alinear «Ver más» sin clonar el layout del restaurante.
+    static func featuredPlaceCardHeight(width: CGFloat, cardScale: CGFloat = featuredPlaceCardScale) -> CGFloat {
+        let scale = cardScale
+        let imageHeight = width / (1.65 / max(scale, 0.8))
+        let footerHeight = (6 * scale) + 22 + 14 + (4 * scale) + 22 + (8 * scale)
+        return imageHeight + footerHeight
+    }
 }

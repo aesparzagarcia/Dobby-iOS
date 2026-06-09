@@ -72,8 +72,12 @@ enum AppConfiguration {
 
         guard var components = URLComponents(string: s) else { return s }
 
+        // Dev backend runs on :3001; production HTTPS (Render, etc.) must use default port 443.
         if components.port == nil {
-            components.port = 3001
+            let scheme = components.scheme?.lowercased() ?? "http"
+            if scheme == "http" {
+                components.port = 3001
+            }
         }
 
         var path = components.path

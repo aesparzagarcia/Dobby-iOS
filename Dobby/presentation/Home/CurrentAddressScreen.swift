@@ -125,8 +125,9 @@ struct CurrentAddressScreen: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(AddressScreenPalette.iconBlue)
+                        .foregroundStyle(DobbyPureScale.onyx)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Atrás")
             }
         }

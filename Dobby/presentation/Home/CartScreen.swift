@@ -104,8 +104,9 @@ struct CartScreen: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(DobbyPureScale.onyx)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Atrás")
             }
         }

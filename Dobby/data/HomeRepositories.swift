@@ -40,7 +40,6 @@ protocol AdsRepository: Sendable {
     func getAds() async -> Result<[Ad], HomeRepositoryError>
     /// Parity with Android `AdsRepository.getAd` → `GET app/ads/:id` (404 → `nil`).
     func getAd(id: String) async -> Result<Ad?, HomeRepositoryError>
-    func recordAdView(id: String) async
     func recordAdClick(id: String) async
 }
 
@@ -370,15 +369,6 @@ final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))
         }
-    }
-
-    func recordAdView(id: String) async {
-        guard let token = sessionStore.accessToken() else { return }
-        _ = await api.post(
-            "app/ads/\(id)/view",
-            body: EmptyJSON(),
-            bearerToken: token
-        ) as Result<TrackAdResponse, HTTPClientError>
     }
 
     func recordAdClick(id: String) async {
