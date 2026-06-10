@@ -580,22 +580,12 @@ struct OrderTrackingScreen: View {
                     .stroke(Color(.separator), lineWidth: 1)
                     .background(Color.white)
                     .frame(width: 52, height: 52)
-                if let urlStr = item.imageUrl, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable().scaledToFill()
-                        default:
-                            Image(systemName: "shippingbox.fill")
-                                .foregroundStyle(OrderTrackingPalette.muted)
-                        }
-                    }
-                    .frame(width: 52, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                } else {
+                LoadingRemoteImage(urlString: item.imageUrl) {
                     Image(systemName: "shippingbox.fill")
                         .foregroundStyle(OrderTrackingPalette.muted)
                 }
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             Text("\(item.productName) ×\(item.quantity)")
                 .font(.subheadline)
@@ -710,28 +700,12 @@ struct OrderTrackingScreen: View {
     }
 
     private func courierAvatar(dm: OrderTrackingCourier) -> some View {
-        Group {
-            if let urlStr = AppConfiguration.fullImageURL(dm.profilePhotoUrl), let url = URL(string: urlStr) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable().scaledToFill()
-                    default:
-                        Image(systemName: "person.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(width: 48, height: 48)
-                .clipShape(Circle())
-            } else {
-                ZStack {
-                    Circle().fill(Color(.systemGray5))
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 48, height: 48)
-            }
+        LoadingRemoteImage(urlString: dm.profilePhotoUrl, resolveAgainstApiBase: true) {
+            Image(systemName: "person.fill")
+                .foregroundStyle(.secondary)
         }
+        .frame(width: 48, height: 48)
+        .clipShape(Circle())
     }
 
     @ViewBuilder

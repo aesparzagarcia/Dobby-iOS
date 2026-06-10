@@ -316,25 +316,10 @@ struct ShopDetailProductCard: View {
 
     @ViewBuilder
     private func productImage(height: CGFloat, corner: CGFloat) -> some View {
-        ZStack {
-            ShopDetailPalette.imagePlaceholder
-            if let urlString = product.imageUrl, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        placeholderMonogram
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        placeholderMonogram
-                    }
-                }
-            } else {
-                placeholderMonogram
-            }
+        LoadingRemoteImage(urlString: product.imageUrl) {
+            placeholderMonogram
         }
+        .background(ShopDetailPalette.imagePlaceholder)
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipped()

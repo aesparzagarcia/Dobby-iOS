@@ -249,26 +249,10 @@ struct CartScreen: View {
     }
 
     private func cartThumb(_ line: CartLineItem) -> some View {
-        Group {
-            if let url = line.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                    default:
-                        Color(.systemGray5)
-                    }
-                }
-            } else {
-                ZStack {
-                    Color(.systemGray5)
-                    Text(String(line.name.prefix(1)).uppercased())
-                        .font(.title3.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-            }
+        LoadingRemoteImage(urlString: line.imageUrl) {
+            Text(String(line.name.prefix(1)).uppercased())
+                .font(.title3.weight(.medium))
+                .foregroundStyle(.secondary)
         }
     }
 

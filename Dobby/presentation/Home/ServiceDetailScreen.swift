@@ -164,29 +164,11 @@ struct ServiceDetailScreen: View {
 
     @ViewBuilder
     private func imageHeader(service: ServiceDetail) -> some View {
-        ZStack {
-            Color(.systemGray5)
-            if let url = service.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                            .clipped()
-                    case .failure:
-                        placeholderMonogram(name: service.name)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        placeholderMonogram(name: service.name)
-                    }
-                }
-            } else {
-                placeholderMonogram(name: service.name)
-            }
+        LoadingRemoteImage(urlString: service.imageUrl) {
+            placeholderMonogram(name: service.name)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .clipped()
     }
 
     private func placeholderMonogram(name: String) -> some View {

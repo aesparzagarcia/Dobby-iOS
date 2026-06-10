@@ -739,29 +739,8 @@ private struct AdsCarousel: View {
 
     @ViewBuilder
     private func adPageView(ad: Ad) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.systemGray5))
-            if let url = ad.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                            .clipped()
-                    case .failure:
-                        adPlaceholderMonogram(ad: ad)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        adPlaceholderMonogram(ad: ad)
-                    }
-                }
-            } else {
-                adPlaceholderMonogram(ad: ad)
-            }
+        LoadingRemoteImage(urlString: ad.imageUrl) {
+            adPlaceholderMonogram(ad: ad)
         }
         .frame(height: cardHeight)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

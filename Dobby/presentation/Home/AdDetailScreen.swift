@@ -154,29 +154,11 @@ struct AdDetailScreen: View {
 
     @ViewBuilder
     private func imageHeader(ad: Ad) -> some View {
-        ZStack {
-            Color(.systemGray5)
-            if let url = ad.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                            .clipped()
-                    case .failure:
-                        placeholderMonogram(name: ad.name)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        placeholderMonogram(name: ad.name)
-                    }
-                }
-            } else {
-                placeholderMonogram(name: ad.name)
-            }
+        LoadingRemoteImage(urlString: ad.imageUrl) {
+            placeholderMonogram(name: ad.name)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .clipped()
     }
 
     private func placeholderMonogram(name: String) -> some View {

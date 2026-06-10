@@ -349,22 +349,8 @@ struct HomeFeaturedPlaceCard: View {
 
     @ViewBuilder
     private var featuredImage: some View {
-        ZStack {
-            Color(.systemGray5)
-            if let url = place.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable().scaledToFill()
-                    case .failure, .empty:
-                        placeholderMonogram
-                    @unknown default:
-                        placeholderMonogram
-                    }
-                }
-            } else {
-                placeholderMonogram
-            }
+        LoadingRemoteImage(urlString: place.imageUrl) {
+            placeholderMonogram
         }
     }
 
@@ -492,23 +478,10 @@ struct HomeServicePlaceRow: View {
 
     @ViewBuilder
     private var serviceImage: some View {
-        ZStack {
-            Color(.systemGray5)
-            if let url = place.imageUrl.flatMap(URL.init(string:)) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let img) = phase {
-                        img.resizable().scaledToFill()
-                    } else {
-                        Text(String(place.name.prefix(1)).uppercased())
-                            .font(.headline)
-                            .foregroundStyle(HomeScreenPalette.primary)
-                    }
-                }
-            } else {
-                Text(String(place.name.prefix(1)).uppercased())
-                    .font(.headline)
-                    .foregroundStyle(HomeScreenPalette.primary)
-            }
+        LoadingRemoteImage(urlString: place.imageUrl) {
+            Text(String(place.name.prefix(1)).uppercased())
+                .font(.headline)
+                .foregroundStyle(HomeScreenPalette.primary)
         }
     }
 }

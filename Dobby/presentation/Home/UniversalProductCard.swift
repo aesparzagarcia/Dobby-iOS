@@ -73,30 +73,11 @@ struct UniversalProductCard: View {
 
     @ViewBuilder
     private var imageBlock: some View {
-        ZStack {
-            Color(.systemGray5)
-            if let urlString = AppConfiguration.fullImageURL(product.imageUrl),
-               let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: width, height: imageHeight)
-                            .clipped()
-                    case .failure:
-                        placeholderMonogram
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        placeholderMonogram
-                    }
-                }
-            } else {
-                placeholderMonogram
-            }
+        LoadingRemoteImage(urlString: product.imageUrl, resolveAgainstApiBase: true) {
+            placeholderMonogram
         }
+        .frame(width: width, height: imageHeight)
+        .clipped()
     }
 
     private var placeholderMonogram: some View {

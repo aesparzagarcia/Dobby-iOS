@@ -161,26 +161,8 @@ struct ProductDetailScreen: View {
                         .tag(0)
                 } else {
                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, urlString in
-                        Group {
-                            if let url = URL(string: urlString) {
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .success(let img):
-                                        img.resizable().scaledToFill()
-                                    case .failure:
-                                        imagePlaceholder
-                                    case .empty:
-                                        ZStack {
-                                            Color(.systemGray5)
-                                            ProgressView()
-                                        }
-                                    @unknown default:
-                                        imagePlaceholder
-                                    }
-                                }
-                            } else {
-                                imagePlaceholder
-                            }
+                        LoadingRemoteImage(urlString: urlString) {
+                            imagePlaceholder
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: heroHeight)
