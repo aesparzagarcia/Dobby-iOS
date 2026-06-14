@@ -33,12 +33,14 @@ struct VerifyOtpResponseDTO: Decodable {
     let refreshToken: String?
     let user: UserDTO?
     let requiresRegistration: Bool
+    let registrationToken: String?
 
     enum CodingKeys: String, CodingKey {
         case token
         case refreshToken
         case user
         case requiresRegistration = "requires_registration"
+        case registrationToken = "registration_token"
     }
 }
 
@@ -62,10 +64,12 @@ struct CompleteRegistrationRequestDTO: Encodable {
     let name: String
     let lastName: String
     let email: String
+    let registrationToken: String
 
     enum CodingKeys: String, CodingKey {
         case phone, name, email
         case lastName = "last_name"
+        case registrationToken = "registration_token"
     }
 }
 
