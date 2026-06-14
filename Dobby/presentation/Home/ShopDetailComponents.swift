@@ -19,6 +19,7 @@ private enum ShopDetailPalette {
 }
 
 private let shopDetailProductCardScale: CGFloat = 0.9
+private let shopDetailProductImageAspectRatio: CGFloat = 4 / 3
 
 struct ShopDetailSearchBar: View {
     @Binding var query: String
@@ -198,7 +199,7 @@ struct ShopDetailProductCard: View {
         let cardShape = RoundedRectangle(cornerRadius: corner, style: .continuous)
 
         VStack(spacing: 0) {
-            productImage(height: 180 * scale, corner: corner)
+            productImage(corner: corner)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onTap)
 
@@ -315,14 +316,21 @@ struct ShopDetailProductCard: View {
     }
 
     @ViewBuilder
-    private func productImage(height: CGFloat, corner: CGFloat) -> some View {
-        LoadingRemoteImage(urlString: product.imageUrl) {
-            placeholderMonogram
+    private func productImage(corner: CGFloat) -> some View {
+        let imagePadding = 8 * shopDetailProductCardScale
+        ZStack {
+            Color.white
+            LoadingRemoteImage(
+                urlString: product.imageUrl,
+                contentMode: .fit,
+                placeholderBackground: .white
+            ) {
+                placeholderMonogram
+            }
+            .padding(imagePadding)
         }
-        .background(ShopDetailPalette.imagePlaceholder)
+        .aspectRatio(shopDetailProductImageAspectRatio, contentMode: .fit)
         .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .clipped()
         .clipShape(
             UnevenRoundedRectangle(
                 topLeadingRadius: corner,

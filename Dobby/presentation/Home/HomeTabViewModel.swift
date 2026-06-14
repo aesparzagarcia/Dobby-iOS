@@ -236,7 +236,14 @@ final class HomeTabViewModel {
             return false
         }
         isCheckoutLoading = true
+        await refreshDeliveryPricing()
+        await refreshShopCoords()
         let deliveryFee = orderPricing?.delivery.finalDeliveryFee ?? 0
+        if deliveryFee <= 0, orderPricing == nil, hasValidDeliveryAddress {
+            cartPayError = "No se pudo calcular el envío. Actualiza el carrito e intenta de nuevo."
+            isCheckoutLoading = false
+            return false
+        }
         switch await orderRepository.createOrder(addressId: addressId, items: cartLines, deliveryFee: deliveryFee) {
         case .success:
             cartLines = []
@@ -421,6 +428,15 @@ final class HomeTabViewModel {
     func refresh() async {
         isRefreshing = true
         defer { isRefreshing = false }
+        await refreshHomeData()
+    }
+
+    /// Silent refresh when the app returns from background (no pull-to-refresh spinner).
+    func refreshOnForeground() async {
+        await refreshHomeData()
+    }
+
+    private func refreshHomeData() async {
         errorMessage = nil
 
         // Pedidos, direcciones y anuncios: detached para que no se cancelen al soltar el pull-to-refresh.

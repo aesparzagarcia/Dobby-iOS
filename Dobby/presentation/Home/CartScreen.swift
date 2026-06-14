@@ -8,7 +8,6 @@ import SwiftUI
 private enum CartPalette {
     static let primary = DobbyBrandColor.primary
     static let screenBackground = Color(red: 0.97, green: 0.96, blue: 0.98)
-    static let rowBackground = Color(red: 0.93, green: 0.91, blue: 0.96)
 }
 
 /// Placeholder copy until payment API exists.
@@ -22,78 +21,22 @@ struct CartScreen: View {
     var onPay: () -> Void
 
     var body: some View {
-        ZStack {
-            CartPalette.screenBackground
-                .ignoresSafeArea()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if viewModel.cartLines.isEmpty {
-                        Text("Tu carrito está vacío.")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
-                    } else {
-                        ForEach(viewModel.cartLines) { line in
-                            cartLineRow(line)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-
-                        VStack(alignment: .leading, spacing: 0) {
-                            infoRow(
-                                label: viewModel.addressLabel ?? "Casa",
-                                icon: "mappin.circle.fill",
-                                text: viewModel.address ?? "Añade una dirección de entrega"
-                            )
-                            Divider().padding(.leading, 16)
-                            if let details = viewModel.addressDetails, !details.isEmpty {
-                                infoRow(
-                                    label: "Detalles",
-                                    icon: "info.circle.fill",
-                                    text: details
-                                )
-                                Divider().padding(.leading, 16)
-                            }
-                            infoRow(
-                                label: "Entrega estimada",
-                                icon: "clock.fill",
-                                text: viewModel.estimatedDeliveryLabel
-                            )
-                            Divider().padding(.leading, 16)
-                            infoRow(
-                                label: "Método de pago",
-                                icon: "creditcard.fill",
-                                text: CartFakeData.paymentMethod
-                            )
-                        }
-                        .padding(.top, 24)
-                        .background(Color.white.opacity(0.5))
-
-                        cartPricingFooter
-                            .padding(.horizontal, 20)
-                            .padding(.top, 24)
-
-                        Button {
-                            onPay()
-                        } label: {
-                            Text("Pagar \(money(viewModel.grandTotal))")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(CartPalette.primary)
-                        .disabled(!viewModel.hasValidDeliveryAddress)
-                        .opacity(viewModel.hasValidDeliveryAddress ? 1 : 0.45)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 28)
-                    }
+        Group {
+            if viewModel.cartLines.isEmpty {
+                Text("Tu carrito está vacío.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 0) {
+                    cartProductsList
+                    deliveryInfoSection
+                    cartFooter
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(CartPalette.screenBackground)
         .navigationTitle("Carrito")
         .navigationBarTitleDisplayMode(.large)
         .navigationBarBackButtonHidden(true)
@@ -126,6 +69,77 @@ struct CartScreen: View {
         }
     }
 
+    private var cartProductsList: some View {
+        List {
+            ForEach(viewModel.cartLines) { line in
+                cartLineRow(line)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                    .listRowSeparator(.visible)
+                    .listRowBackground(Color.white)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var deliveryInfoSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            infoRow(
+                label: viewModel.addressLabel ?? "Casa",
+                icon: "mappin.circle.fill",
+                text: viewModel.address ?? "Añade una dirección de entrega"
+            )
+            Divider().padding(.leading, 16)
+            if let details = viewModel.addressDetails, !details.isEmpty {
+                infoRow(
+                    label: "Detalles",
+                    icon: "info.circle.fill",
+                    text: details
+                )
+                Divider().padding(.leading, 16)
+            }
+            infoRow(
+                label: "Entrega estimada",
+                icon: "clock.fill",
+                text: viewModel.estimatedDeliveryLabel
+            )
+            Divider().padding(.leading, 16)
+            infoRow(
+                label: "Método de pago",
+                icon: "creditcard.fill",
+                text: CartFakeData.paymentMethod
+            )
+        }
+        .background(Color.white)
+    }
+
+    private var cartFooter: some View {
+        VStack(spacing: 0) {
+            cartPricingFooter
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+            Button {
+                onPay()
+            } label: {
+                Text("Pagar \(money(viewModel.grandTotal))")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(CartPalette.primary)
+            .disabled(!viewModel.hasValidDeliveryAddress)
+            .opacity(viewModel.hasValidDeliveryAddress ? 1 : 0.45)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+        }
+        .background(Color.white)
+    }
+
     @ViewBuilder
     private var cartPricingFooter: some View {
         if let pricing = viewModel.orderPricing {
@@ -145,7 +159,7 @@ struct CartScreen: View {
                 .padding(.top, 4)
             }
             Divider()
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
         } else if !viewModel.cartLines.isEmpty {
             HStack {
                 Text("Subtotal")
@@ -195,16 +209,16 @@ struct CartScreen: View {
             Text(money(amount))
                 .font(.subheadline.weight(.medium))
         }
-        .padding(.bottom, 6)
+        .padding(.bottom, 4)
     }
 
     private func cartLineRow(_ line: CartLineItem) -> some View {
         HStack(alignment: .center, spacing: 12) {
             cartThumb(line)
-                .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(line.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -242,10 +256,6 @@ struct CartScreen: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Quitar \(line.name)")
         }
-        .padding(12)
-        .background(CartPalette.rowBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .padding(.bottom, 10)
     }
 
     private func cartThumb(_ line: CartLineItem) -> some View {
@@ -257,7 +267,7 @@ struct CartScreen: View {
     }
 
     private func infoRow(label: String, icon: String, text: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -274,7 +284,7 @@ struct CartScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 7)
     }
 
     private func money(_ value: Double) -> String {

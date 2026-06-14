@@ -54,7 +54,12 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         postOrderRefresh(userInfo: notification.request.content.userInfo)
-        completionHandler([.banner, .sound])
+        completionHandler([.banner, .sound, .badge])
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
+        clearDeliveredOrderNotifications(orderId: nil)
     }
 
     func userNotificationCenter(
@@ -63,6 +68,9 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
+        if let orderId = orderId(from: userInfo), isOrderPushPayload(userInfo) {
+            clearDeliveredOrderNotifications(orderId: orderId)
+        }
         postOrderRefresh(userInfo: userInfo)
         postOpenOrderTrackingIfNeeded(userInfo: userInfo)
         handleProductPromotionPush(userInfo: userInfo)
@@ -126,6 +134,27 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
     private func isConsumerPushPayload(_ userInfo: [AnyHashable: Any]) -> Bool {
         let type = pushType(from: userInfo)
         return type == nil || type == "order_status" || type == "courier_arrived" || type == "product_promotion"
+    }
+
+    private func isOrderPushPayload(_ userInfo: [AnyHashable: Any]) -> Bool {
+        let type = pushType(from: userInfo)
+        return type == "order_status" || type == "courier_arrived"
+    }
+
+    /// Removes delivered order pushes (all orders, or one order) from Notification Center.
+    private func clearDeliveredOrderNotifications(orderId: String?) {
+        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
+            let ids = notifications.compactMap { note -> String? in
+                let info = note.request.content.userInfo
+                guard self.isOrderPushPayload(info) else { return nil }
+                if let orderId {
+                    guard self.orderId(from: info) == orderId else { return nil }
+                }
+                return note.request.identifier
+            }
+            guard !ids.isEmpty else { return }
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+        }
     }
 
     private func pushType(from userInfo: [AnyHashable: Any]) -> String? {

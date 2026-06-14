@@ -15,7 +15,9 @@ struct UniversalProductCard: View {
     let width: CGFloat
 
     private var corner: CGFloat { 16 * productCardScale }
-    private var imageHeight: CGFloat { 120 * productCardScale }
+    /// Square image area so tall products (bottles, etc.) use more of the card.
+    private var imageHeight: CGFloat { width }
+    private var imagePadding: CGFloat { 4 * productCardScale }
 
     private var validDiscount: Int {
         max(0, min(100, product.discount))
@@ -73,11 +75,18 @@ struct UniversalProductCard: View {
 
     @ViewBuilder
     private var imageBlock: some View {
-        LoadingRemoteImage(urlString: product.imageUrl, resolveAgainstApiBase: true) {
-            placeholderMonogram
+        ZStack {
+            Color.white
+            LoadingRemoteImage(
+                urlString: product.imageUrl,
+                resolveAgainstApiBase: true,
+                contentMode: .fit,
+                placeholderBackground: .white
+            ) {
+                placeholderMonogram
+            }
+            .padding(imagePadding)
         }
-        .frame(width: width, height: imageHeight)
-        .clipped()
     }
 
     private var placeholderMonogram: some View {

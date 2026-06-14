@@ -46,6 +46,8 @@ struct HomeTabScreen: View {
     @Binding var pendingOpenProductDiscount: Int?
     let tokenRefresh: ConsumerTokenRefreshService
 
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var wasInBackground = false
     @State private var showCurrentAddress = false
     @State private var navigationPath: [HomeStackRoute] = []
     @State private var quickCategory: HomeQuickCategory = .all
@@ -328,6 +330,14 @@ struct HomeTabScreen: View {
         .background(HomeScreenPalette.screenBackground)
         .onAppear {
             viewModel.loadInitial()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                wasInBackground = true
+            } else if phase == .active && wasInBackground {
+                wasInBackground = false
+                Task { await viewModel.refreshOnForeground() }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.orderChangedNotification)) { _ in
             Task { await viewModel.loadActiveOrder() }

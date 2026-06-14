@@ -19,8 +19,7 @@ private enum OrderTrackingPalette {
     static let totalBarBackground = DobbyBrandColor.light
     static let iconTileBackground = Color(red: 0.95, green: 0.96, blue: 0.97)
     static let checkBadgeBackground = DobbyBrandColor.primary.opacity(0.18)
-    /// Brand green aligned with Android OrderTrackingScreen / PhoneScreen (#2ECC71).
-    static let brandGreen = Color(red: 46 / 255, green: 204 / 255, blue: 113 / 255)
+    static let detailsButtonBackground = Color.black
 }
 
 /// Map camera parity with Android `MAP_BOUNDS_EXPANSION_FACTOR` / `DEFAULT_ZOOM`.
@@ -313,7 +312,7 @@ struct OrderTrackingScreen: View {
                 }
                 .buttonStyle(.plain)
                 .background(
-                    OrderTrackingPalette.brandGreen,
+                    OrderTrackingPalette.detailsButtonBackground,
                     in: RoundedRectangle(
                         cornerRadius: OrderTrackingDetailsCTA.cornerRadius,
                         style: .continuous

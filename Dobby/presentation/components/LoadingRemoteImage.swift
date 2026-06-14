@@ -5,22 +5,25 @@
 
 import SwiftUI
 
-/// Remote image with gray placeholder and spinner while loading.
+/// Remote image with configurable placeholder background and spinner while loading.
 struct LoadingRemoteImage<Placeholder: View>: View {
     let urlString: String?
     var resolveAgainstApiBase: Bool = false
     var contentMode: ContentMode = .fill
+    var placeholderBackground: Color = Color(.systemGray5)
     @ViewBuilder var placeholder: () -> Placeholder
 
     init(
         urlString: String?,
         resolveAgainstApiBase: Bool = false,
         contentMode: ContentMode = .fill,
+        placeholderBackground: Color = Color(.systemGray5),
         @ViewBuilder placeholder: @escaping () -> Placeholder
     ) {
         self.urlString = urlString
         self.resolveAgainstApiBase = resolveAgainstApiBase
         self.contentMode = contentMode
+        self.placeholderBackground = placeholderBackground
         self.placeholder = placeholder
     }
 
@@ -33,7 +36,7 @@ struct LoadingRemoteImage<Placeholder: View>: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGray5)
+            placeholderBackground
             if let url = resolvedURL {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -61,12 +64,14 @@ extension LoadingRemoteImage where Placeholder == EmptyView {
     init(
         urlString: String?,
         resolveAgainstApiBase: Bool = false,
-        contentMode: ContentMode = .fill
+        contentMode: ContentMode = .fill,
+        placeholderBackground: Color = Color(.systemGray5)
     ) {
         self.init(
             urlString: urlString,
             resolveAgainstApiBase: resolveAgainstApiBase,
             contentMode: contentMode,
+            placeholderBackground: placeholderBackground,
             placeholder: { EmptyView() }
         )
     }
