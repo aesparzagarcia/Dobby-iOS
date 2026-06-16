@@ -24,6 +24,7 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let estimatedPreparationMinutes: Int?
     let estimatedDeliveryMinutes: Int?
     let arrivedAtCustomerAt: String?
+    let deliveryCode: String?
     let deliveryRating: Int?
     let canRateDelivery: Bool
     let shopRating: Int?

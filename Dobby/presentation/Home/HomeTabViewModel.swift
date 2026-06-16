@@ -293,6 +293,14 @@ final class HomeTabViewModel {
         warningMessage = nil
     }
 
+    private func applyHomeData(_ data: HomeData) {
+        featuredPlaces = HomeShopHours.sortFeaturedPlacesByAvailability(places: data.featuredPlaces)
+        bestSellerProducts = HomeShopHours.sortBestSellersByShopAvailability(
+            products: data.bestSellerProducts,
+            featuredPlaces: data.featuredPlaces
+        )
+    }
+
     func loadInitial() {
         if let snapshot = HomeBootstrapCache.shared.consume() {
             applyBootstrap(snapshot)
@@ -308,8 +316,7 @@ final class HomeTabViewModel {
             await pricingTask
             switch await placesRepository.getHome() {
             case .success(let data):
-                featuredPlaces = data.featuredPlaces
-                bestSellerProducts = data.bestSellerProducts
+                applyHomeData(data)
                 isLoading = false
             case .failure(let e):
                 isLoading = false
@@ -323,8 +330,11 @@ final class HomeTabViewModel {
     }
 
     private func applyBootstrap(_ snapshot: HomeBootstrapSnapshot) {
-        featuredPlaces = snapshot.featuredPlaces
-        bestSellerProducts = snapshot.bestSellerProducts
+        featuredPlaces = HomeShopHours.sortFeaturedPlacesByAvailability(places: snapshot.featuredPlaces)
+        bestSellerProducts = HomeShopHours.sortBestSellersByShopAvailability(
+            products: snapshot.bestSellerProducts,
+            featuredPlaces: snapshot.featuredPlaces
+        )
         ads = snapshot.ads
         activeOrders = snapshot.activeOrders
         addressLabel = snapshot.addressLabel
@@ -349,8 +359,7 @@ final class HomeTabViewModel {
             warningMessage = nil
             switch await placesRepository.getHome() {
             case .success(let data):
-                featuredPlaces = data.featuredPlaces
-                bestSellerProducts = data.bestSellerProducts
+                applyHomeData(data)
                 isLoading = false
             case .failure(let e):
                 isLoading = false
@@ -470,8 +479,7 @@ final class HomeTabViewModel {
     private func refreshHome() async {
         switch await placesRepository.getHome() {
         case .success(let data):
-            featuredPlaces = data.featuredPlaces
-            bestSellerProducts = data.bestSellerProducts
+            applyHomeData(data)
             errorMessage = nil
         case .failure(let e):
             guard !shouldPreserveExistingData(on: e) else {

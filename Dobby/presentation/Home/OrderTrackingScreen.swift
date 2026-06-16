@@ -466,6 +466,13 @@ struct OrderTrackingScreen: View {
 
                 orderTrackingStatusCard(tracking: tracking)
 
+                if tracking.courierArrivedAtCustomer,
+                   tracking.isOnDelivery,
+                   let code = tracking.deliveryCode?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !code.isEmpty {
+                    orderTrackingDeliveryCodeCard(code: code)
+                }
+
                 if let shop = tracking.shopName {
                     orderTrackingShopRow(
                         shopName: shop,
@@ -505,6 +512,30 @@ struct OrderTrackingScreen: View {
             .padding(.bottom, max(bottomInset, 12))
         }
         .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    private func orderTrackingDeliveryCodeCard(code: String) -> some View {
+        VStack(spacing: 10) {
+            Text("TU CÓDIGO DE ENTREGA")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(OrderTrackingPalette.muted)
+                .kerning(0.6)
+            Text(code)
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(OrderTrackingPalette.primary)
+                .kerning(6)
+            Text("Muéstralo al repartidor para confirmar la entrega.")
+                .font(.subheadline)
+                .foregroundStyle(OrderTrackingPalette.statusSubtitle)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(OrderTrackingPalette.statusBackground)
+        )
     }
 
     private func orderTrackingStatusCard(tracking: OrderTrackingDetail) -> some View {
@@ -903,6 +934,9 @@ private func orderTrackingStatusTitle(_ tracking: OrderTrackingDetail) -> String
 
 private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> String {
     if tracking.courierArrivedAtCustomer, tracking.status.uppercased() == "ON_DELIVERY" {
+        if let code = tracking.deliveryCode?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
+            return "Comparte tu código de entrega con el repartidor"
+        }
         return "Tu pedido te está esperando en la puerta"
     }
     switch tracking.status.uppercased() {

@@ -63,6 +63,56 @@ enum HomeShopHours {
         )
     }
 
+    /// Available shops first; preserves sales/API order within each group.
+    /// Open/available featured places first; preserves API order within each group.
+    static func isFeaturedPlaceAvailable(_ place: FeaturedPlace) -> Bool {
+        isPlaceOpenNow(openingHour: place.openingHour, closingHour: place.closingHour) != false
+    }
+
+    static func sortFeaturedPlacesByAvailability(places: [FeaturedPlace]) -> [FeaturedPlace] {
+        places.enumerated().sorted { lhs, rhs in
+            let lhsAvailable = isFeaturedPlaceAvailable(lhs.element)
+            let rhsAvailable = isFeaturedPlaceAvailable(rhs.element)
+            if lhsAvailable != rhsAvailable { return lhsAvailable && !rhsAvailable }
+            return lhs.offset < rhs.offset
+        }
+        .map(\.element)
+    }
+
+    static func sortBestSellersByShopAvailability(
+        products: [BestSellerProduct],
+        featuredPlaces: [FeaturedPlace]
+    ) -> [BestSellerProduct] {
+        sortProductsByShopAvailability(products: products, featuredPlaces: featuredPlaces) { $0.shopId }
+    }
+
+    static func sortShopProductsByShopAvailability(
+        products: [ShopProduct],
+        featuredPlaces: [FeaturedPlace]
+    ) -> [ShopProduct] {
+        sortProductsByShopAvailability(products: products, featuredPlaces: featuredPlaces) { $0.shopId }
+    }
+
+    private static func sortProductsByShopAvailability<Product>(
+        products: [Product],
+        featuredPlaces: [FeaturedPlace],
+        shopId: (Product) -> String?
+    ) -> [Product] {
+        products.enumerated().sorted { lhs, rhs in
+            let lhsAvailable = isProductShopAvailableForOrders(
+                shopId: shopId(lhs.element),
+                featuredPlaces: featuredPlaces
+            )
+            let rhsAvailable = isProductShopAvailableForOrders(
+                shopId: shopId(rhs.element),
+                featuredPlaces: featuredPlaces
+            )
+            if lhsAvailable != rhsAvailable { return lhsAvailable && !rhsAvailable }
+            return lhs.offset < rhs.offset
+        }
+        .map(\.element)
+    }
+
     private static func parseHour(_ raw: String?) -> (hour: Int, minute: Int)? {
         let s = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if s.isEmpty { return nil }

@@ -98,6 +98,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
     let estimatedPreparationMinutes: Int?
     let estimatedDeliveryMinutes: Int?
     let arrivedAtCustomerAt: String?
+    let deliveryCode: String?
     let deliveryRating: Int?
     let canRateDelivery: Bool
     let shopRating: Int?
@@ -118,6 +119,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
         case estimatedPreparationMinutes = "estimated_preparation_minutes"
         case estimatedDeliveryMinutes = "estimated_delivery_minutes"
         case arrivedAtCustomerAt = "arrived_at_customer_at"
+        case deliveryCode = "delivery_code"
         case deliveryRating = "delivery_rating"
         case canRateDelivery = "can_rate_delivery"
         case shopRating = "shop_rating"
@@ -143,6 +145,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
         estimatedPreparationMinutes = try c.decodeIfPresent(Int.self, forKey: .estimatedPreparationMinutes)
         estimatedDeliveryMinutes = try c.decodeIfPresent(Int.self, forKey: .estimatedDeliveryMinutes)
         arrivedAtCustomerAt = try c.decodeIfPresent(String.self, forKey: .arrivedAtCustomerAt)
+        deliveryCode = try c.decodeIfPresent(String.self, forKey: .deliveryCode)
         deliveryRating = try c.decodeIfPresent(Int.self, forKey: .deliveryRating)
         canRateDelivery = try c.decodeIfPresent(Bool.self, forKey: .canRateDelivery) ?? false
         shopRating = try c.decodeIfPresent(Int.self, forKey: .shopRating)

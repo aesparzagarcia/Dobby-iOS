@@ -141,6 +141,7 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                 estimatedPreparationMinutes: dto.estimatedPreparationMinutes,
                 estimatedDeliveryMinutes: dto.estimatedDeliveryMinutes,
                 arrivedAtCustomerAt: dto.arrivedAtCustomerAt,
+                deliveryCode: dto.deliveryCode,
                 deliveryRating: dto.deliveryRating,
                 canRateDelivery: dto.canRateDelivery,
                 shopRating: dto.shopRating,

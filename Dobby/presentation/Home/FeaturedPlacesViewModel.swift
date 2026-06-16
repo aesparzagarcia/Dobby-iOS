@@ -56,7 +56,7 @@ final class FeaturedPlacesViewModel {
         switch await placesRepository.getFeaturedPlaces() {
         case .success(let places):
             uiState = FeaturedPlacesUiState(
-                places: places,
+                places: HomeShopHours.sortFeaturedPlacesByAvailability(places: places),
                 searchQuery: uiState.searchQuery,
                 selectedCategory: uiState.selectedCategory,
                 isLoading: false,

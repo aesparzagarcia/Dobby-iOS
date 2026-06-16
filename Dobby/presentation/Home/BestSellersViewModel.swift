@@ -82,7 +82,10 @@ final class BestSellersViewModel {
                 featuredPlaces = uiState.featuredPlaces
             }
             uiState = BestSellersUiState(
-                products: products,
+                products: HomeShopHours.sortShopProductsByShopAvailability(
+                    products: products,
+                    featuredPlaces: featuredPlaces
+                ),
                 featuredPlaces: featuredPlaces,
                 searchQuery: uiState.searchQuery,
                 selectedCategoryId: uiState.selectedCategoryId,
