@@ -58,6 +58,7 @@ Thumbs.db
 .env
 .env.*
 *.xcconfig.local
+Dobby/Config/Secrets.xcconfig
 
 # Editores / herramientas
 .idea/

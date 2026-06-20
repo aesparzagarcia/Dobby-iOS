@@ -3,19 +3,28 @@
 <plist version="1.0">
 <dict>
 	<key>API_BASE_URL</key>
-	<string>https://dobby-api-31lf.onrender.com/api/</string>
+	<string>$(API_BASE_URL)</string>
+	<key>APP_ENV</key>
+	<string>$(APP_ENV)</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Dobby necesita acceder a tu red local para conectarse al servidor de desarrollo en tu Mac.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>PLACES_API_KEY</key>
-	<string>AIzaSyDqRhTmNHdy3SEYZqlqIPkL1fi97gyz7bY</string>
+	<string>$(PLACES_API_KEY)</string>
 	<key>DIRECTIONS_API_KEY</key>
-	<string>AIzaSyA6VPXA8IQ1XrImZBS49H0QapDab8UIhRQ</string>
+	<string>$(DIRECTIONS_API_KEY)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>$(LAUNCH_BACKGROUND_NAME)</string>
+	</dict>
 </dict>
 </plist>

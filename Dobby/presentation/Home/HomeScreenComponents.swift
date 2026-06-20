@@ -400,23 +400,19 @@ struct HomeProductSeeMoreCard: View {
 
     private let scale = HomeLayoutConstants.productCardScale
     private var corner: CGFloat { 16 * scale }
-    private var imageHeight: CGFloat { 120 * scale }
+    /// Same square image area as [UniversalProductCard].
+    private var imageHeight: CGFloat { width }
 
     var body: some View {
         Button(action: onTap) {
             ZStack {
                 VStack(spacing: 0) {
-                    Color.clear.frame(height: imageHeight)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(" ").font(.caption.weight(.bold)).opacity(0)
-                            .padding(.horizontal, 10 * scale)
-                            .padding(.vertical, 8 * scale)
-                        HStack { Text(" ").font(.caption2).opacity(0) }
-                            .padding(.horizontal, 10 * scale)
-                            .padding(.vertical, 3 * scale)
-                    }
-                    .padding(.bottom, 10 * scale)
+                    Color.clear
+                        .frame(width: width, height: imageHeight)
+
+                    productCardFooterPlaceholder
                 }
+
                 HStack(spacing: 8 * scale) {
                     Image(systemName: "square.grid.2x2.fill")
                     Text("Ver más").font(.caption.weight(.bold))
@@ -429,9 +425,32 @@ struct HomeProductSeeMoreCard: View {
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
             .shadow(color: HomeScreenPalette.cardShadow, radius: 4, x: 0, y: 2)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.plain)
+    }
+
+    /// Invisible footer matching [UniversalProductCard] so «Ver más» aligns in the carousel.
+    private var productCardFooterPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("\u{00A0}")
+                .font(.caption.weight(.bold))
+                .lineLimit(1)
+                .padding(.horizontal, 10 * scale)
+                .padding(.top, 8 * scale)
+
+            HStack(spacing: 6 * scale) {
+                Text("\u{00A0}")
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                HomeRatingDisplay(rate: 0)
+            }
+            .padding(.horizontal, 10 * scale)
+            .padding(.vertical, 3 * scale)
+            .padding(.bottom, 10 * scale)
+        }
+        .opacity(0)
     }
 }
 

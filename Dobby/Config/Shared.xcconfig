@@ -1,0 +1,5 @@
+// Shared build settings for Dobby iOS. Copy Secrets.example.xcconfig → Secrets.xcconfig for local overrides.
+#include? "Secrets.xcconfig"
+
+PLACES_API_KEY = AIzaSyDqRhTmNHdy3SEYZqlqIPkL1fi97gyz7bY
+DIRECTIONS_API_KEY = AIzaSyA6VPXA8IQ1XrImZBS49H0QapDab8UIhRQ

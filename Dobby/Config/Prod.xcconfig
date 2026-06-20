@@ -1,0 +1,9 @@
+// Release builds → production backend (parity with Android `prod` flavor).
+#include "Shared.xcconfig"
+
+APP_ENV = prod
+API_BASE_URL = https:/$()/dobby-api-31lf.onrender.com/api/
+PRODUCT_BUNDLE_IDENTIFIER = com.ares.Dobby
+INFOPLIST_KEY_CFBundleDisplayName = Dobby
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Prod
+LAUNCH_BACKGROUND_NAME = LaunchBackground-Prod

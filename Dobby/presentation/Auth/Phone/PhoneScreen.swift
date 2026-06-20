@@ -121,30 +121,6 @@ struct PhoneScreen: View {
                     )
                 }
                 .buttonStyle(.plain)
-
-                Spacer().frame(height: 14)
-
-                Button {
-                    viewModel.sendCode { phone, userExists in
-                        onCodeSent(phone, userExists)
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "bubble.left.and.bubble.right")
-                        Text("Recibir código por WhatsApp")
-                            .font(.system(.subheadline, design: .default, weight: .semibold))
-                    }
-                    .foregroundStyle(DobbyPureScale.onyx)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 27, style: .continuous)
-                            .stroke(DobbyPureScale.onyx, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
             }
 
             Spacer(minLength: 0)

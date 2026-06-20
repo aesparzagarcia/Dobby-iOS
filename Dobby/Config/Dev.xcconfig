@@ -1,0 +1,10 @@
+// Debug builds → local / development backend (parity with Android `dev` flavor).
+#include "Shared.xcconfig"
+
+APP_ENV = dev
+API_BASE_URL = http:/$()/192.168.1.16:3001/api/
+PRODUCT_BUNDLE_IDENTIFIER = com.ares.Dobby.dev
+INFOPLIST_KEY_CFBundleDisplayName = Dobby Dev
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Dev
+LAUNCH_BACKGROUND_NAME = LaunchBackground-Dev
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) DOBBY_DEV

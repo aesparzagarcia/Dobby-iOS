@@ -9,6 +9,15 @@ import os.log
 enum AppConfiguration {
     private static let log = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Dobby", category: "API")
 
+    /// `dev` or `prod` (from xcconfig → Info.plist).
+    static var environment: String {
+        let raw = (Bundle.main.object(forInfoDictionaryKey: "APP_ENV") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return raw.isEmpty ? "prod" : raw
+    }
+
+    static var isDevEnvironment: Bool { environment == "dev" }
+
     private static let defaultSimulatorBase = "http://127.0.0.1:3001/api/"
     private static let defaultDeviceFallbackBase = "http://127.0.0.1:3001/api/"
 
