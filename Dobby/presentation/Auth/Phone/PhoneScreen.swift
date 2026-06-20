@@ -7,6 +7,9 @@ import SwiftUI
 
 private let subtitleBlack = Color(red: 0x11 / 255, green: 0x11 / 255, blue: 0x11 / 255)
 private let backSurface = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
+private let termsLinkBlue = Color(red: 0x00 / 255, green: 0x7A / 255, blue: 0xFF / 255)
+private let termsURL = URL(string: "https://dobby-frontend-wwru.onrender.com/terminos-y-condiciones")!
+private let privacyURL = URL(string: "https://dobby-frontend-wwru.onrender.com/aviso-de-privacidad")!
 /// Placeholder del celular: más oscuro que el gris secundario del sistema.
 private let phoneFieldPlaceholderColor = Color(red: 0x55 / 255, green: 0x55 / 255, blue: 0x55 / 255)
 
@@ -18,6 +21,12 @@ struct PhoneScreen: View {
     @FocusState private var isPhoneFieldFocused: Bool
     /// Copia local del número: SwiftUI a veces no recorta el TextField si solo se acorta vía el modelo.
     @State private var phoneFieldText = ""
+    @State private var acceptedTerms = false
+    @State private var acceptedPrivacy = false
+
+    private var canSendCode: Bool {
+        viewModel.nationalDigits.count == PhoneNationalInput.maxDigits && acceptedTerms && acceptedPrivacy
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -66,7 +75,7 @@ struct PhoneScreen: View {
                 TextField(
                     "",
                     text: $phoneFieldText,
-                    prompt: Text("384 1234 567")
+                    prompt: Text("Tu número celular")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(phoneFieldPlaceholderColor)
                 )
@@ -92,6 +101,58 @@ struct PhoneScreen: View {
             }
 
             Spacer().frame(height: 32)
+
+            HStack(alignment: .top, spacing: 10) {
+                Button {
+                    acceptedTerms.toggle()
+                } label: {
+                    Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 22))
+                        .foregroundStyle(acceptedTerms ? DobbyPureScale.onyx : Color.gray)
+                }
+                .buttonStyle(.plain)
+
+                HStack(spacing: 0) {
+                    Text("Acepto los ")
+                        .font(.system(.subheadline))
+                        .foregroundStyle(.black)
+                    Link(destination: termsURL) {
+                        Text("Términos y condiciones")
+                            .font(.system(.subheadline))
+                            .foregroundStyle(termsLinkBlue)
+                            .underline()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Spacer().frame(height: 12)
+
+            HStack(alignment: .top, spacing: 10) {
+                Button {
+                    acceptedPrivacy.toggle()
+                } label: {
+                    Image(systemName: acceptedPrivacy ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 22))
+                        .foregroundStyle(acceptedPrivacy ? DobbyPureScale.onyx : Color.gray)
+                }
+                .buttonStyle(.plain)
+
+                HStack(spacing: 0) {
+                    Text("Acepto ")
+                        .font(.system(.subheadline))
+                        .foregroundStyle(.black)
+                    Link(destination: privacyURL) {
+                        Text("Aviso de privacidad")
+                            .font(.system(.subheadline))
+                            .foregroundStyle(termsLinkBlue)
+                            .underline()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Spacer().frame(height: 20)
 
             if viewModel.isLoading {
                 HStack {
@@ -121,6 +182,8 @@ struct PhoneScreen: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(!canSendCode)
+                .opacity(canSendCode ? 1 : 0.45)
             }
 
             Spacer(minLength: 0)
