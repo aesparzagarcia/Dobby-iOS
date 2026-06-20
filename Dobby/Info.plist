@@ -7,7 +7,7 @@
 	<key>APP_ENV</key>
 	<string>$(APP_ENV)</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Dobby necesita acceder a tu red local para conectarse al servidor de desarrollo en tu Mac.</string>
+	<string>Dobbi necesita acceder a tu red local para conectarse al servidor de desarrollo en tu Mac.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

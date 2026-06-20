@@ -999,8 +999,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Dobby/Info.plist;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobby needs access to devices on your local network to reach the API during development.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobby uses your location to show and save your delivery address on the map.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobbi needs access to devices on your local network to reach the API during development.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobbi uses your location to show and save your delivery address on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
@@ -1029,8 +1029,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Dobby/Info.plist;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobby needs access to devices on your local network to reach the API during development.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobby uses your location to show and save your delivery address on the map.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobbi needs access to devices on your local network to reach the API during development.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobbi uses your location to show and save your delivery address on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
