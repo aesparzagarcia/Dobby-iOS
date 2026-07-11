@@ -63,9 +63,6 @@ struct AdDetailScreen: View {
                     .padding(.horizontal)
             case (false, let ad?, _):
                 adContent(ad: ad)
-            default:
-                ProgressView()
-                    .tint(AdDetailPalette.primary)
             }
         }
         .navigationTitle(viewModel.uiState.ad?.name ?? "Anuncio")

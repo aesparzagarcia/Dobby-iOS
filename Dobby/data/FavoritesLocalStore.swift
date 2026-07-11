@@ -18,7 +18,7 @@ final class FavoritesLocalStore {
 
     /// Newest first — matches Android `ORDER BY createdAt DESC`.
     func loadAll() -> [FavoriteProduct] {
-        var descriptor = FetchDescriptor<FavoriteProductPersistedEntity>(
+        let descriptor = FetchDescriptor<FavoriteProductPersistedEntity>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         guard let entities = try? context.fetch(descriptor) else {
@@ -50,7 +50,7 @@ final class FavoritesLocalStore {
     }
 
     private func remove(productId: String) {
-        var descriptor = FetchDescriptor<FavoriteProductPersistedEntity>(
+        let descriptor = FetchDescriptor<FavoriteProductPersistedEntity>(
             predicate: #Predicate { $0.productId == productId }
         )
         guard let rows = try? context.fetch(descriptor) else { return }

@@ -23,11 +23,11 @@ enum DeviceLocationFetchError: LocalizedError {
 }
 
 /// Requests a single fix; create a **new** instance per request.
-@MainActor
 final class OneShotLocationRequest: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation, Error>?
 
+    @MainActor
     func getLocation() async throws -> CLLocation {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<CLLocation, Error>) in
             continuation = cont
@@ -49,7 +49,14 @@ final class OneShotLocationRequest: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in
+            self.handleAuthorizationChange(manager)
+        }
+    }
+
+    @MainActor
+    private func handleAuthorizationChange(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
             if continuation != nil {
@@ -63,16 +70,20 @@ final class OneShotLocationRequest: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let loc = locations.last else { return }
-        continuation?.resume(returning: loc)
-        continuation = nil
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            guard let loc = locations.last else { return }
+            self.continuation?.resume(returning: loc)
+            self.continuation = nil
+        }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        if let c = continuation {
-            c.resume(throwing: error)
-            continuation = nil
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            if let c = self.continuation {
+                c.resume(throwing: error)
+                self.continuation = nil
+            }
         }
     }
 }

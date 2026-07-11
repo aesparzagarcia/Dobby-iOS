@@ -12,6 +12,7 @@ private let resendCountdownSeconds = 600
 @Observable
 final class OtpViewModel {
     private let authRepository: AuthRepository
+    nonisolated private let countdown = OtpCountdownScheduler()
 
     let phone: String
 
@@ -25,7 +26,6 @@ final class OtpViewModel {
     var canResend: Bool { remainingSeconds == 0 && !isResending && !isLoading }
 
     private var resendDeadline: Date
-    nonisolated(unsafe) private var countdownTask: Task<Void, Never>?
 
     init(authRepository: AuthRepository, phone: String) {
         self.authRepository = authRepository
@@ -36,7 +36,7 @@ final class OtpViewModel {
     }
 
     deinit {
-        countdownTask?.cancel()
+        countdown.cancel()
     }
 
     /// Recomputes displayed time from wall clock (e.g. after returning from background).
@@ -50,14 +50,9 @@ final class OtpViewModel {
     }
 
     private func startCountdownTicker() {
-        countdownTask?.cancel()
-        countdownTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                await MainActor.run {
-                    self?.syncRemainingSeconds()
-                }
-            }
+        countdown.restart { [weak self] in
+            guard let viewModel = self else { return }
+            await viewModel.syncRemainingSeconds()
         }
     }
 
@@ -117,5 +112,25 @@ final class OtpViewModel {
 
     func clearError() {
         errorMessage = nil
+    }
+}
+
+/// Holds the resend countdown task outside `@MainActor` so `deinit` can cancel it safely.
+private final class OtpCountdownScheduler: @unchecked Sendable {
+    private var task: Task<Void, Never>?
+
+    func restart(tick: @escaping @Sendable () async -> Void) {
+        task?.cancel()
+        task = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await tick()
+            }
+        }
+    }
+
+    func cancel() {
+        task?.cancel()
+        task = nil
     }
 }
