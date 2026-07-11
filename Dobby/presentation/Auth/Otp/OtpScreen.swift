@@ -32,6 +32,7 @@ private func formatMmSs(_ totalSeconds: Int) -> String {
 }
 
 struct OtpScreen: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: OtpViewModel
     var onLoggedIn: () -> Void
     var onRequiresRegistration: (String) -> Void
@@ -58,7 +59,7 @@ struct OtpScreen: View {
 
                 Spacer().frame(height: 20)
 
-                Text("Introduce el código que enviamos 👀")
+                Text("Introduce el código que enviamos")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.black)
 
@@ -125,13 +126,35 @@ struct OtpScreen: View {
             }
             .padding(.horizontal, 24)
 
-            VStack(spacing: 4) {
-                Text("Podrás solicitar un nuevo código en")
-                    .font(.body)
-                    .foregroundStyle(timerLabel)
-                Text(formatMmSs(viewModel.remainingSeconds))
-                    .font(.system(.title3, design: .default, weight: .bold))
-                    .foregroundStyle(timerValue)
+            Group {
+                if viewModel.canResend {
+                    Button {
+                        Task {
+                            if await viewModel.resendCode() {
+                                otpEntry = ""
+                            }
+                        }
+                    } label: {
+                        if viewModel.isResending {
+                            ProgressView()
+                                .tint(phoneTeal)
+                        } else {
+                            Text("Reenviar código")
+                                .font(.system(.body, weight: .semibold))
+                                .foregroundStyle(phoneTeal)
+                        }
+                    }
+                    .disabled(viewModel.isResending)
+                } else {
+                    VStack(spacing: 4) {
+                        Text("Podrás solicitar un nuevo código en")
+                            .font(.body)
+                            .foregroundStyle(timerLabel)
+                        Text(formatMmSs(viewModel.remainingSeconds))
+                            .font(.system(.title3, design: .default, weight: .bold))
+                            .foregroundStyle(timerValue)
+                    }
+                }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
@@ -140,6 +163,12 @@ struct OtpScreen: View {
         .background(Color.white)
         .onAppear {
             otpFieldFocused = true
+            viewModel.syncRemainingSeconds()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                viewModel.syncRemainingSeconds()
+            }
         }
         .onChange(of: otpEntry) { _, new in
             let filtered = String(new.filter { $0.isNumber }.prefix(6))
@@ -150,6 +179,7 @@ struct OtpScreen: View {
             viewModel.applyOtpDigits(filtered)
             guard filtered.count == 6 else { return }
             guard !viewModel.isLoading else { return }
+            guard !viewModel.isResending else { return }
             guard viewModel.errorMessage == nil else { return }
             viewModel.verifyCode(
                 onLoggedIn: onLoggedIn,

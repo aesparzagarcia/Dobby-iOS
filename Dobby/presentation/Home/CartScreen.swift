@@ -38,7 +38,7 @@ struct CartScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(CartPalette.screenBackground)
         .navigationTitle("Carrito")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -144,11 +144,8 @@ struct CartScreen: View {
     private var cartPricingFooter: some View {
         if let pricing = viewModel.orderPricing {
             pricingLine(label: "Subtotal productos", amount: pricing.productsSubtotal)
-            pricingLine(
-                label: "Envío",
-                amount: pricing.delivery.finalDeliveryFee,
-                subtitle: deliveryFeeSubtitle(pricing.delivery)
-            )
+            pricingLine(label: "Tarifa de servicio", amount: pricing.serviceFee)
+            pricingLine(label: "Envío", amount: pricing.delivery.finalDeliveryFee)
             if pricing.delivery.dynamicMultiplier > 1 {
                 Text(
                     "Incluye tarifa dinámica (×\(String(format: "%.2f", pricing.delivery.dynamicMultiplier)))"
@@ -169,7 +166,11 @@ struct CartScreen: View {
                 Text(money(viewModel.productsSubtotal))
                     .font(.subheadline)
             }
-            Text("El costo de envío se calculará al tener una dirección de entrega válida.")
+            Text(
+                viewModel.hasValidDeliveryAddress
+                    ? "No se pudo calcular el envío. La tienda no tiene ubicación válida configurada."
+                    : "El costo de envío se calculará al tener una dirección de entrega válida."
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -187,24 +188,11 @@ struct CartScreen: View {
         .padding(.top, viewModel.orderPricing == nil && viewModel.cartLines.isEmpty ? 0 : 8)
     }
 
-    private func deliveryFeeSubtitle(_ delivery: DeliveryPricingBreakdown) -> String {
-        var s = "Base, distancia (\(String(format: "%.1f", delivery.distanceKm)) km) y zona"
-        if delivery.weatherFee > 0 { s += " · clima" }
-        return s
-    }
-
-    private func pricingLine(label: String, amount: Double, subtitle: String? = nil) -> some View {
+    private func pricingLine(label: String, amount: Double) -> some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
             Spacer()
             Text(money(amount))
                 .font(.subheadline.weight(.medium))

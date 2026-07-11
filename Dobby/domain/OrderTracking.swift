@@ -11,6 +11,7 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let id: String
     let status: String
     var total: Double
+    let serviceFee: Double
     let deliveryFee: Double
     let productsSubtotal: Double
     let deliveryAddress: String?
@@ -78,15 +79,37 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     var mapCameraFitCoordinates: [(lat: Double, lng: Double)] {
         var points: [(lat: Double, lng: Double)] = []
         if showsRestaurantAndCustomerOnMap {
-            if let shopCoordinate { points.append(shopCoordinate) }
-            if let customerCoordinate { points.append(customerCoordinate) }
-        } else if let routeDestinationCoordinate {
+            if let shopCoordinate, Self.isValidMapCoordinate(shopCoordinate) {
+                points.append(shopCoordinate)
+            }
+            if let customerCoordinate, Self.isValidMapCoordinate(customerCoordinate) {
+                points.append(customerCoordinate)
+            }
+        } else if let routeDestinationCoordinate, Self.isValidMapCoordinate(routeDestinationCoordinate) {
             points.append(routeDestinationCoordinate)
+        } else if status.uppercased() == "PENDING",
+                  let customerCoordinate,
+                  Self.isValidMapCoordinate(customerCoordinate) {
+            points.append(customerCoordinate)
         }
-        if let dm = deliveryMan, let lat = dm.lat, let lng = dm.lng {
+        if let dm = deliveryMan, let lat = dm.lat, let lng = dm.lng,
+           Self.isValidMapCoordinate((lat, lng)) {
             points.append((lat, lng))
         }
         return points
+    }
+
+    /// Pending orders: show delivery address before shop/courier markers appear.
+    var showsPendingCustomerOnMap: Bool {
+        status.uppercased() == "PENDING" && customerCoordinate != nil
+    }
+
+    private static func isValidMapCoordinate(_ coordinate: (lat: Double, lng: Double)) -> Bool {
+        let lat = coordinate.lat
+        let lng = coordinate.lng
+        guard lat >= -90, lat <= 90, lng >= -180, lng <= 180 else { return false }
+        guard abs(lat) > 1e-4 || abs(lng) > 1e-4 else { return false }
+        return true
     }
 
     private static let preCourierBothMarkerStatuses: Set<String> = [

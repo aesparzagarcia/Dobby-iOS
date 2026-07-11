@@ -25,7 +25,8 @@ struct PhoneScreen: View {
     @State private var acceptedPrivacy = false
 
     private var canSendCode: Bool {
-        viewModel.nationalDigits.count == PhoneNationalInput.maxDigits && acceptedTerms && acceptedPrivacy
+        phoneFieldText.filter(\.isNumber).count == PhoneNationalInput.maxDigits
+            && acceptedTerms && acceptedPrivacy
     }
 
     var body: some View {
@@ -162,6 +163,8 @@ struct PhoneScreen: View {
                 }
             } else {
                 Button {
+                    let digits = String(phoneFieldText.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits))
+                    viewModel.onPhoneChange(digits)
                     viewModel.sendCode { phone, userExists in
                         onCodeSent(phone, userExists)
                     }
@@ -171,19 +174,18 @@ struct PhoneScreen: View {
                         Text("Recibir código por SMS")
                             .font(.system(.subheadline, design: .default, weight: .semibold))
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(canSendCode ? Color.white : DobbyPureScale.ash)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(DobbyPureScale.onyx)
+                    .background(canSendCode ? DobbyPureScale.onyx : DobbyPureScale.mist)
                     .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 27, style: .continuous)
-                            .stroke(DobbyPureScale.onyx, lineWidth: 1)
+                            .stroke(canSendCode ? DobbyPureScale.onyx : DobbyPureScale.mist, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSendCode)
-                .opacity(canSendCode ? 1 : 0.45)
             }
 
             Spacer(minLength: 0)

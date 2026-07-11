@@ -14,7 +14,7 @@ private enum ProductDetailPalette {
     static let divider = Color(red: 0.91, green: 0.91, blue: 0.93)
 }
 
-private let heroHeight: CGFloat = 300
+private let heroImagePadding: CGFloat = 24
 private let cardOverlap: CGFloat = 24
 
 struct ProductDetailScreen: View {
@@ -157,21 +157,15 @@ struct ProductDetailScreen: View {
         ZStack(alignment: .top) {
             TabView(selection: $imagePage) {
                 if imageUrls.isEmpty {
-                    imagePlaceholder
+                    heroImagePage(urlString: nil)
                         .tag(0)
                 } else {
                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, urlString in
-                        LoadingRemoteImage(urlString: urlString) {
-                            imagePlaceholder
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: heroHeight)
-                        .clipped()
-                        .tag(index)
+                        heroImagePage(urlString: urlString)
+                            .tag(index)
                     }
                 }
             }
-            .frame(height: heroHeight)
             .tabViewStyle(.page(indexDisplayMode: .never))
 
             if imageUrls.count > 1 {
@@ -204,8 +198,30 @@ struct ProductDetailScreen: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             .padding(.trailing, 16)
-            .padding(.bottom, 12)
+            .padding(.bottom, cardOverlap + 12)
         }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func heroImagePage(urlString: String?) -> some View {
+        ZStack {
+            Color.white
+            LoadingRemoteImage(
+                urlString: urlString,
+                contentMode: .fit,
+                placeholderBackground: .white
+            ) {
+                heroImageMonogram
+            }
+            .padding(heroImagePadding)
+        }
+    }
+
+    private var heroImageMonogram: some View {
+        Text(String(displayProduct.name.prefix(1)).uppercased())
+            .font(.system(size: 72, weight: .medium))
+            .foregroundStyle(.secondary)
     }
 
     private var infoCard: some View {
@@ -376,17 +392,6 @@ struct ProductDetailScreen: View {
                 .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
-    }
-
-    private var imagePlaceholder: some View {
-        ZStack {
-            Color(.systemGray5)
-            Text(String(displayProduct.name.prefix(1)).uppercased())
-                .font(.system(size: 72, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: heroHeight)
     }
 
     private func loadProductDetail() async {

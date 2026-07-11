@@ -294,7 +294,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         case .success(let dto):
             var coords: [String: (Double, Double)] = [:]
             for s in dto.shops {
-                if let la = s.lat, let lo = s.lng, la.isFinite, lo.isFinite {
+                if let la = s.lat, let lo = s.lng, GeoDistance.isUsableWgs84Point(lat: la, lng: lo) {
                     coords[s.id] = (la, lo)
                 }
             }

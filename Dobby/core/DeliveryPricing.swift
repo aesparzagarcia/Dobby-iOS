@@ -7,6 +7,8 @@
 
 import Foundation
 
+private let serviceFeeRate = 0.08
+
 struct DeliveryPricingSettings: Equatable, Sendable {
     var baseFee: Double
     var pricePerKm: Double
@@ -66,8 +68,12 @@ struct OrderPricing: Equatable, Sendable {
     var productsSubtotal: Double
     var delivery: DeliveryPricingBreakdown
 
+    var serviceFee: Double {
+        roundMoney(productsSubtotal * serviceFeeRate)
+    }
+
     var grandTotal: Double {
-        roundMoney(productsSubtotal + delivery.finalDeliveryFee)
+        roundMoney(productsSubtotal + serviceFee + delivery.finalDeliveryFee)
     }
 }
 
@@ -111,6 +117,15 @@ enum DeliveryPricingCalculator {
 enum GeoDistance {
     static let earthRadiusM = 6_371_000.0
     static let roadFactor = 1.32
+    /// Local delivery sanity cap (road km, after `roadFactor`).
+    static let maxReasonableDeliveryRoadKm = 100.0
+
+    static func isUsableWgs84Point(lat: Double, lng: Double) -> Bool {
+        guard lat.isFinite, lng.isFinite else { return false }
+        guard abs(lat) <= 90, abs(lng) <= 180 else { return false }
+        guard abs(lat) >= 1e-5 || abs(lng) >= 1e-5 else { return false }
+        return true
+    }
 
     static func haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
         let r1 = lat1 * .pi / 180
@@ -133,10 +148,14 @@ enum GeoDistance {
         cartLines: [CartLineItem],
         shopCoordsByShopId: [String: (Double, Double)]
     ) -> Double? {
-        guard let userLat, let userLng, userLat.isFinite, userLng.isFinite else { return nil }
+        guard let userLat, let userLng, isUsableWgs84Point(lat: userLat, lng: userLng) else { return nil }
         let pickups = resolvePickups(cartLines: cartLines, shopCoordsByShopId: shopCoordsByShopId)
         guard !pickups.isEmpty else { return nil }
-        return pickups.map { roadDistanceKm(lat1: userLat, lon1: userLng, lat2: $0.0, lon2: $0.1) }.max()
+        guard let maxKm = pickups
+            .map({ roadDistanceKm(lat1: userLat, lon1: userLng, lat2: $0.0, lon2: $0.1) })
+            .max(),
+            maxKm <= maxReasonableDeliveryRoadKm else { return nil }
+        return maxKm
     }
 
     static func resolvePickups(
@@ -148,8 +167,9 @@ enum GeoDistance {
         for line in cartLines {
             let pair: (Double, Double)? = {
                 if let la = line.pickupLatitude, let lo = line.pickupLongitude,
-                   la.isFinite, lo.isFinite { return (la, lo) }
-                if let sid = line.shopId, let p = shopCoordsByShopId[sid] { return p }
+                   isUsableWgs84Point(lat: la, lng: lo) { return (la, lo) }
+                if let sid = line.shopId, let p = shopCoordsByShopId[sid],
+                   isUsableWgs84Point(lat: p.0, lng: p.1) { return p }
                 return nil
             }()
             guard let pair else { continue }

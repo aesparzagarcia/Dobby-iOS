@@ -126,8 +126,9 @@ struct ShopDetailScreen: View {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(DobbyPureScale.onyx)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Atrás")
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -136,6 +137,7 @@ struct ShopDetailScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            .hideToolbarSharedBackgroundIfAvailable()
         }
     }
 

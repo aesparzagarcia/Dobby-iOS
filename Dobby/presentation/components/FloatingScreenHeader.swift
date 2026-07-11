@@ -9,12 +9,11 @@ import SwiftUI
 
 enum FloatingScreenHeaderStyle {
     static let titleColor = DobbyBrandColor.dark
-    static let cartBadgeBackground = DobbyBrandColor.primary
     static let backButtonBackground = Color(red: 0xEC / 255, green: 0xEC / 255, blue: 0xEC / 255)
     static let cardCornerRadius: CGFloat = 18
     static let backButtonCornerRadius: CGFloat = 12
     static let backButtonSize: CGFloat = 40
-    static let sideSlotWidth: CGFloat = 48
+    static let sideSlotWidth: CGFloat = 56
 }
 
 struct FloatingScreenHeader: View {
@@ -56,7 +55,7 @@ struct FloatingScreenHeader: View {
             Group {
                 if let onCartClick {
                     Button(action: onCartClick) {
-                        FloatingScreenHeaderCartBadge(count: cartItemCount)
+                        HomeCartIconBadge(count: cartItemCount)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Carrito")
@@ -76,27 +75,6 @@ struct FloatingScreenHeader: View {
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 16)
         .padding(.top, 8)
-    }
-}
-
-private struct FloatingScreenHeaderCartBadge: View {
-    let count: Int
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "cart.fill")
-                .font(.title2)
-                .foregroundStyle(.primary)
-            if count > 0 {
-                Text("\(min(count, 99))")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(4)
-                    .background(FloatingScreenHeaderStyle.cartBadgeBackground)
-                    .clipShape(Circle())
-                    .offset(x: 4, y: -4)
-            }
-        }
     }
 }
 

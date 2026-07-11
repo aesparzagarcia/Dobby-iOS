@@ -128,6 +128,7 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                 id: dto.id,
                 status: dto.status,
                 total: dto.total,
+                serviceFee: dto.serviceFee,
                 deliveryFee: dto.deliveryFee,
                 productsSubtotal: dto.productsSubtotal,
                 deliveryAddress: dto.deliveryAddress,

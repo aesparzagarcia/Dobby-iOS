@@ -89,7 +89,7 @@ struct HomeTabScreen: View {
                                 )
                             },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .featuredPlaces:
@@ -131,7 +131,7 @@ struct HomeTabScreen: View {
                                 )
                             },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .service(let serviceId):
@@ -142,7 +142,7 @@ struct HomeTabScreen: View {
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .ad(let adId):
@@ -153,7 +153,7 @@ struct HomeTabScreen: View {
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .product(let r):
@@ -167,11 +167,11 @@ struct HomeTabScreen: View {
                             userLongitude: viewModel.deliveryLongitude,
                             onBack: { popNavigation() },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             },
                             onAddToCart: { quantity, detail in
                                 viewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .cart:
@@ -226,6 +226,12 @@ struct HomeTabScreen: View {
         if !navigationPath.isEmpty {
             navigationPath.removeLast()
         }
+    }
+
+    /// Evita `[.shop, .cart, .cart]` cuando el FAB de inicio y el de restaurante reciben el mismo toque.
+    private func pushCartIfNeeded() {
+        guard navigationPath.last != .cart else { return }
+        navigationPath.append(.cart)
     }
 
     private func openOrderTrackingIfNeeded(_ orderId: String?) {
@@ -604,11 +610,12 @@ struct HomeTabScreen: View {
             .background(HomeScreenPalette.screenBackground)
 
             Button {
-                navigationPath.append(.cart)
+                pushCartIfNeeded()
             } label: {
                 HomeCartIconBadge(count: viewModel.cartItemCount)
             }
             .buttonStyle(.plain)
+            .allowsHitTesting(navigationPath.isEmpty)
             .accessibilityLabel("Carrito")
             .padding(.trailing, 4)
             .padding(.top, 4)

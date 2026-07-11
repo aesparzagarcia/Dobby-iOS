@@ -533,24 +533,44 @@ struct HomeCartIconBadge: View {
     let count: Int
 
     var body: some View {
-        // Badge must stay inside these bounds — toolbar Buttons clip overflow (same as Android IconButton).
-        ZStack(alignment: .topTrailing) {
+        // Parity with Android `CartIconBadge`: outer box fits badge + icon so toolbar buttons do not clip it.
+        ZStack {
             Image(systemName: "cart.fill")
                 .font(.system(size: 22))
                 .foregroundStyle(.primary)
-                .frame(width: 44, height: 44)
 
             if count > 0 {
-                Text(count > 99 ? "99+" : "\(count)")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, count > 99 ? 4 : 0)
-                    .frame(minWidth: 18, minHeight: 18)
-                    .background(HomeScreenPalette.primary)
-                    .clipShape(Circle())
+                cartCountBadge
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.top, 4)
+                    .padding(.trailing, 2)
             }
         }
-        .padding(.top, 4)
-        .padding(.trailing, 6)
+        .frame(width: 48, height: 48)
+        .padding(.top, 6)
+        .padding(.trailing, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(count > 0 ? "Carrito, \(count) artículos" : "Carrito")
+    }
+
+    private var cartCountBadge: some View {
+        Text(count > 99 ? "99+" : "\(count)")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, count > 99 ? 4 : 0)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(HomeScreenPalette.primary)
+            .clipShape(Circle())
+    }
+}
+
+extension ToolbarContent {
+    @ToolbarContentBuilder
+    func hideToolbarSharedBackgroundIfAvailable() -> some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            self.sharedBackgroundVisibility(.hidden)
+        } else {
+            self
+        }
     }
 }

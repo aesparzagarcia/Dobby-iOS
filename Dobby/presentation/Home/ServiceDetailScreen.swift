@@ -90,6 +90,7 @@ struct ServiceDetailScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            .hideToolbarSharedBackgroundIfAvailable()
         }
     }
 

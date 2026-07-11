@@ -42,11 +42,11 @@ struct PromotionsTabScreen: View {
                             cartItemCount: homeViewModel.cartItemCount,
                             onBack: { popNavigation() },
                             onCartClick: {
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             },
                             onAddToCart: { quantity, detail in
                                 homeViewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                navigationPath.append(.cart)
+                                pushCartIfNeeded()
                             }
                         )
                     case .cart:
@@ -82,6 +82,11 @@ struct PromotionsTabScreen: View {
         if !navigationPath.isEmpty {
             navigationPath.removeLast()
         }
+    }
+
+    private func pushCartIfNeeded() {
+        guard navigationPath.last != .cart else { return }
+        navigationPath.append(.cart)
     }
 
     @ViewBuilder

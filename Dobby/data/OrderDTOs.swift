@@ -85,6 +85,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
     let id: String
     let status: String
     let total: Double
+    let serviceFee: Double
     let deliveryFee: Double
     let productsSubtotal: Double
     let deliveryAddress: String?
@@ -108,6 +109,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id, status, total, lat, lng, items
+        case serviceFee = "service_fee"
         case deliveryFee = "delivery_fee"
         case productsSubtotal = "products_subtotal"
         case deliveryAddress = "delivery_address"
@@ -132,6 +134,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
         id = try c.decode(String.self, forKey: .id)
         status = try c.decode(String.self, forKey: .status)
         total = try c.decodeIfPresent(Double.self, forKey: .total) ?? 0
+        serviceFee = try c.decodeIfPresent(Double.self, forKey: .serviceFee) ?? 0
         deliveryFee = try c.decodeIfPresent(Double.self, forKey: .deliveryFee) ?? 0
         productsSubtotal = try c.decodeIfPresent(Double.self, forKey: .productsSubtotal) ?? 0
         deliveryAddress = try c.decodeIfPresent(String.self, forKey: .deliveryAddress)

@@ -88,6 +88,7 @@ struct AdDetailScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            .hideToolbarSharedBackgroundIfAvailable()
         }
     }
 

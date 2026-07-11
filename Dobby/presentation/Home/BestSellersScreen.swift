@@ -109,8 +109,9 @@ struct BestSellersScreen: View {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(DobbyPureScale.onyx)
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Atrás")
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -119,6 +120,7 @@ struct BestSellersScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            .hideToolbarSharedBackgroundIfAvailable()
         }
     }
 

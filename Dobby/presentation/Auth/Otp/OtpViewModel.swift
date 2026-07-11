@@ -18,30 +18,47 @@ final class OtpViewModel {
     var digitSlots: [String] = Array(repeating: "", count: otpLength)
     var remainingSeconds = resendCountdownSeconds
     var isLoading = false
+    var isResending = false
     var errorMessage: String?
 
     var code: String { digitSlots.joined() }
+    var canResend: Bool { remainingSeconds == 0 && !isResending && !isLoading }
 
+    private var resendDeadline: Date
     nonisolated(unsafe) private var countdownTask: Task<Void, Never>?
 
     init(authRepository: AuthRepository, phone: String) {
         self.authRepository = authRepository
         self.phone = phone
-        countdownTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                await MainActor.run {
-                    guard let self else { return }
-                    if remainingSeconds > 0 {
-                        remainingSeconds -= 1
-                    }
-                }
-            }
-        }
+        resendDeadline = Date().addingTimeInterval(TimeInterval(resendCountdownSeconds))
+        syncRemainingSeconds()
+        startCountdownTicker()
     }
 
     deinit {
         countdownTask?.cancel()
+    }
+
+    /// Recomputes displayed time from wall clock (e.g. after returning from background).
+    func syncRemainingSeconds() {
+        remainingSeconds = max(0, Int(ceil(resendDeadline.timeIntervalSinceNow)))
+    }
+
+    private func resetResendDeadline() {
+        resendDeadline = Date().addingTimeInterval(TimeInterval(resendCountdownSeconds))
+        syncRemainingSeconds()
+    }
+
+    private func startCountdownTicker() {
+        countdownTask?.cancel()
+        countdownTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await MainActor.run {
+                    self?.syncRemainingSeconds()
+                }
+            }
+        }
     }
 
     /// Updates all six slots from a raw string (used by single hidden `TextField`).
@@ -78,6 +95,23 @@ final class OtpViewModel {
             case .error(let message):
                 errorMessage = message
             }
+        }
+    }
+
+    func resendCode() async -> Bool {
+        guard canResend else { return false }
+        isResending = true
+        errorMessage = nil
+        defer { isResending = false }
+        let result = await authRepository.requestOtp(phone: phone)
+        switch result {
+        case .success:
+            resetResendDeadline()
+            digitSlots = Array(repeating: "", count: otpLength)
+            return true
+        case .error(let message):
+            errorMessage = message
+            return false
         }
     }
 

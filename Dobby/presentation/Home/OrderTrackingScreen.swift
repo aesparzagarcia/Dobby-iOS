@@ -193,6 +193,7 @@ struct OrderTrackingScreen: View {
         let route = viewModel.routePoints
         let usingStraightLineRoute = viewModel.usingStraightLineRoute
         let showsBothMarkers = tracking.showsRestaurantAndCustomerOnMap
+        let showsPendingCustomer = tracking.showsPendingCustomerOnMap
 
         Map(
             position: $mapPosition,
@@ -217,7 +218,16 @@ struct OrderTrackingScreen: View {
                         .frame(width: 44, height: 44)
                 }
             }
-            if !showsBothMarkers, let c = destination {
+            if showsPendingCustomer, let c = customer {
+                Annotation("Entrega", coordinate: c) {
+                    Image("IcHouse")
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFit()
+                        .frame(width: 44, height: 44)
+                }
+            }
+            if !showsBothMarkers, !showsPendingCustomer, let c = destination {
                 Annotation(destinationLabel, coordinate: c) {
                     if tracking.isAssignedToCourier {
                         Image("IcShop")
@@ -330,13 +340,31 @@ struct OrderTrackingScreen: View {
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
-    /// Fits delivery + courier once on first load. Does not run again on poll updates so manual zoom/pan is preserved.
+    /// Fits delivery + courier once on first load. Falls back to user GPS when no order coordinates exist yet (e.g. PENDING).
     private func fitMapCamera() {
         guard isScreenVisible, let t = viewModel.tracking, !hasFittedCamera else { return }
         let fitCoords: [CLLocationCoordinate2D] = t.mapCameraFitCoordinates.map {
             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
         }
-        guard !fitCoords.isEmpty else { return }
+
+        if !fitCoords.isEmpty {
+            applyMapCamera(to: fitCoords)
+            hasFittedCamera = true
+            return
+        }
+
+        Task {
+            guard let location = try? await OneShotLocationRequest().getLocation() else { return }
+            await MainActor.run {
+                guard isScreenVisible, !hasFittedCamera else { return }
+                applyMapCamera(to: [location.coordinate])
+                hasFittedCamera = true
+            }
+        }
+    }
+
+    private func applyMapCamera(to fitCoords: [CLLocationCoordinate2D]) {
+        guard let first = fitCoords.first else { return }
 
         if fitCoords.count >= 2 {
             let minLat = fitCoords.map(\.latitude).min()!
@@ -359,12 +387,11 @@ struct OrderTrackingScreen: View {
             let single = OrderTrackingMapCamera.singleMarkerSpan
             mapPosition = .region(
                 MKCoordinateRegion(
-                    center: fitCoords[0],
+                    center: first,
                     span: MKCoordinateSpan(latitudeDelta: single, longitudeDelta: single)
                 )
             )
         }
-        hasFittedCamera = true
     }
 
     private func orderBottomSheet(tracking: OrderTrackingDetail, fullScreen: Bool) -> some View {
@@ -495,6 +522,7 @@ struct OrderTrackingScreen: View {
                     : tracking.items.reduce(0) { $0 + $1.price * Double($1.quantity) }
                 orderTrackingPricingSection(
                     productsSubtotal: productsSubtotal,
+                    serviceFee: tracking.serviceFee,
                     deliveryFee: tracking.deliveryFee,
                     total: tracking.total
                 )
@@ -630,6 +658,7 @@ struct OrderTrackingScreen: View {
 
     private func orderTrackingPricingSection(
         productsSubtotal: Double,
+        serviceFee: Double,
         deliveryFee: Double,
         total: Double
     ) -> some View {
@@ -642,6 +671,17 @@ struct OrderTrackingScreen: View {
                 Text(String(format: "$%.2f", productsSubtotal))
                     .font(.subheadline)
                     .foregroundStyle(OrderTrackingPalette.muted)
+            }
+            if serviceFee > 0 {
+                HStack {
+                    Text("Tarifa de servicio")
+                        .font(.subheadline)
+                        .foregroundStyle(OrderTrackingPalette.muted)
+                    Spacer()
+                    Text(String(format: "$%.2f", serviceFee))
+                        .font(.subheadline)
+                        .foregroundStyle(OrderTrackingPalette.muted)
+                }
             }
             if deliveryFee > 0 {
                 HStack {
