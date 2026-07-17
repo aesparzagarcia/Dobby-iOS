@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 private enum ProfilePalette {
     static let primary = DobbyBrandColor.primary
@@ -44,6 +45,8 @@ private enum ProfileStackRoute: Hashable {
     case orderTracking(orderId: String)
 }
 
+private let profileSupportURL = URL(string: "https://dobby-frontend-wwru.onrender.com/")!
+
 struct ProfileTabScreen: View {
     @Bindable var viewModel: ProfileTabViewModel
     var favoritesCount: Int
@@ -51,7 +54,10 @@ struct ProfileTabScreen: View {
     let directionsRepository: DirectionsRepository
     let httpClient: DobbyHTTPClient
     @Binding var mainTabBarHidden: Bool
+    let onGoHome: () -> Void
     let onLogout: () -> Void
+
+    @Environment(\.openURL) private var openURL
 
     @State private var navigationPath: [ProfileStackRoute] = []
     @State private var orderHistoryViewModel: OrderHistoryViewModel?
@@ -106,7 +112,7 @@ struct ProfileTabScreen: View {
                         .foregroundStyle(ProfilePalette.dark)
                     Spacer()
                     Button {
-                        // settings — próximamente
+                        openAppSettings()
                     } label: {
                         Image(systemName: "gearshape.fill")
                             .font(.body)
@@ -213,7 +219,12 @@ struct ProfileTabScreen: View {
             sectionHeader("Misiones de hoy")
             whiteCard {
                 ForEach(Array(profileTodayMissions.enumerated()), id: \.element.id) { index, mission in
-                    missionRow(mission)
+                    Button {
+                        onGoHome()
+                    } label: {
+                        missionRow(mission)
+                    }
+                    .buttonStyle(.plain)
                     if index < profileTodayMissions.count - 1 {
                         menuDivider
                     }
@@ -239,11 +250,19 @@ struct ProfileTabScreen: View {
             .padding(.top, 4)
 
             whiteCard {
-                menuRow(title: "Métodos de pago", systemImage: "creditcard.fill")
+                Button {
+                    openAppSettings()
+                } label: {
+                    menuRow(title: "Notificaciones", systemImage: "bell.fill")
+                }
+                .buttonStyle(.plain)
                 menuDivider
-                menuRow(title: "Notificaciones", systemImage: "bell.fill")
-                menuDivider
-                menuRow(title: "Ayuda y soporte", systemImage: "questionmark.circle.fill")
+                Button {
+                    openURL(profileSupportURL)
+                } label: {
+                    menuRow(title: "Ayuda y soporte", systemImage: "questionmark.circle.fill")
+                }
+                .buttonStyle(.plain)
             }
             .padding(.top, 4)
 
@@ -362,9 +381,6 @@ struct ProfileTabScreen: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(ProfilePalette.dark)
             Spacer()
-            Text("Ver todas")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(ProfilePalette.primary)
         }
         .padding(.top, 4)
     }
@@ -475,6 +491,11 @@ struct ProfileTabScreen: View {
         Rectangle()
             .fill(Color(red: 0.91, green: 0.91, blue: 0.93))
             .frame(height: 1)
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url)
     }
 }
 

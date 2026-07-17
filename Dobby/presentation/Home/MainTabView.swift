@@ -139,6 +139,7 @@ struct MainTabView: View {
                         directionsRepository: directionsRepository,
                         httpClient: httpClient,
                         mainTabBarHidden: $profileHidesFloatingTabBar,
+                        onGoHome: { tab = .home },
                         onLogout: onLogout
                     )
                 }
