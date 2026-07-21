@@ -25,6 +25,8 @@ struct PromotionsTabScreen: View {
     @Bindable var homeViewModel: HomeTabViewModel
     @Binding var mainTabBarHidden: Bool
     let onCheckoutSuccess: () -> Void
+    let isLoggedIn: Bool
+    let onRequireLogin: () -> Void
 
     @State private var navigationPath: [PromotionsStackRoute] = []
 
@@ -46,13 +48,15 @@ struct PromotionsTabScreen: View {
                             },
                             onAddToCart: { quantity, detail in
                                 homeViewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                pushCartIfNeeded()
+                                openCartAfterAddingFromProduct()
                             }
                         )
                     case .cart:
                         CartScreen(
                             viewModel: homeViewModel,
                             onBack: { popNavigation() },
+                            isLoggedIn: isLoggedIn,
+                            onRequireLogin: onRequireLogin,
                             onPay: {
                                 Task {
                                     let ok = await homeViewModel.runCheckoutFlow()
@@ -85,7 +89,18 @@ struct PromotionsTabScreen: View {
     }
 
     private func pushCartIfNeeded() {
-        guard navigationPath.last != .cart else { return }
+        ensureSingleCartOnTop()
+    }
+
+    private func openCartAfterAddingFromProduct() {
+        ensureSingleCartOnTop()
+    }
+
+    private func ensureSingleCartOnTop() {
+        navigationPath.removeAll { route in
+            if case .cart = route { return true }
+            return false
+        }
         navigationPath.append(.cart)
     }
 

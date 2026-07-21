@@ -24,12 +24,12 @@ final class RegisterUserViewModel {
     }
 
     func onNameChange(_ value: String) {
-        name = value
+        name = Self.capitalizePersonName(value)
         errorMessage = nil
     }
 
     func onLastNameChange(_ value: String) {
-        lastName = value
+        lastName = Self.capitalizePersonName(value)
         errorMessage = nil
     }
 
@@ -105,5 +105,24 @@ final class RegisterUserViewModel {
     private static func isValidEmail(_ s: String) -> Bool {
         let pattern = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
         return s.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Capitaliza la primera letra de cada palabra (nombre / apellidos).
+    private static func capitalizePersonName(_ input: String) -> String {
+        guard !input.isEmpty else { return input }
+        var result = ""
+        var capitalizeNext = true
+        for ch in input {
+            if ch.isWhitespace {
+                result.append(ch)
+                capitalizeNext = true
+            } else if capitalizeNext {
+                result.append(String(ch).uppercased())
+                capitalizeNext = false
+            } else {
+                result.append(ch)
+            }
+        }
+        return result
     }
 }

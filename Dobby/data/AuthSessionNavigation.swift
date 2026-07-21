@@ -28,9 +28,8 @@ enum AuthSessionNavigation {
     }
 
     /// Call when `accessToken` is missing for an endpoint that requires auth.
-    static func notifyIfMissingAccessToken() {
-        notifySessionExpired()
-    }
+    /// Guest browse is allowed: do not force navigation — callers should prompt login locally.
+    static func notifyIfMissingAccessToken() {}
 
     static func shouldSuppressUserMessage(for error: HTTPClientError) -> Bool {
         error.shouldSuppressUserFacingMessage

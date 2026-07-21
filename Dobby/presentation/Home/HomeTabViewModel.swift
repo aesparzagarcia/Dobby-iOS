@@ -119,13 +119,17 @@ final class HomeTabViewModel {
         let showPromotion = route.hasPromotion && validDiscount > 0
         let unitAfterDiscount = route.unitPriceAfterDiscount
         let list = route.price
-        let resolvedShopId = route.shopId
+        let resolvedShopId = CartShopSwitchPolicy.normalized(route.shopId)
+            ?? CartShopSwitchPolicy.normalized(detail?.shopId)
+            ?? CartShopSwitchPolicy.normalized(product.shopId)
 
         if let i = cartLines.firstIndex(where: { $0.productId == route.id }) {
             cartLines[i].quantity += quantity
             if cartLines[i].pickupLatitude == nil, let p = route.pickupLatitude { cartLines[i].pickupLatitude = p }
             if cartLines[i].pickupLongitude == nil, let p = route.pickupLongitude { cartLines[i].pickupLongitude = p }
-            if cartLines[i].shopId == nil, let s = resolvedShopId { cartLines[i].shopId = s }
+            if CartShopSwitchPolicy.normalized(cartLines[i].shopId) == nil, let s = resolvedShopId {
+                cartLines[i].shopId = s
+            }
         } else {
             cartLines.append(
                 CartLineItem(
@@ -157,13 +161,16 @@ final class HomeTabViewModel {
         let unitAfterDiscount = showPromotion
             ? product.price * (1 - Double(validDiscount) / 100)
             : product.price
-        let resolvedShopId = product.shopId ?? shopId
+        let resolvedShopId = CartShopSwitchPolicy.normalized(product.shopId)
+            ?? CartShopSwitchPolicy.normalized(shopId)
 
         if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
             cartLines[i].quantity += 1
             if cartLines[i].pickupLatitude == nil, let lat = pickupLatitude { cartLines[i].pickupLatitude = lat }
             if cartLines[i].pickupLongitude == nil, let lng = pickupLongitude { cartLines[i].pickupLongitude = lng }
-            if cartLines[i].shopId == nil { cartLines[i].shopId = resolvedShopId }
+            if CartShopSwitchPolicy.normalized(cartLines[i].shopId) == nil, let s = resolvedShopId {
+                cartLines[i].shopId = s
+            }
         } else {
             cartLines.append(
                 CartLineItem(
@@ -254,8 +261,13 @@ final class HomeTabViewModel {
             return true
         case .failure(let e):
             isCheckoutLoading = false
-            if !e.shouldSuppressUserMessage {
-                cartPayError = message(for: e)
+            switch e {
+            case .notAuthenticated:
+                cartPayError = "Inicia sesión para realizar tu pedido."
+            default:
+                if !e.shouldSuppressUserMessage {
+                    cartPayError = message(for: e)
+                }
             }
             return false
         }

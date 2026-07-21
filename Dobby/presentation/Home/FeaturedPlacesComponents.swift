@@ -16,15 +16,8 @@ struct FeaturedPlacesHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.leading, 8)
-            .accessibilityLabel("Atrás")
+            NavigationBackButton(tint: .primary, action: onBack)
+                .padding(.leading, 8)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Destacados")

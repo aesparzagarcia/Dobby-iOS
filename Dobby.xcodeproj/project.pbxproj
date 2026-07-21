@@ -89,6 +89,7 @@
 		FP02FP02FP0244389384901 /* FeaturedPlacesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FP02FP02FP0244389384902 /* FeaturedPlacesViewModel.swift */; };
 		FP03FP03FP0344389384901 /* FeaturedPlacesComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */; };
 		FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */; };
+		NBB1NBB1NBB144389384901 /* NavigationBackButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = NBB2NBB2NBB244389384902 /* NavigationBackButton.swift */; };
 		G1G1G1G1G1G1G443893848901 /* ProfileDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = G1G1G1G1G1G1G443893848902 /* ProfileDTOs.swift */; };
 		G2G2G2G2G2G2G443893848901 /* ProfileRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */; };
 		G3G3G3G3G3G3G443893848901 /* ProfileTabViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */; };
@@ -224,6 +225,7 @@
 		FP02FP02FP0244389384902 /* FeaturedPlacesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedPlacesViewModel.swift; sourceTree = "<group>"; };
 		FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedPlacesComponents.swift; sourceTree = "<group>"; };
 		FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingScreenHeader.swift; sourceTree = "<group>"; };
+		NBB2NBB2NBB244389384902 /* NavigationBackButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackButton.swift; sourceTree = "<group>"; };
 		G1G1G1G1G1G1G443893848902 /* ProfileDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileDTOs.swift; sourceTree = "<group>"; };
 		G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepositories.swift; sourceTree = "<group>"; };
 		G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabViewModel.swift; sourceTree = "<group>"; };
@@ -523,6 +525,7 @@
 			isa = PBXGroup;
 			children = (
 				FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */,
+				NBB2NBB2NBB244389384902 /* NavigationBackButton.swift */,
 				LRI2LRI2LRI244389384902 /* LoadingRemoteImage.swift */,
 				DS02DS02DS0244389384902 /* DobbySplashLottieView.swift */,
 			);
@@ -788,6 +791,7 @@
 				5A5A5A5A5B9D443893848901 /* HomeTabScreen.swift in Sources */,
 				D4D4D4D4D4D4D443893848901 /* UniversalProductCard.swift in Sources */,
 				FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */,
+				NBB1NBB1NBB144389384901 /* NavigationBackButton.swift in Sources */,
 				LRI1LRI1LRI144389384901 /* LoadingRemoteImage.swift in Sources */,
 				DS01DS01DS0144389384901 /* DobbySplashLottieView.swift in Sources */,
 				C7C7C7C7C7C7C443893848901 /* ProductDetailScreen.swift in Sources */,
@@ -996,7 +1000,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Dobby/Dobby.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = K7XK7A4TT3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1028,7 +1032,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Dobby/Dobby.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = K7XK7A4TT3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

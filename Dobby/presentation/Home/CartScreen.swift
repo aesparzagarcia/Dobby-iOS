@@ -18,6 +18,8 @@ private enum CartFakeData {
 struct CartScreen: View {
     @Bindable var viewModel: HomeTabViewModel
     let onBack: () -> Void
+    var isLoggedIn: Bool = true
+    var onRequireLogin: () -> Void = {}
     var onPay: () -> Void
 
     var body: some View {
@@ -42,15 +44,7 @@ struct CartScreen: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    onBack()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(DobbyPureScale.onyx)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Atrás")
+                NavigationBackButton(action: onBack)
             }
         }
         .alert(
@@ -121,21 +115,37 @@ struct CartScreen: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
 
-            Button {
-                onPay()
-            } label: {
-                Text("Pagar \(money(viewModel.grandTotal))")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+            if isLoggedIn {
+                Button {
+                    onPay()
+                } label: {
+                    Text("Pagar \(money(viewModel.grandTotal))")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(CartPalette.primary)
+                .disabled(!viewModel.hasValidDeliveryAddress)
+                .opacity(viewModel.hasValidDeliveryAddress ? 1 : 0.45)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
+            } else {
+                Button {
+                    onRequireLogin()
+                } label: {
+                    Text("Iniciar sesión para pedir")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(CartPalette.primary)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(CartPalette.primary)
-            .disabled(!viewModel.hasValidDeliveryAddress)
-            .opacity(viewModel.hasValidDeliveryAddress ? 1 : 0.45)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 16)
         }
         .background(Color.white)
     }

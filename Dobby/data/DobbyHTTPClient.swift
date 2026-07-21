@@ -381,6 +381,11 @@ struct DobbyHTTPClient: Sendable {
         await deleteAuthenticated(path: "app/push-device", bearerToken: bearerToken, isAuthRetry: false)
     }
 
+    /// Authenticated DELETE (e.g. `app/me` account deletion).
+    func delete(path: String, bearerToken: String?) async -> Result<Void, HTTPClientError> {
+        await deleteAuthenticated(path: path, bearerToken: bearerToken, isAuthRetry: false)
+    }
+
     /// Custom token for Firestore listeners (`POST app/firebase-token`).
     func fetchFirebaseCustomToken(bearerToken: String?) async -> Result<String, HTTPClientError> {
         let result: Result<FirebaseTokenDTO, HTTPClientError> = await post(

@@ -94,6 +94,20 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
         sessionStore.clearSession()
     }
 
+    func deleteAccount() async -> AuthResult<Void> {
+        guard let bearer = sessionStore.accessToken(), !bearer.isEmpty else {
+            return .error("Sesión no válida. Vuelve a iniciar sesión.")
+        }
+        switch await api.delete(path: "app/me", bearerToken: bearer) {
+        case .success:
+            DobbyOrderRealtime.signOut()
+            sessionStore.clearSession()
+            return .success(())
+        case .failure(let e):
+            return .error(api.userFacingMessage(from: e))
+        }
+    }
+
     func syncSessionAtLaunch() async -> Bool {
         if !isLoggedIn { return false }
         switch await tokenRefresh.refreshStoredSession() {

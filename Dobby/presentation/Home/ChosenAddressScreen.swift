@@ -250,15 +250,7 @@ struct ChosenAddressScreen: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(DobbyPureScale.onyx)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Atrás")
+                NavigationBackButton(action: { dismiss() })
             }
         }
         .toolbarBackground(Color.white, for: ToolbarPlacement.navigationBar)

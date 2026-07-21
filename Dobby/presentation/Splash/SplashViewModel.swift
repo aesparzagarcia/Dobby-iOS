@@ -14,14 +14,11 @@ final class SplashViewModel {
         self.deps = deps
     }
 
+    /// Always opens Home (guest browse). Syncs session when already logged in.
     func resolveSplashDestination() async -> Bool {
-        guard deps.authRepository.isLoggedIn else {
-            return false
+        if deps.authRepository.isLoggedIn {
+            _ = await deps.authRepository.syncSessionAtLaunch()
         }
-        guard await deps.authRepository.syncSessionAtLaunch() else {
-            return false
-        }
-
         let snapshot = await HomeBootstrapLoader.load(deps: deps)
         HomeBootstrapCache.shared.store(snapshot)
         return true

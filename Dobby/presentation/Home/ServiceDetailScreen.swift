@@ -75,14 +75,7 @@ struct ServiceDetailScreen: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    onBack()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.primary)
-                }
-                .accessibilityLabel("Atrás")
+                NavigationBackButton(tint: .primary, action: onBack)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onCartClick) {

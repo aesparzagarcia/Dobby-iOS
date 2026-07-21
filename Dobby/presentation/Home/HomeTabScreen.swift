@@ -45,6 +45,9 @@ struct HomeTabScreen: View {
     @Binding var pendingOpenProductName: String?
     @Binding var pendingOpenProductDiscount: Int?
     let tokenRefresh: ConsumerTokenRefreshService
+    /// Guest browse: open phone login when cart needs an account.
+    let onRequireLogin: () -> Void
+    let isLoggedIn: Bool
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var wasInBackground = false
@@ -75,7 +78,8 @@ struct HomeTabScreen: View {
                                             shopProduct: product,
                                             pickupLatitude: r.pickupLatitude,
                                             pickupLongitude: r.pickupLongitude,
-                                            isShopAvailableForOrders: isAvailable
+                                            isShopAvailableForOrders: isAvailable,
+                                            shopIdFallback: r.shopId
                                         )
                                     )
                                 )
@@ -115,13 +119,14 @@ struct HomeTabScreen: View {
                                             shopProduct: product,
                                             pickupLatitude: place?.latitude,
                                             pickupLongitude: place?.longitude,
-                                            isShopAvailableForOrders: isAvailable
+                                            isShopAvailableForOrders: isAvailable,
+                                            shopIdFallback: product.shopId
                                         )
                                     )
                                 )
                             },
                             onAddToCart: { product in
-                                let shopId = product.shopId ?? ""
+                                let shopId = CartShopSwitchPolicy.normalized(product.shopId) ?? ""
                                 let place = viewModel.featuredPlaces.first { $0.id == shopId && !$0.isService }
                                 viewModel.addShopProductToCart(
                                     product,
@@ -171,13 +176,15 @@ struct HomeTabScreen: View {
                             },
                             onAddToCart: { quantity, detail in
                                 viewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                pushCartIfNeeded()
+                                openCartAfterAddingFromProduct()
                             }
                         )
                     case .cart:
                         CartScreen(
                             viewModel: viewModel,
                             onBack: { popNavigation() },
+                            isLoggedIn: isLoggedIn,
+                            onRequireLogin: onRequireLogin,
                             onPay: {
                                 Task {
                                     let ok = await viewModel.runCheckoutFlow()
@@ -228,9 +235,21 @@ struct HomeTabScreen: View {
         }
     }
 
-    /// Evita `[.shop, .cart, .cart]` cuando el FAB de inicio y el de restaurante reciben el mismo toque.
+    /// Ensures a single `.cart` on top. Avoids needing two Back taps when cart was pushed twice.
     private func pushCartIfNeeded() {
-        guard navigationPath.last != .cart else { return }
+        ensureSingleCartOnTop()
+    }
+
+    /// Opens cart on top of the product so Back returns to the product (e.g. best seller from Home).
+    private func openCartAfterAddingFromProduct() {
+        ensureSingleCartOnTop()
+    }
+
+    private func ensureSingleCartOnTop() {
+        navigationPath.removeAll { route in
+            if case .cart = route { return true }
+            return false
+        }
         navigationPath.append(.cart)
     }
 
@@ -374,7 +393,12 @@ struct HomeTabScreen: View {
                     placesAutocompleteRepository: placesAutocompleteRepository,
                     userAddressRepository: userAddressRepository,
                     httpClient: httpClient,
-                    onDefaultAddressUpdated: { viewModel.loadAddresses() }
+                    onDefaultAddressUpdated: { viewModel.loadAddresses() },
+                    isLoggedIn: isLoggedIn,
+                    onRequireLogin: {
+                        showCurrentAddress = false
+                        onRequireLogin()
+                    }
                 )
             }
         }
@@ -440,186 +464,175 @@ struct HomeTabScreen: View {
         let restaurantsOnly = filteredPlaces.filter { !$0.isService && ($0.shopType == "RESTAURANT" || $0.shopType == nil) }
         let servicesOnly = filteredPlaces.filter(\.isService)
 
-        return ZStack(alignment: .topTrailing) {
-            VStack(spacing: 0) {
-                if let warn = viewModel.warningMessage {
-                    warningBanner(warn)
-                }
+        return VStack(spacing: 0) {
+            if let warn = viewModel.warningMessage {
+                warningBanner(warn)
+            }
 
-                HomeAddressSearchHeader(
-                    addressLabel: viewModel.addressLabel,
-                    address: viewModel.address,
-                    searchQuery: $viewModel.searchQuery,
-                    onAddressClick: { showCurrentAddress = true }
-                ) {
-                    if viewModel.addressFetchCompleted,
-                       viewModel.needsDeliveryAddressCallout,
-                       viewModel.warningMessage == nil {
-                        DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
-                            .padding(.horizontal, 13)
-                            .padding(.top, 0)
-                            .padding(.bottom, 4)
+            HomeAddressSearchHeader(
+                addressLabel: viewModel.addressLabel,
+                address: viewModel.address,
+                searchQuery: $viewModel.searchQuery,
+                onAddressClick: { showCurrentAddress = true },
+                cartItemCount: viewModel.cartItemCount,
+                onCartClick: navigationPath.isEmpty ? { pushCartIfNeeded() } : nil
+            ) {
+                if viewModel.addressFetchCompleted,
+                   viewModel.needsDeliveryAddressCallout,
+                   viewModel.warningMessage == nil {
+                    DeliveryAddressCalloutView(onTap: { showCurrentAddress = true })
+                        .padding(.horizontal, 13)
+                        .padding(.top, 0)
+                        .padding(.bottom, 4)
+                }
+            }
+
+            HomeCategoryRow(selected: quickCategory) { category in
+                quickCategory = category
+                if category == .offers {
+                    onPromotionsTabClick()
+                }
+            }
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if !viewModel.activeOrders.isEmpty {
+                        ActiveOrdersHomeSectionView(
+                            activeOrders: viewModel.activeOrders,
+                            onTrackOrder: { orderId in
+                                navigationPath.append(.orderTracking(orderId: orderId))
+                            },
+                            onMultipleOrdersTap: {
+                                navigationPath.append(.activeOrders)
+                            }
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                     }
-                }
 
-                HomeCategoryRow(selected: quickCategory) { category in
-                    quickCategory = category
-                    if category == .offers {
-                        onPromotionsTabClick()
-                    }
-                }
-                .padding(.top, 4)
-                .padding(.bottom, 8)
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if !viewModel.activeOrders.isEmpty {
-                            ActiveOrdersHomeSectionView(
-                                activeOrders: viewModel.activeOrders,
-                                onTrackOrder: { orderId in
-                                    navigationPath.append(.orderTracking(orderId: orderId))
-                                },
-                                onMultipleOrdersTap: {
-                                    navigationPath.append(.activeOrders)
+                    if !destacadosPreview.isEmpty {
+                        HomeSectionHeader(title: "Destacados")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(destacadosPreview) { place in
+                                    HomeFeaturedPlaceCard(
+                                        place: place,
+                                        width: featuredCardWidth,
+                                        onTap: { onFeaturedPlaceTap(place) }
+                                    )
                                 }
-                            )
-                            .padding(.horizontal, 16)
+                                HomeFeaturedSeeMoreCard(width: featuredCardWidth) {
+                                    navigationPath.append(.featuredPlaces)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
+                        }
+                        .background(DobbyPureScale.pure)
+                        .padding(.bottom, 10)
+                    }
+
+                    if !bestSellersPreview.isEmpty {
+                        HomeSectionHeader(title: "Más vendidos")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(bestSellersPreview) { product in
+                                    Button {
+                                        navigationPath.append(
+                                            .product(ProductDetailRoute(
+                                                bestSeller: product,
+                                                featuredPlaces: viewModel.featuredPlaces
+                                            ))
+                                        )
+                                    } label: {
+                                        UniversalProductCard(product: product, width: productWidth)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                HomeProductSeeMoreCard(width: productWidth, onTap: {
+                                    navigationPath.append(.bestSellers)
+                                })
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
+                        }
+                        .background(DobbyPureScale.pure)
+                        .padding(.bottom, 10)
+                    }
+
+                    if !query.isEmpty && filteredPlaces.isEmpty && filteredProducts.isEmpty {
+                        Text("Sin resultados para \"\(query)\"")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 24)
+                    }
+
+                    if viewModel.ads.isEmpty {
+                        HomePromoBanner()
+                    }
+
+                    if !viewModel.ads.isEmpty {
+                        AdsCarousel(
+                            slides: AdCarouselSlide.weighted(from: viewModel.ads),
+                            onAdTap: { adId in
+                                viewModel.recordAdClick(adId: adId)
+                                navigationPath.append(.ad(adId: adId))
+                            }
+                        )
+                    }
+
+                    if !restaurantsOnly.isEmpty {
+                        HomeSectionHeader(title: "Restaurantes populares")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(restaurantsOnly) { place in
+                                    HomeFeaturedPlaceCard(
+                                        place: place,
+                                        width: featuredCardWidth,
+                                        onTap: { onFeaturedPlaceTap(place) }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                         }
-
-                        if !destacadosPreview.isEmpty {
-                            HomeSectionHeader(title: "Destacados")
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(destacadosPreview) { place in
-                                        HomeFeaturedPlaceCard(
-                                            place: place,
-                                            width: featuredCardWidth,
-                                            onTap: { onFeaturedPlaceTap(place) }
-                                        )
-                                    }
-                                    HomeFeaturedSeeMoreCard(width: featuredCardWidth) {
-                                        navigationPath.append(.featuredPlaces)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-                            }
-                            .background(DobbyPureScale.pure)
-                            .padding(.bottom, 10)
-                        }
-
-                        if !bestSellersPreview.isEmpty {
-                            HomeSectionHeader(title: "Más vendidos")
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(bestSellersPreview) { product in
-                                        Button {
-                                            navigationPath.append(
-                                                .product(ProductDetailRoute(
-                                                    bestSeller: product,
-                                                    featuredPlaces: viewModel.featuredPlaces
-                                                ))
-                                            )
-                                        } label: {
-                                            UniversalProductCard(product: product, width: productWidth)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    HomeProductSeeMoreCard(width: productWidth, onTap: {
-                                        navigationPath.append(.bestSellers)
-                                    })
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 4)
-                            }
-                            .background(DobbyPureScale.pure)
-                            .padding(.bottom, 10)
-                        }
-
-                        if !query.isEmpty && filteredPlaces.isEmpty && filteredProducts.isEmpty {
-                            Text("Sin resultados para \"\(query)\"")
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 20)
-                                .padding(.top, 24)
-                        }
-
-                        if viewModel.ads.isEmpty {
-                            HomePromoBanner()
-                        }
-
-                        if !viewModel.ads.isEmpty {
-                            AdsCarousel(
-                                slides: AdCarouselSlide.weighted(from: viewModel.ads),
-                                onAdTap: { adId in
-                                    viewModel.recordAdClick(adId: adId)
-                                    navigationPath.append(.ad(adId: adId))
-                                }
-                            )
-                        }
-
-                        if !restaurantsOnly.isEmpty {
-                            HomeSectionHeader(title: "Restaurantes populares")
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(restaurantsOnly) { place in
-                                        HomeFeaturedPlaceCard(
-                                            place: place,
-                                            width: featuredCardWidth,
-                                            onTap: { onFeaturedPlaceTap(place) }
-                                        )
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                            }
-                            .background(DobbyPureScale.pure)
-                            .padding(.bottom, 20)
-                        }
-
-                        if !servicesOnly.isEmpty {
-                            HomeSectionHeader(title: "Servicios destacados")
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(servicesOnly) { place in
-                                        HomeServicePlaceRow(place: place) {
-                                            onFeaturedPlaceTap(place)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                            }
-                            .background(DobbyPureScale.pure)
-                            .padding(.bottom, 8)
-                        }
-
-                        Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
+                        .background(DobbyPureScale.pure)
+                        .padding(.bottom, 20)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DobbyPureScale.pure)
-                }
-                .scrollIndicators(.hidden)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(DobbyPureScale.pure)
-                .refreshable {
-                    await viewModel.refresh()
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(HomeScreenPalette.screenBackground)
 
-            Button {
-                pushCartIfNeeded()
-            } label: {
-                HomeCartIconBadge(count: viewModel.cartItemCount)
+                    if !servicesOnly.isEmpty {
+                        HomeSectionHeader(title: "Servicios destacados")
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(servicesOnly) { place in
+                                    HomeServicePlaceRow(place: place) {
+                                        onFeaturedPlaceTap(place)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                        }
+                        .background(DobbyPureScale.pure)
+                        .padding(.bottom, 8)
+                    }
+
+                    Color.clear.frame(height: 8 + HomeLayoutConstants.mainTabContentBottomInset)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DobbyPureScale.pure)
             }
-            .buttonStyle(.plain)
-            .allowsHitTesting(navigationPath.isEmpty)
-            .accessibilityLabel("Carrito")
-            .padding(.trailing, 4)
-            .padding(.top, 4)
+            .scrollIndicators(.hidden)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(DobbyPureScale.pure)
+            .refreshable {
+                await viewModel.refresh()
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(HomeScreenPalette.screenBackground)
     }
 
     private func warningBanner(_ msg: String) -> some View {

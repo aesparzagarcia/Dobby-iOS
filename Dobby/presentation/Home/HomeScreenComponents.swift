@@ -58,6 +58,9 @@ struct HomeAddressSearchHeader: View {
     let address: String?
     @Binding var searchQuery: String
     let onAddressClick: () -> Void
+    /// When non-nil, cart sits in the address row (not a root `ZStack` overlay that can steal taps from pushed screens).
+    var cartItemCount: Int = 0
+    var onCartClick: (() -> Void)?
     private let addressCallout: AnyView
 
     init(
@@ -65,44 +68,60 @@ struct HomeAddressSearchHeader: View {
         address: String?,
         searchQuery: Binding<String>,
         onAddressClick: @escaping () -> Void,
+        cartItemCount: Int = 0,
+        onCartClick: (() -> Void)? = nil,
         @ViewBuilder addressCallout: () -> some View = { EmptyView() }
     ) {
         self.addressLabel = addressLabel
         self.address = address
         self._searchQuery = searchQuery
         self.onAddressClick = onAddressClick
+        self.cartItemCount = cartItemCount
+        self.onCartClick = onCartClick
         self.addressCallout = AnyView(addressCallout())
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            Button(action: onAddressClick) {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(HomeScreenPalette.primary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 2) {
-                            Text(addressLabel ?? "Casa")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Image(systemName: "chevron.down")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.primary)
+            HStack(alignment: .top, spacing: 0) {
+                Button(action: onAddressClick) {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(HomeScreenPalette.primary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 2) {
+                                Text(addressLabel ?? "Casa")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Image(systemName: "chevron.down")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                            }
+                            Text(address ?? "Añade tu dirección")
+                                .font(.caption)
+                                .foregroundStyle(address != nil ? HomeScreenPalette.mutedText : Color.secondary)
+                                .lineLimit(1)
                         }
-                        Text(address ?? "Añade tu dirección")
-                            .font(.caption)
-                            .foregroundStyle(address != nil ? HomeScreenPalette.mutedText : Color.secondary)
-                            .lineLimit(1)
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
+                    .padding(.leading, 16)
+                    .padding(.trailing, onCartClick == nil ? 16 : 4)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
                 }
-                .padding(.leading, 16)
-                .padding(.trailing, 56)
-                .padding(.top, 4)
-                .padding(.bottom, 8)
+                .buttonStyle(.plain)
+
+                if let onCartClick {
+                    Button(action: onCartClick) {
+                        HomeCartIconBadge(count: cartItemCount)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Carrito")
+                    .padding(.trailing, 4)
+                    .padding(.top, 4)
+                }
             }
-            .buttonStyle(.plain)
 
             addressCallout
 

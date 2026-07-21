@@ -19,6 +19,7 @@ private enum MainPalette {
 
 struct MainTabView: View {
     let onLogout: () -> Void
+    let onRequireLogin: () -> Void
     private let placesRepository: PlacesRepository
     private let adsRepository: AdsRepository
     private let userAddressRepository: UserAddressRepository
@@ -27,6 +28,7 @@ struct MainTabView: View {
     private let directionsRepository: DirectionsRepository
     private let httpClient: DobbyHTTPClient
     private let tokenRefresh: ConsumerTokenRefreshService
+    private let authRepository: AuthRepository
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var proactiveRefreshTask: Task<Void, Never>?
@@ -50,8 +52,9 @@ struct MainTabView: View {
     @State private var favoritesStore: FavoritesStore
     @State private var profileViewModel: ProfileTabViewModel
 
-    init(deps: AppDependencies, onLogout: @escaping () -> Void) {
+    init(deps: AppDependencies, onLogout: @escaping () -> Void, onRequireLogin: @escaping () -> Void) {
         self.onLogout = onLogout
+        self.onRequireLogin = onRequireLogin
         self.placesRepository = deps.placesRepository
         self.adsRepository = deps.adsRepository
         self.userAddressRepository = deps.userAddressRepository
@@ -60,12 +63,14 @@ struct MainTabView: View {
         self.directionsRepository = deps.directionsRepository
         self.httpClient = deps.httpClient
         self.tokenRefresh = deps.tokenRefresh
+        self.authRepository = deps.authRepository
         let cartStore = CartLocalStore(container: CartSwiftDataStack.sharedContainer)
         let favoritesLocal = FavoritesLocalStore(container: CartSwiftDataStack.sharedContainer)
         _favoritesStore = State(initialValue: FavoritesStore(local: favoritesLocal))
         _profileViewModel = State(
             initialValue: ProfileTabViewModel(
                 profileRepository: deps.profileRepository,
+                authRepository: deps.authRepository,
                 http: deps.httpClient
             )
         )
@@ -112,7 +117,9 @@ struct MainTabView: View {
                         pendingOpenProductShopId: $pendingOpenProductShopId,
                         pendingOpenProductName: $pendingOpenProductName,
                         pendingOpenProductDiscount: $pendingOpenProductDiscount,
-                        tokenRefresh: tokenRefresh
+                        tokenRefresh: tokenRefresh,
+                        onRequireLogin: onRequireLogin,
+                        isLoggedIn: authRepository.isLoggedIn
                     )
                 case .promotions:
                     PromotionsTabScreen(
@@ -121,7 +128,9 @@ struct MainTabView: View {
                         promotionsViewModel: promotionsViewModel,
                         homeViewModel: homeViewModel,
                         mainTabBarHidden: $promotionsHidesFloatingTabBar,
-                        onCheckoutSuccess: { tab = .home }
+                        onCheckoutSuccess: { tab = .home },
+                        isLoggedIn: authRepository.isLoggedIn,
+                        onRequireLogin: onRequireLogin
                     )
                 case .favorites:
                     FavoritesTabScreen(
@@ -129,7 +138,9 @@ struct MainTabView: View {
                         favoritesStore: favoritesStore,
                         homeViewModel: homeViewModel,
                         mainTabBarHidden: $favoritesHidesFloatingTabBar,
-                        onCheckoutSuccess: { tab = .home }
+                        onCheckoutSuccess: { tab = .home },
+                        isLoggedIn: authRepository.isLoggedIn,
+                        onRequireLogin: onRequireLogin
                     )
                 case .profile:
                     ProfileTabScreen(
@@ -140,7 +151,8 @@ struct MainTabView: View {
                         httpClient: httpClient,
                         mainTabBarHidden: $profileHidesFloatingTabBar,
                         onGoHome: { tab = .home },
-                        onLogout: onLogout
+                        onLogout: onLogout,
+                        onRequireLogin: onRequireLogin
                     )
                 }
             }

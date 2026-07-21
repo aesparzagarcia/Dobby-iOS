@@ -17,6 +17,8 @@ struct CurrentAddressScreen: View {
     @Environment(\.dismiss) private var dismiss
 
     var onDefaultAddressUpdated: () -> Void
+    var isLoggedIn: Bool = true
+    var onRequireLogin: () -> Void = {}
 
     private let placesAutocompleteRepository: PlacesAutocompleteRepository
     private let userAddressRepository: UserAddressRepository
@@ -30,9 +32,13 @@ struct CurrentAddressScreen: View {
         placesAutocompleteRepository: PlacesAutocompleteRepository,
         userAddressRepository: UserAddressRepository,
         httpClient: DobbyHTTPClient,
-        onDefaultAddressUpdated: @escaping () -> Void
+        onDefaultAddressUpdated: @escaping () -> Void,
+        isLoggedIn: Bool = true,
+        onRequireLogin: @escaping () -> Void = {}
     ) {
         self.onDefaultAddressUpdated = onDefaultAddressUpdated
+        self.isLoggedIn = isLoggedIn
+        self.onRequireLogin = onRequireLogin
         self.placesAutocompleteRepository = placesAutocompleteRepository
         self.userAddressRepository = userAddressRepository
         self.httpClient = httpClient
@@ -48,54 +54,58 @@ struct CurrentAddressScreen: View {
     var body: some View {
         ZStack {
             VStack(alignment: .leading, spacing: 0) {
-                searchField
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-
-                if let err = addressViewModel.uiState.errorMessage, !err.isEmpty {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 20)
+                if isLoggedIn {
+                    searchField
+                        .padding(.horizontal, 16)
                         .padding(.top, 8)
-                }
 
-                VStack(spacing: 12) {
-                    actionRow(
-                        title: "Mis direcciones",
-                        systemImage: "house.fill",
-                        action: { addressViewModel.onMyAddressesClick() }
-                    )
-                    actionRow(
-                        title: "Mi ubicación actual",
-                        systemImage: "location.circle.fill",
-                        action: { openMyCurrentLocation() }
-                    )
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+                    if let err = addressViewModel.uiState.errorMessage, !err.isEmpty {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                    }
 
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(addressViewModel.uiState.searchResults) { result in
-                            AddressResultItem(
-                                title: result.title,
-                                subtitle: result.subtitle,
-                                onClick: {
-                                    let label: String
-                                    if let sub = result.subtitle, !sub.isEmpty {
-                                        label = "\(result.title), \(sub)"
-                                    } else {
-                                        label = result.title
-                                    }
-                                    addressViewModel.onAddressClick(placeId: result.id, addressLabel: label)
-                                }
-                            )
-                        }
+                    VStack(spacing: 12) {
+                        actionRow(
+                            title: "Mis direcciones",
+                            systemImage: "house.fill",
+                            action: { addressViewModel.onMyAddressesClick() }
+                        )
+                        actionRow(
+                            title: "Mi ubicación actual",
+                            systemImage: "location.circle.fill",
+                            action: { openMyCurrentLocation() }
+                        )
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
-                    .padding(.bottom, 24)
+
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(addressViewModel.uiState.searchResults) { result in
+                                AddressResultItem(
+                                    title: result.title,
+                                    subtitle: result.subtitle,
+                                    onClick: {
+                                        let label: String
+                                        if let sub = result.subtitle, !sub.isEmpty {
+                                            label = "\(result.title), \(sub)"
+                                        } else {
+                                            label = result.title
+                                        }
+                                        addressViewModel.onAddressClick(placeId: result.id, addressLabel: label)
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 24)
+                    }
+                } else {
+                    guestLoginContent
                 }
             }
 
@@ -120,15 +130,7 @@ struct CurrentAddressScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(DobbyPureScale.onyx)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Atrás")
+                NavigationBackButton(action: { dismiss() })
             }
         }
         .sheet(
@@ -173,6 +175,33 @@ struct CurrentAddressScreen: View {
             chosenAddressRoute = nav
             addressViewModel.onNavigatedToMap()
         }
+    }
+
+    private var guestLoginContent: some View {
+        VStack(spacing: 16) {
+            Text("Inicia sesión para guardar y administrar tu dirección de entrega.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+
+            Button {
+                dismiss()
+                onRequireLogin()
+            } label: {
+                Text("Inicia sesión para continuar")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AddressScreenPalette.iconBlue)
+            .padding(.horizontal, 16)
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func openMyCurrentLocation() {

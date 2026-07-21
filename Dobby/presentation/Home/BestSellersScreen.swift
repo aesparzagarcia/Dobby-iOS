@@ -106,13 +106,7 @@ struct BestSellersScreen: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(DobbyPureScale.onyx)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Atrás")
+                NavigationBackButton(action: onBack)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: onCartClick) {

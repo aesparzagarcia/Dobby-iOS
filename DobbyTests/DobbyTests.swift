@@ -10,8 +10,43 @@ import Testing
 
 struct DobbyTests {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    @Test func shopSwitchSkipsSameShop() {
+        let lines = [
+            CartLineItem(
+                productId: "p1",
+                name: "Taco",
+                imageUrl: nil,
+                quantity: 1,
+                unitPrice: 10,
+                listUnitPrice: 10,
+                hasPromotion: false,
+                discount: 0,
+                shopId: "shop-a"
+            )
+        ]
+        #expect(CartShopSwitchPolicy.needsConfirmation(lines: lines, targetShopId: "shop-a") == false)
+        #expect(CartShopSwitchPolicy.needsConfirmation(lines: lines, targetShopId: "SHOP-A") == false)
+        #expect(CartShopSwitchPolicy.needsConfirmation(lines: lines, targetShopId: "shop-b") == true)
+    }
+
+    @Test func shopSwitchIgnoresBlankShopIdOnLines() {
+        let lines = [
+            CartLineItem(
+                productId: "p1",
+                name: "Taco",
+                imageUrl: nil,
+                quantity: 1,
+                unitPrice: 10,
+                listUnitPrice: 10,
+                hasPromotion: false,
+                discount: 0,
+                shopId: ""
+            )
+        ]
+        #expect(CartShopSwitchPolicy.needsConfirmation(lines: lines, targetShopId: "shop-a") == false)
+        #expect(CartShopSwitchPolicy.normalized("") == nil)
+        #expect(CartShopSwitchPolicy.normalized("  ") == nil)
+        #expect(CartShopSwitchPolicy.normalized("shop-a") == "shop-a")
     }
 
 }

@@ -110,7 +110,7 @@ private func mapBestSeller(_ p: BestSellerProductDTO) -> BestSellerProduct {
         rate: p.rate,
         hasPromotion: p.hasPromotion,
         discount: p.discount,
-        shopId: p.shopId
+        shopId: CartShopSwitchPolicy.normalized(p.shopId)
     )
 }
 
@@ -125,7 +125,8 @@ private func mapShopProduct(_ p: ShopProductDTO, fallbackShopId: String) -> Shop
         ratingCount: p.ratingCount ?? 0,
         hasPromotion: p.hasPromotion,
         discount: p.discount,
-        shopId: p.shopId ?? fallbackShopId,
+        shopId: CartShopSwitchPolicy.normalized(p.shopId)
+            ?? CartShopSwitchPolicy.normalized(fallbackShopId),
         category: p.category
     )
 }
@@ -142,7 +143,7 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         ratingCount: dto.ratingCount ?? 0,
         hasPromotion: dto.hasPromotion,
         discount: dto.discount,
-        shopId: dto.shopId
+        shopId: CartShopSwitchPolicy.normalized(dto.shopId)
     )
 }
 
@@ -166,12 +167,11 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
         self.sessionStore = sessionStore
     }
 
+    /// Public catalog endpoints: work without a session (App Store 5.1.1 guest browse).
+    private var optionalBearer: String? { sessionStore.accessToken() }
+
     func getHome() async -> Result<HomeData, HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
-        let result: Result<HomeResponseDTO, HTTPClientError> = await api.get("app/home", bearerToken: token)
+        let result: Result<HomeResponseDTO, HTTPClientError> = await api.get("app/home", bearerToken: optionalBearer)
         switch result {
         case .success(let dto):
             let places = dto.featuredPlaces.map(mapFeaturedPlace)
@@ -184,11 +184,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getPromotions() async -> Result<[BestSellerProduct], HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
-        let result: Result<[BestSellerProductDTO], HTTPClientError> = await api.get("app/promotions", bearerToken: token)
+        let result: Result<[BestSellerProductDTO], HTTPClientError> = await api.get("app/promotions", bearerToken: optionalBearer)
         switch result {
         case .success(let list):
             return .success(list.map(mapBestSeller))
@@ -199,11 +195,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getBestSellers() async -> Result<[ShopProduct], HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
-        let result: Result<[ShopProductDTO], HTTPClientError> = await api.get("app/best-sellers", bearerToken: token)
+        let result: Result<[ShopProductDTO], HTTPClientError> = await api.get("app/best-sellers", bearerToken: optionalBearer)
         switch result {
         case .success(let list):
             return .success(list.map { mapShopProduct($0, fallbackShopId: $0.shopId ?? "") })
@@ -214,11 +206,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getFeaturedPlaces() async -> Result<[FeaturedPlace], HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
-        let result: Result<[FeaturedPlaceDTO], HTTPClientError> = await api.get("app/featured-places", bearerToken: token)
+        let result: Result<[FeaturedPlaceDTO], HTTPClientError> = await api.get("app/featured-places", bearerToken: optionalBearer)
         switch result {
         case .success(let list):
             return .success(list.map(mapFeaturedPlace))
@@ -229,12 +217,8 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getShopProducts(shopId: String) async -> Result<ShopProductsPage, HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
         let path = "app/shops/\(shopId)/products"
-        let result: Result<ShopProductsResponseDTO, HTTPClientError> = await api.get(path, bearerToken: token)
+        let result: Result<ShopProductsResponseDTO, HTTPClientError> = await api.get(path, bearerToken: optionalBearer)
         switch result {
         case .success(let response):
             let products = response.products.map { mapShopProduct($0, fallbackShopId: shopId) }
@@ -253,12 +237,8 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getProduct(id: String) async -> Result<ProductDetail, HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
         let path = "app/products/\(id)"
-        let result: Result<ProductDetailDTO, HTTPClientError> = await api.get(path, bearerToken: token)
+        let result: Result<ProductDetailDTO, HTTPClientError> = await api.get(path, bearerToken: optionalBearer)
         switch result {
         case .success(let dto):
             return .success(mapProductDetail(dto))
@@ -269,12 +249,8 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getService(id: String) async -> Result<ServiceDetail, HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
         let path = "app/services/\(id)"
-        let result: Result<ServiceDetailDTO, HTTPClientError> = await api.get(path, bearerToken: token)
+        let result: Result<ServiceDetailDTO, HTTPClientError> = await api.get(path, bearerToken: optionalBearer)
         switch result {
         case .success(let dto):
             return .success(mapServiceDetail(dto))
@@ -285,10 +261,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
+        let token = optionalBearer
         let result: Result<PlacesResponseDTO, HTTPClientError> = await api.get("app/places", bearerToken: token)
         switch result {
         case .success(let dto):
@@ -338,11 +311,7 @@ final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
     }
 
     func getAds() async -> Result<[Ad], HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
-        let result: Result<[AdDTO], HTTPClientError> = await api.get("app/ads", bearerToken: token)
+        let result: Result<[AdDTO], HTTPClientError> = await api.get("app/ads", bearerToken: sessionStore.accessToken())
         switch result {
         case .success(let list):
             return .success(list.map(mapAd))
@@ -353,12 +322,8 @@ final class AdsRepositoryImpl: AdsRepository, @unchecked Sendable {
     }
 
     func getAd(id: String) async -> Result<Ad?, HomeRepositoryError> {
-        guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
-            return .failure(.notAuthenticated)
-        }
         let path = "app/ads/\(id)"
-        let result: Result<AdDTO?, HTTPClientError> = await api.getOptionalDecodableOrNotFound(path, bearerToken: token)
+        let result: Result<AdDTO?, HTTPClientError> = await api.getOptionalDecodableOrNotFound(path, bearerToken: sessionStore.accessToken())
         switch result {
         case .success(let dto):
             if let dto {
@@ -392,7 +357,6 @@ final class UserAddressRepositoryImpl: UserAddressRepository, @unchecked Sendabl
 
     func getAddresses() async -> Result<[UserAddress], HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let result: Result<[AddressDTO], HTTPClientError> = await api.get("addresses", bearerToken: token)
@@ -414,7 +378,6 @@ final class UserAddressRepositoryImpl: UserAddressRepository, @unchecked Sendabl
         isDefault: Bool
     ) async -> Result<UserAddress, HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let body = CreateAddressRequest(
@@ -437,7 +400,6 @@ final class UserAddressRepositoryImpl: UserAddressRepository, @unchecked Sendabl
 
     func setDefaultAddress(id: String) async -> Result<Void, HomeRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let path = "addresses/\(id)/default"

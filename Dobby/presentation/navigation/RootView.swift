@@ -13,6 +13,8 @@ struct RootView: View {
     @State private var route: AppRoute = .splash
     @State private var phoneViewModel: PhoneViewModel
     @State private var otpViewModel: OtpViewModel?
+    /// Bumps to remount `MainTabView` after login / logout / session expiry.
+    @State private var homeEpoch = 0
 
     init(deps: AppDependencies) {
         self.deps = deps
@@ -23,8 +25,8 @@ struct RootView: View {
         Group {
             switch route {
             case .splash:
-                SplashView(viewModel: SplashViewModel(deps: deps)) { openHome in
-                    route = openHome ? .home : .phone
+                SplashView(viewModel: SplashViewModel(deps: deps)) { _ in
+                    route = .home
                 }
             case .phone:
                 PhoneScreen(
@@ -33,7 +35,7 @@ struct RootView: View {
                         otpViewModel = OtpViewModel(authRepository: deps.authRepository, phone: phone)
                         route = .otp(phone: phone, userExists: userExists)
                     },
-                    onBack: nil
+                    onBack: { route = .home }
                 )
             case .otp(_, _):
                 if let otpViewModel {
@@ -41,6 +43,7 @@ struct RootView: View {
                         viewModel: otpViewModel,
                         onLoggedIn: {
                             self.otpViewModel = nil
+                            homeEpoch += 1
                             route = .home
                         },
                         onRequiresRegistration: { route = .register(phone: $0) },
@@ -53,20 +56,35 @@ struct RootView: View {
             case .register(let phone):
                 RegisterUserScreen(
                     viewModel: RegisterUserViewModel(authRepository: deps.authRepository, phone: phone),
-                    onComplete: { route = .home },
+                    onComplete: {
+                        homeEpoch += 1
+                        route = .home
+                    },
                     onBack: { route = .phone }
                 )
             case .home:
-                MainTabView(deps: deps) {
-                    Task {
-                        await deps.authRepository.logout()
-                        await MainActor.run {
-                            phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
-                            otpViewModel = nil
-                            route = .phone
+                MainTabView(
+                    deps: deps,
+                    onLogout: {
+                        Task {
+                            if deps.authRepository.isLoggedIn {
+                                await deps.authRepository.logout()
+                            }
+                            await MainActor.run {
+                                phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
+                                otpViewModel = nil
+                                homeEpoch += 1
+                                route = .home
+                            }
                         }
+                    },
+                    onRequireLogin: {
+                        phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
+                        otpViewModel = nil
+                        route = .phone
                     }
-                }
+                )
+                .id(homeEpoch)
                 .task(id: scenePhase) {
                     guard scenePhase == .active else { return }
                     await deps.tokenRefresh.refreshAccessTokenOnForeground()
@@ -76,11 +94,10 @@ struct RootView: View {
         }
         .modelContainer(CartSwiftDataStack.sharedContainer)
         .onReceive(NotificationCenter.default.publisher(for: .dobbySessionExpired)) { _ in
-            if case .home = route {
-                phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
-                otpViewModel = nil
-                route = .phone
-            }
+            phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
+            otpViewModel = nil
+            homeEpoch += 1
+            route = .home
         }
     }
 }

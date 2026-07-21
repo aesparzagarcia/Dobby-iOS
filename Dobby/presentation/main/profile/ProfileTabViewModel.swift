@@ -17,6 +17,8 @@ struct ProfileRecentEvent: Sendable, Hashable {
 struct ProfileUiState: Sendable {
     var isLoading: Bool = true
     var error: String?
+    /// Guest browse: not signed in — show login CTA instead of gamification.
+    var isGuest: Bool = false
     var displayName: String = ""
     var email: String = ""
     var phone: String?
@@ -30,6 +32,8 @@ struct ProfileUiState: Sendable {
     var totalOrdersDelivered: Int = 0
     var favoritesCount: Int = 0
     var recentEvents: [ProfileRecentEvent] = []
+    var isDeletingAccount: Bool = false
+    var deleteAccountError: String?
 
     var levelNumber: Int {
         consumerLevelNumber(levelKey)
@@ -48,12 +52,14 @@ struct ProfileUiState: Sendable {
 @Observable
 final class ProfileTabViewModel {
     private let profileRepository: ProfileRepository
+    private let authRepository: AuthRepository
     private let http: DobbyHTTPClient
 
     var uiState = ProfileUiState()
 
-    init(profileRepository: ProfileRepository, http: DobbyHTTPClient) {
+    init(profileRepository: ProfileRepository, authRepository: AuthRepository, http: DobbyHTTPClient) {
         self.profileRepository = profileRepository
+        self.authRepository = authRepository
         self.http = http
         refresh()
     }
@@ -62,6 +68,16 @@ final class ProfileTabViewModel {
         Task {
             uiState.isLoading = true
             uiState.error = nil
+            uiState.deleteAccountError = nil
+            guard authRepository.isLoggedIn else {
+                uiState = ProfileUiState(
+                    isLoading: false,
+                    error: nil,
+                    isGuest: true,
+                    favoritesCount: uiState.favoritesCount
+                )
+                return
+            }
             switch await profileRepository.getGamification() {
             case .success(let g):
                 let next = g.xpForNextLevel
@@ -107,6 +123,7 @@ final class ProfileTabViewModel {
                 uiState = ProfileUiState(
                     isLoading: false,
                     error: nil,
+                    isGuest: false,
                     displayName: display,
                     email: g.email,
                     phone: g.phone.flatMap { $0.isEmpty ? nil : $0 },
@@ -122,7 +139,16 @@ final class ProfileTabViewModel {
                     recentEvents: events
                 )
             case .failure(let error):
+                if case .notAuthenticated = error {
+                    uiState = ProfileUiState(
+                        isLoading: false,
+                        isGuest: true,
+                        favoritesCount: uiState.favoritesCount
+                    )
+                    return
+                }
                 uiState.isLoading = false
+                uiState.isGuest = false
                 uiState.error = profileAuthErrorShouldSuppress(error) ? nil : message(for: error)
             }
         }
@@ -130,6 +156,21 @@ final class ProfileTabViewModel {
 
     func updateFavoritesCount(_ count: Int) {
         uiState.favoritesCount = count
+    }
+
+    /// Deletes the account on the server. Returns `true` when the caller should leave the signed-in UI (same as logout).
+    func deleteAccount() async -> Bool {
+        uiState.isDeletingAccount = true
+        uiState.deleteAccountError = nil
+        let result = await authRepository.deleteAccount()
+        uiState.isDeletingAccount = false
+        switch result {
+        case .success:
+            return true
+        case .error(let message):
+            uiState.deleteAccountError = message
+            return false
+        }
     }
 
     private func profileAuthErrorShouldSuppress(_ error: ProfileRepositoryError) -> Bool {

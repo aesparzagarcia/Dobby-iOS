@@ -152,7 +152,7 @@ struct ProductDetailRoute: Hashable, Sendable {
         discount = bestSeller.discount
         pickupLatitude = nil
         pickupLongitude = nil
-        shopId = bestSeller.shopId
+        shopId = CartShopSwitchPolicy.normalized(bestSeller.shopId)
         ratingCount = 0
         isShopAvailableForOrders = HomeShopHours.isProductShopAvailableForOrders(
             shopId: bestSeller.shopId,
@@ -164,7 +164,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         shopProduct: ShopProduct,
         pickupLatitude: Double? = nil,
         pickupLongitude: Double? = nil,
-        isShopAvailableForOrders: Bool = true
+        isShopAvailableForOrders: Bool = true,
+        shopIdFallback: String? = nil
     ) {
         id = shopProduct.id
         name = shopProduct.name
@@ -176,7 +177,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         discount = shopProduct.discount
         self.pickupLatitude = pickupLatitude
         self.pickupLongitude = pickupLongitude
-        shopId = shopProduct.shopId
+        shopId = CartShopSwitchPolicy.normalized(shopProduct.shopId)
+            ?? CartShopSwitchPolicy.normalized(shopIdFallback)
         ratingCount = shopProduct.ratingCount
         self.isShopAvailableForOrders = isShopAvailableForOrders
     }
@@ -192,7 +194,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         discount = detail.discount
         self.pickupLatitude = pickupLatitude
         self.pickupLongitude = pickupLongitude
-        self.shopId = shopId ?? detail.shopId
+        self.shopId = CartShopSwitchPolicy.normalized(shopId)
+            ?? CartShopSwitchPolicy.normalized(detail.shopId)
         ratingCount = detail.ratingCount
         isShopAvailableForOrders = true
     }
@@ -217,7 +220,7 @@ struct ProductDetailRoute: Hashable, Sendable {
         discount = pct
         pickupLatitude = nil
         pickupLongitude = nil
-        self.shopId = shopId
+        self.shopId = CartShopSwitchPolicy.normalized(shopId)
         ratingCount = 0
         self.isShopAvailableForOrders = isShopAvailableForOrders
     }

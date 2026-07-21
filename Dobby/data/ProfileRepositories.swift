@@ -36,7 +36,6 @@ final class ProfileRepositoryImpl: ProfileRepository, @unchecked Sendable {
 
     func getGamification() async -> Result<GamificationDto, ProfileRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let result: Result<GamificationDto, HTTPClientError> = await api.get("app/me/gamification", bearerToken: token)

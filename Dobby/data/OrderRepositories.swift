@@ -42,7 +42,6 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
 
     func createOrder(addressId: String, items: [CartLineItem], deliveryFee: Double) async -> Result<Void, OrderRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let bodyItems = items.map {
@@ -115,7 +114,6 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
 
     func getOrderTracking(orderId: String) async -> Result<OrderTrackingDetail?, OrderRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let encodedId = orderId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? orderId
@@ -191,7 +189,6 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
 
     private func postRating<B: Encodable>(path: String, body: B) async -> Result<Void, OrderRepositoryError> {
         guard let token = sessionStore.accessToken() else {
-            AuthSessionNavigation.notifyIfMissingAccessToken()
             return .failure(.notAuthenticated)
         }
         let result: Result<RateDeliveryResponseDTO, HTTPClientError> = await api.post(path, body: body, bearerToken: token)

@@ -45,7 +45,7 @@ private enum ProfileStackRoute: Hashable {
     case orderTracking(orderId: String)
 }
 
-private let profileSupportURL = URL(string: "https://dobby-frontend-wwru.onrender.com/")!
+private let profileSupportURL = URL(string: "https://dobby-frontend-wwru.onrender.com/soporte")!
 
 struct ProfileTabScreen: View {
     @Bindable var viewModel: ProfileTabViewModel
@@ -56,11 +56,14 @@ struct ProfileTabScreen: View {
     @Binding var mainTabBarHidden: Bool
     let onGoHome: () -> Void
     let onLogout: () -> Void
+    let onRequireLogin: () -> Void
 
     @Environment(\.openURL) private var openURL
 
     @State private var navigationPath: [ProfileStackRoute] = []
     @State private var orderHistoryViewModel: OrderHistoryViewModel?
+    @State private var showDeleteConfirm = false
+    @State private var showDeleteFinalConfirm = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -92,6 +95,7 @@ struct ProfileTabScreen: View {
                 orderHistoryViewModel = OrderHistoryViewModel(orderRepository: orderRepository)
             }
             viewModel.updateFavoritesCount(favoritesCount)
+            viewModel.refresh()
             syncMainTabBarHidden()
         }
         .onChange(of: favoritesCount) { _, newValue in
@@ -99,6 +103,26 @@ struct ProfileTabScreen: View {
         }
         .onChange(of: navigationPath) { _, _ in
             syncMainTabBarHidden()
+        }
+        .alert("Eliminar cuenta", isPresented: $showDeleteConfirm) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Continuar", role: .destructive) {
+                showDeleteFinalConfirm = true
+            }
+        } message: {
+            Text("Se eliminará tu cuenta y los datos personales asociados de forma permanente. Esta acción no se puede deshacer.")
+        }
+        .alert("Confirmar eliminación", isPresented: $showDeleteFinalConfirm) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Eliminar definitivamente", role: .destructive) {
+                Task {
+                    if await viewModel.deleteAccount() {
+                        onLogout()
+                    }
+                }
+            }
+        } message: {
+            Text("¿Seguro que quieres eliminar tu cuenta de Dobbi?")
         }
     }
 
@@ -149,28 +173,61 @@ struct ProfileTabScreen: View {
     @ViewBuilder
     private var content: some View {
         let s = viewModel.uiState
-        switch (s.isLoading, s.error) {
-        case (true, _):
-            HStack {
-                Spacer()
-                ProgressView()
-                    .tint(ProfilePalette.primary)
-                    .padding(.vertical, 32)
-                Spacer()
+        if s.isGuest {
+            guestBody
+        } else {
+            switch (s.isLoading, s.error) {
+            case (true, _):
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(ProfilePalette.primary)
+                        .padding(.vertical, 32)
+                    Spacer()
+                }
+            case (false, let err?) where !(err.isEmpty):
+                Text(err)
+                    .font(.body)
+                    .foregroundStyle(.red)
+                Button("Reintentar") {
+                    viewModel.refresh()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ProfilePalette.primary)
+                .padding(.top, 12)
+            default:
+                profileBody(s)
             }
-        case (false, let err?) where !(err.isEmpty):
-            Text(err)
-                .font(.body)
-                .foregroundStyle(.red)
-            Button("Reintentar") {
-                viewModel.refresh()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(ProfilePalette.primary)
-            .padding(.top, 12)
-        default:
-            profileBody(s)
         }
+    }
+
+    private var guestBody: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Inicia sesión para ver tu perfil, historial de pedidos y recompensas.")
+                .font(.body)
+                .foregroundStyle(ProfilePalette.muted)
+
+            Button(action: onRequireLogin) {
+                Text("Iniciar sesión")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(ProfilePalette.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            whiteCard {
+                Button {
+                    openURL(profileSupportURL)
+                } label: {
+                    menuRow(title: "Ayuda y soporte", systemImage: "questionmark.circle.fill")
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 8)
     }
 
     private func profileBody(_ s: ProfileUiState) -> some View {
@@ -277,6 +334,32 @@ struct ProfileTabScreen: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 8)
+            .disabled(s.isDeletingAccount)
+
+            Button {
+                showDeleteConfirm = true
+            } label: {
+                Group {
+                    if s.isDeletingAccount {
+                        ProgressView()
+                            .tint(ProfilePalette.logoutText)
+                    } else {
+                        Text("Eliminar cuenta")
+                            .font(.body.weight(.semibold))
+                    }
+                }
+                .foregroundStyle(ProfilePalette.logoutText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.plain)
+            .disabled(s.isDeletingAccount)
+
+            if let deleteErr = s.deleteAccountError, !deleteErr.isEmpty {
+                Text(deleteErr)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         }
     }
 
