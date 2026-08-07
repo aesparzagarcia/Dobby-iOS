@@ -170,6 +170,12 @@ struct MainTabView: View {
             PlaceOrderLoadingView()
         }
         .animation(.easeInOut(duration: 0.2), value: shouldShowFloatingTabBar)
+        .onAppear {
+            CrashlyticsJourney.setScreen("tab_\(tab)")
+        }
+        .onChange(of: tab) { _, newTab in
+            CrashlyticsJourney.setScreen("tab_\(newTab)")
+        }
         .onReceive(NotificationCenter.default.publisher(for: DobbyOrderRealtime.openOrderTrackingNotification)) { notification in
             let orderId = (notification.userInfo?["order_id"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)

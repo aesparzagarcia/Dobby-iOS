@@ -93,6 +93,12 @@ struct RootView: View {
             }
         }
         .modelContainer(CartSwiftDataStack.sharedContainer)
+        .onAppear {
+            CrashlyticsJourney.setScreen(route.crashlyticsScreen)
+        }
+        .onChange(of: route) { _, newRoute in
+            CrashlyticsJourney.setScreen(newRoute.crashlyticsScreen)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .dobbySessionExpired)) { _ in
             phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
             otpViewModel = nil

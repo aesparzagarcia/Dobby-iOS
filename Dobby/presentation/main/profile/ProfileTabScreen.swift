@@ -310,56 +310,36 @@ struct ProfileTabScreen: View {
                 Button {
                     openAppSettings()
                 } label: {
-                    menuRow(title: "Notificaciones", systemImage: "bell.fill")
+                    menuRow(
+                        title: "Notificaciones",
+                        systemImage: "bell.fill",
+                        iconTint: Color(red: 0.42, green: 0.45, blue: 0.50),
+                        iconBackground: Color(red: 0.949, green: 0.949, blue: 0.969)
+                    )
                 }
                 .buttonStyle(.plain)
                 menuDivider
                 Button {
                     openURL(profileSupportURL)
                 } label: {
-                    menuRow(title: "Ayuda y soporte", systemImage: "questionmark.circle.fill")
+                    menuRow(
+                        title: "Ayuda y soporte",
+                        systemImage: "questionmark.circle.fill",
+                        iconTint: Color(red: 0.42, green: 0.45, blue: 0.50),
+                        iconBackground: Color(red: 0.949, green: 0.949, blue: 0.969)
+                    )
                 }
                 .buttonStyle(.plain)
             }
             .padding(.top, 4)
 
-            Button(action: onLogout) {
-                Text("Cerrar sesión")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(ProfilePalette.logoutText)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(ProfilePalette.logoutBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
-            .disabled(s.isDeletingAccount)
-
-            Button {
-                showDeleteConfirm = true
-            } label: {
-                Group {
-                    if s.isDeletingAccount {
-                        ProgressView()
-                            .tint(ProfilePalette.logoutText)
-                    } else {
-                        Text("Eliminar cuenta")
-                            .font(.body.weight(.semibold))
-                    }
-                }
-                .foregroundStyle(ProfilePalette.logoutText)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-            }
-            .buttonStyle(.plain)
-            .disabled(s.isDeletingAccount)
-
-            if let deleteErr = s.deleteAccountError, !deleteErr.isEmpty {
-                Text(deleteErr)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+            ProfileAccountSection(
+                isDeletingAccount: s.isDeletingAccount,
+                deleteAccountError: s.deleteAccountError,
+                onLogout: onLogout,
+                onDeleteAccount: { showDeleteConfirm = true }
+            )
+            .padding(.top, 16)
         }
     }
 
@@ -553,21 +533,32 @@ struct ProfileTabScreen: View {
         }
     }
 
-    private func menuRow(title: String, systemImage: String) -> some View {
+    private func menuRow(
+        title: String,
+        systemImage: String,
+        iconTint: Color = ProfilePalette.primary,
+        iconBackground: Color = ProfilePalette.light,
+        titleColor: Color = ProfilePalette.dark,
+        chevronTint: Color = ProfilePalette.muted
+    ) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.body)
-                .foregroundStyle(ProfilePalette.primary)
-                .frame(width: 22)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(iconBackground)
+                    .frame(width: 36, height: 36)
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(iconTint)
+            }
             Text(title)
-                .font(.body)
-                .foregroundStyle(ProfilePalette.dark)
+                .font(.body.weight(.medium))
+                .foregroundStyle(titleColor)
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(ProfilePalette.muted)
+                .foregroundStyle(chevronTint)
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
     }
 
     private var menuDivider: some View {

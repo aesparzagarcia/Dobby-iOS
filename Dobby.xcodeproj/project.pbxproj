@@ -33,6 +33,9 @@
 		4CF8A200000B00000000000A /* DobbyOrderRealtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000B00000000000A /* DobbyOrderRealtime.swift */; };
 		4CF8A200000C00000000000A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000300000000000A /* FirebaseFirestore */; };
 		4CF8A200000D00000000000A /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000400000000000A /* FirebaseAuth */; };
+		4CF8A200000E00000000000A /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF8A400000500000000000A /* FirebaseCrashlytics */; };
+		CRJ2CRJ2CRJ244389384901 /* CrashlyticsJourney.swift in Sources */ = {isa = PBXBuildFile; fileRef = CRJ1CRJ1CRJ144389384902 /* CrashlyticsJourney.swift */; };
+		PBF2PBF2PBF244389384901 /* ProfileBuildFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = PBF1PBF1PBF144389384902 /* ProfileBuildFooter.swift */; };
 		4EE74B9693704CF091696EF1 /* OtpScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E541752AD684522AF8D0CBF /* OtpScreen.swift */; };
 		5231D3F7FD904A4AB9C4A72E /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07DA20421D984530B9DB3F78 /* SessionStore.swift */; };
 		5A5A5A5A5B9D443893848901 /* HomeTabScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A5A5A5A5B9D443893848902 /* HomeTabScreen.swift */; };
@@ -151,6 +154,8 @@
 		4CC6123784AE4799BC497D43 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		4CF8A100000100000000000A /* AppGraph.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGraph.swift; sourceTree = "<group>"; };
 		4CF8A100000200000000000A /* DobbyAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyAppDelegate.swift; sourceTree = "<group>"; };
+		CRJ1CRJ1CRJ144389384902 /* CrashlyticsJourney.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashlyticsJourney.swift; sourceTree = "<group>"; };
+		PBF1PBF1PBF144389384902 /* ProfileBuildFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileBuildFooter.swift; sourceTree = "<group>"; };
 		4CF8A100000300000000000A /* DobbyPushSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DobbyPushSync.swift; sourceTree = "<group>"; };
 		4CF8A100000400000000000A /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		4CF8A100000500000000000A /* service_area.kml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = service_area.kml; sourceTree = "<group>"; };
@@ -277,6 +282,7 @@
 				E6823BC82FAD4F99001E475E /* FirebaseMessaging in Frameworks */,
 				4CF8A200000C00000000000A /* FirebaseFirestore in Frameworks */,
 				4CF8A200000D00000000000A /* FirebaseAuth in Frameworks */,
+				4CF8A200000E00000000000A /* FirebaseCrashlytics in Frameworks */,
 				E6823BC72FAD4F99001E475E /* FirebaseCore in Frameworks */,
 				LT03LT03LT0344389384901 /* Lottie in Frameworks */,
 			);
@@ -305,6 +311,8 @@
 				4CC6123784AE4799BC497D43 /* AppDependencies.swift */,
 				4CF8A100000100000000000A /* AppGraph.swift */,
 				4CF8A100000200000000000A /* DobbyAppDelegate.swift */,
+				CRJ1CRJ1CRJ144389384902 /* CrashlyticsJourney.swift */,
+				PBF1PBF1PBF144389384902 /* ProfileBuildFooter.swift */,
 				4CF8A100000300000000000A /* DobbyPushSync.swift */,
 				4CF8A100000B00000000000A /* DobbyOrderRealtime.swift */,
 			);
@@ -592,6 +600,7 @@
 				E63673852F7F0C7300140ABA /* Sources */,
 				E63673862F7F0C7300140ABA /* Frameworks */,
 				E63673872F7F0C7300140ABA /* Resources */,
+				CRJRUNCRJRUN44389384901 /* Crashlytics Upload Symbols */,
 			);
 			buildRules = (
 			);
@@ -603,6 +612,7 @@
 				4CF8A400000200000000000A /* FirebaseMessaging */,
 				4CF8A400000300000000000A /* FirebaseFirestore */,
 				4CF8A400000400000000000A /* FirebaseAuth */,
+				4CF8A400000500000000000A /* FirebaseCrashlytics */,
 				LT02LT02LT0244389384902 /* Lottie */,
 			);
 			productName = Dobby;
@@ -731,6 +741,33 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		CRJRUNCRJRUN44389384901 /* Crashlytics Upload Symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Crashlytics Upload Symbols";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		E63673852F7F0C7300140ABA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -740,6 +777,8 @@
 				91BDFB69EACE4630B7D0AC0D /* AppDependencies.swift in Sources */,
 				4CF8A200000100000000000A /* AppGraph.swift in Sources */,
 				4CF8A200000200000000000A /* DobbyAppDelegate.swift in Sources */,
+				CRJ2CRJ2CRJ244389384901 /* CrashlyticsJourney.swift in Sources */,
+				PBF2PBF2PBF244389384901 /* ProfileBuildFooter.swift in Sources */,
 				4CF8A200000300000000000A /* DobbyPushSync.swift in Sources */,
 				4CF8A200000B00000000000A /* DobbyOrderRealtime.swift in Sources */,
 				B1B1B1B1B1B1B443893848901 /* CartPersistedEntity.swift in Sources */,
@@ -1196,23 +1235,28 @@
 /* Begin XCSwiftPackageProductDependency section */
 		4CF8A400000100000000000A /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
 		};
 		4CF8A400000200000000000A /* FirebaseMessaging */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
 		};
 		4CF8A400000300000000000A /* FirebaseFirestore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
 		};
 		4CF8A400000400000000000A /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4CF8A300000100000000000A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAuth;
+		};
+		4CF8A400000500000000000A /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E6823BCF2FB27212001E475E /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
 		};
 		LT02LT02LT0244389384902 /* Lottie */ = {
 			isa = XCSwiftPackageProductDependency;

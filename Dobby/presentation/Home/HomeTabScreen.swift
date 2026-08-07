@@ -21,6 +21,20 @@ private enum HomeStackRoute: Hashable {
     case cart
     case activeOrders
     case orderTracking(orderId: String)
+
+    var crashlyticsScreen: String {
+        switch self {
+        case .shop: return "shop"
+        case .featuredPlaces: return "featured_places"
+        case .bestSellers: return "best_sellers"
+        case .product: return "product"
+        case .service: return "service"
+        case .ad: return "ad"
+        case .cart: return "cart"
+        case .activeOrders: return "active_orders"
+        case .orderTracking: return "order_tracking"
+        }
+    }
 }
 
 struct HomeTabScreen: View {
@@ -217,8 +231,9 @@ struct HomeTabScreen: View {
                     }
                 }
         }
-        .onChange(of: navigationPath) { _, _ in
+        .onChange(of: navigationPath) { _, path in
             syncMainTabBarHiddenWithNavigation()
+            CrashlyticsJourney.setScreen(path.last?.crashlyticsScreen ?? "tab_home")
         }
         .onAppear {
             syncMainTabBarHiddenWithNavigation()

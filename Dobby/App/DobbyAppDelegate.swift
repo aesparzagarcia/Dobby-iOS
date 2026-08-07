@@ -14,6 +14,7 @@ final class DobbyAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificatio
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         FirebaseApp.configure()
+        CrashlyticsJourney.configure(app: "dobby")
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in
