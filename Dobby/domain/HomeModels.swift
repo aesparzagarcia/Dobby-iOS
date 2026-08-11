@@ -65,6 +65,12 @@ struct ShopProductsPage: Sendable {
     let openingHour: String?
     let closingHour: String?
     let products: [ShopProduct]
+    let shopName: String?
+    let shopType: String?
+    let logoUrl: String?
+    let rate: Float
+    let ratingCount: Int
+    let jobsDone: Int
 
     var isShopAvailableForOrders: Bool {
         HomeShopHours.isShopAvailableForOrders(
@@ -113,6 +119,7 @@ struct ProductDetail: Sendable {
     let hasPromotion: Bool
     let discount: Int
     let shopId: String?
+    let shopType: String?
 }
 
 /// Parity with Android `ServiceDetail` (`GET app/services/:id`).

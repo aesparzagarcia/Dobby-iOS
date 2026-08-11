@@ -27,12 +27,16 @@ struct ProductDetailScreen: View {
     let userLongitude: Double?
     let onBack: () -> Void
     let onCartClick: () -> Void
-    let onAddToCart: (Int, ProductDetail?) -> Void
+    let onAddToCart: (Int, ProductDetail?) -> AddToCartResult
+    var onNeedsAddress: () -> Void = {}
+    var onCancelNeedsAddress: () -> Void = {}
 
     @State private var quantity = 1
     @State private var loadedDetail: ProductDetail?
     @State private var detailFetchFinished = false
     @State private var imagePage = 0
+    @State private var showCarWashSingleProductAlert = false
+    @State private var showAddressRequiredForCartAlert = false
 
     init(
         product: ProductDetailRoute,
@@ -44,7 +48,9 @@ struct ProductDetailScreen: View {
         userLongitude: Double? = nil,
         onBack: @escaping () -> Void,
         onCartClick: @escaping () -> Void,
-        onAddToCart: @escaping (Int, ProductDetail?) -> Void
+        onAddToCart: @escaping (Int, ProductDetail?) -> AddToCartResult,
+        onNeedsAddress: @escaping () -> Void = {},
+        onCancelNeedsAddress: @escaping () -> Void = {}
     ) {
         self.product = product
         self.placesRepository = placesRepository
@@ -56,6 +62,8 @@ struct ProductDetailScreen: View {
         self.onBack = onBack
         self.onCartClick = onCartClick
         self.onAddToCart = onAddToCart
+        self.onNeedsAddress = onNeedsAddress
+        self.onCancelNeedsAddress = onCancelNeedsAddress
     }
 
     private var displayProduct: ProductDetailRoute {
@@ -150,6 +158,21 @@ struct ProductDetailScreen: View {
         .navigationBarHidden(true)
         .task(id: product.id) {
             await loadProductDetail()
+        }
+        .alert("Un solo producto", isPresented: $showCarWashSingleProductAlert) {
+            Button("Entendido", role: .cancel) {}
+        } message: {
+            Text(CartCarWashSingleProductPolicy.message)
+        }
+        .alert("Dirección requerida", isPresented: $showAddressRequiredForCartAlert) {
+            Button("Cancelar", role: .cancel) {
+                onCancelNeedsAddress()
+            }
+            Button("Agregar dirección") {
+                onNeedsAddress()
+            }
+        } message: {
+            Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
         }
     }
 
@@ -335,7 +358,14 @@ struct ProductDetailScreen: View {
                         .font(.title3.monospacedDigit().weight(.medium))
                         .frame(minWidth: 28)
 
-                    Button { quantity += 1 } label: {
+                    Button {
+                        let shopType = loadedDetail?.shopType
+                        if CartCarWashSingleProductPolicy.isCarWash(shopType), quantity >= 1 {
+                            showCarWashSingleProductAlert = true
+                        } else {
+                            quantity += 1
+                        }
+                    } label: {
                         Image(systemName: "plus")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(DobbyBrandColor.primary)
@@ -349,8 +379,14 @@ struct ProductDetailScreen: View {
                 .clipShape(Capsule())
 
                 Button {
-                    onAddToCart(quantity, loadedDetail)
-                    quantity = 1
+                    switch onAddToCart(quantity, loadedDetail) {
+                    case .success:
+                        quantity = 1
+                    case .blockedCarWash:
+                        showCarWashSingleProductAlert = true
+                    case .needsAddress:
+                        showAddressRequiredForCartAlert = true
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "cart.fill")

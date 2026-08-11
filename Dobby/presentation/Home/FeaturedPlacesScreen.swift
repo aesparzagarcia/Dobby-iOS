@@ -31,11 +31,11 @@ struct FeaturedPlacesScreen: View {
         ZStack {
             Color.white.ignoresSafeArea()
 
-            switch (viewModel.uiState.isLoading, viewModel.uiState.errorMessage) {
+            switch (viewModel.uiState.isLoading && viewModel.uiState.places.isEmpty, viewModel.uiState.errorMessage) {
             case (true, _):
                 ProgressView()
                     .tint(DobbyBrandColor.primary)
-            case (false, let err?) where !err.isEmpty:
+            case (false, let err?) where !err.isEmpty && viewModel.uiState.places.isEmpty:
                 VStack(spacing: 16) {
                     Text(err)
                         .font(.body)
@@ -67,21 +67,24 @@ struct FeaturedPlacesScreen: View {
                     )
                     .padding(.bottom, 4)
 
-                    if viewModel.uiState.filteredPlaces.isEmpty {
-                        Spacer()
-                        Text(emptyPlacesMessage)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                        Spacer()
-                    } else {
-                        ScrollView {
+                    ScrollView {
+                        if viewModel.uiState.filteredPlaces.isEmpty {
+                            Text(emptyPlacesMessage)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 24)
+                                .padding(.top, 48)
+                        } else {
                             featuredPlacesGrid(places: viewModel.uiState.filteredPlaces)
                                 .padding(.horizontal, 16)
                                 .padding(.top, 8)
                                 .padding(.bottom, 24)
                         }
+                    }
+                    .refreshable {
+                        await viewModel.refresh()
                     }
                 }
             }

@@ -19,6 +19,9 @@ private enum FavoritesStackRoute: Hashable {
 
 struct FavoritesTabScreen: View {
     let placesRepository: PlacesRepository
+    let placesAutocompleteRepository: PlacesAutocompleteRepository
+    let userAddressRepository: UserAddressRepository
+    let httpClient: DobbyHTTPClient
     @Bindable var favoritesStore: FavoritesStore
     @Bindable var homeViewModel: HomeTabViewModel
     @Binding var mainTabBarHidden: Bool
@@ -27,6 +30,13 @@ struct FavoritesTabScreen: View {
     let onRequireLogin: () -> Void
 
     @State private var navigationPath: [FavoritesStackRoute] = []
+    @State private var showCurrentAddress = false
+    @State private var pendingOpenCartAfterAddress = false
+
+    private func openAddressForPendingCart(openCartAfter: Bool = false) {
+        pendingOpenCartAfterAddress = openCartAfter
+        showCurrentAddress = true
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -45,8 +55,23 @@ struct FavoritesTabScreen: View {
                                 pushCartIfNeeded()
                             },
                             onAddToCart: { quantity, detail in
-                                homeViewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                openCartAfterAddingFromProduct()
+                                let result = homeViewModel.addProductToCart(
+                                    r,
+                                    quantity: quantity,
+                                    detail: detail,
+                                    isLoggedIn: isLoggedIn
+                                )
+                                if result == .success {
+                                    openCartAfterAddingFromProduct()
+                                }
+                                return result
+                            },
+                            onNeedsAddress: {
+                                openAddressForPendingCart(openCartAfter: true)
+                            },
+                            onCancelNeedsAddress: {
+                                homeViewModel.clearPendingCartAdd()
+                                pendingOpenCartAfterAddress = false
                             }
                         )
                     case .cart:
@@ -74,6 +99,39 @@ struct FavoritesTabScreen: View {
         .onAppear {
             favoritesStore.refresh()
             syncMainTabBarHidden()
+        }
+        .fullScreenCover(isPresented: $showCurrentAddress, onDismiss: {
+            if !homeViewModel.hasValidDeliveryAddress {
+                homeViewModel.clearPendingCartAdd()
+                pendingOpenCartAfterAddress = false
+            }
+        }) {
+            NavigationStack {
+                CurrentAddressScreen(
+                    placesAutocompleteRepository: placesAutocompleteRepository,
+                    userAddressRepository: userAddressRepository,
+                    httpClient: httpClient,
+                    onDefaultAddressUpdated: {
+                        Task {
+                            let result = await homeViewModel.resumePendingCartAddIfPossible()
+                            showCurrentAddress = false
+                            if result == .success, pendingOpenCartAfterAddress {
+                                pendingOpenCartAfterAddress = false
+                                openCartAfterAddingFromProduct()
+                            } else {
+                                pendingOpenCartAfterAddress = false
+                            }
+                        }
+                    },
+                    isLoggedIn: isLoggedIn,
+                    onRequireLogin: {
+                        homeViewModel.clearPendingCartAdd()
+                        pendingOpenCartAfterAddress = false
+                        showCurrentAddress = false
+                        onRequireLogin()
+                    }
+                )
+            }
         }
     }
 

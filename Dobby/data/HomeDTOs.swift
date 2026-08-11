@@ -52,12 +52,22 @@ struct ShopProductDTO: Decodable {
 }
 
 struct ShopInfoDTO: Decodable {
+    let id: String?
+    let name: String?
+    let type: String?
+    let logoUrl: String?
+    let rate: Float?
+    let ratingCount: Int?
+    let jobsDone: Int?
     let status: String
     let openingHour: String?
     let closingHour: String?
 
     enum CodingKeys: String, CodingKey {
-        case status
+        case id, name, type, status, rate
+        case logoUrl = "logo_url"
+        case ratingCount = "rating_count"
+        case jobsDone = "jobs_done"
         case openingHour = "opening_hour"
         case closingHour = "closing_hour"
     }
@@ -88,6 +98,7 @@ struct BestSellerProductDTO: Decodable {
 struct ProductDetailDTO: Decodable {
     let id: String
     let shopId: String?
+    let shopType: String?
     let name: String
     let description: String?
     let price: Double
@@ -100,6 +111,7 @@ struct ProductDetailDTO: Decodable {
     enum CodingKeys: String, CodingKey {
         case id, name, description, price, imageUrls, rate, discount
         case shopId = "shop_id"
+        case shopType = "shop_type"
         case ratingCount = "rating_count"
         case hasPromotion = "has_promotion"
     }

@@ -10,6 +10,7 @@ import Foundation
 /// Parity with Android `ShopDetailUiState`.
 struct ShopDetailUiState: Equatable {
     var shopName: String = ""
+    var shopType: String?
     var products: [ShopProduct] = []
     var searchQuery: String = ""
     var selectedCategoryId: String?
@@ -74,6 +75,7 @@ final class ShopDetailViewModel {
         case .success(let page):
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
+                shopType: page.shopType,
                 products: page.products,
                 searchQuery: uiState.searchQuery,
                 selectedCategoryId: uiState.selectedCategoryId,
@@ -87,6 +89,7 @@ final class ShopDetailViewModel {
         case .failure(let e):
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
+                shopType: uiState.shopType,
                 products: [],
                 searchQuery: uiState.searchQuery,
                 selectedCategoryId: uiState.selectedCategoryId,

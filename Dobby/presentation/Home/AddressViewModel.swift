@@ -5,12 +5,18 @@
 //  Parity with Android `com.ares.ewe.presentation.viewmodel.main.home.AddressViewModel`.
 //
 
+import CoreLocation
 import Foundation
 
 struct AddressUiState: Equatable {
     var searchQuery: String = ""
     var searchResults: [AddressSearchResult] = []
     var myAddresses: [UserAddress] = []
+    var isLoadingAddresses: Bool = false
+    var deviceLatitude: Double?
+    var deviceLongitude: Double?
+    var deviceLocationAddress: String?
+    var isLoadingDeviceLocation: Bool = false
     var showMyAddressesSheet: Bool = false
     var isLoading: Bool = false
     var errorMessage: String?
@@ -43,6 +49,42 @@ final class AddressViewModel {
         self.http = http
     }
 
+    func onAppear() {
+        loadSavedAddresses()
+    }
+
+    func loadSavedAddresses() {
+        Task {
+            updateState { $0.isLoadingAddresses = true }
+            switch await userAddressRepository.getAddresses() {
+            case .success(let list):
+                updateState {
+                    $0.myAddresses = list
+                    $0.isLoadingAddresses = false
+                    $0.errorMessage = nil
+                }
+            case .failure(let e):
+                updateState {
+                    $0.isLoadingAddresses = false
+                    $0.errorMessage = e.shouldSuppressUserMessage ? nil : self.message(for: e)
+                }
+            }
+        }
+    }
+
+    func refreshDeviceLocation(coordinate: CLLocationCoordinate2D, addressLabel: String?) {
+        updateState {
+            $0.deviceLatitude = coordinate.latitude
+            $0.deviceLongitude = coordinate.longitude
+            $0.deviceLocationAddress = addressLabel
+            $0.isLoadingDeviceLocation = false
+        }
+    }
+
+    func setLoadingDeviceLocation(_ loading: Bool) {
+        updateState { $0.isLoadingDeviceLocation = loading }
+    }
+
     func onSearchQueryChange(_ query: String) {
         updateState {
             $0.searchQuery = query
@@ -62,7 +104,11 @@ final class AddressViewModel {
             let current = self.uiState.searchQuery
             guard current.count >= minQueryLength else { return }
             self.updateState { $0.isLoading = true; $0.errorMessage = nil }
-            let result = await self.placesAutocomplete.getAddressPredictions(input: current)
+            let result = await self.placesAutocomplete.getAddressPredictions(
+                input: current,
+                latitude: self.uiState.deviceLatitude,
+                longitude: self.uiState.deviceLongitude
+            )
             guard !Task.isCancelled else { return }
             switch result {
             case .success(let predictions):
@@ -147,10 +193,36 @@ final class AddressViewModel {
             updateState { $0.showMyAddressesSheet = false }
             switch await userAddressRepository.setDefaultAddress(id: address.id) {
             case .success:
+                loadSavedAddresses()
                 updateState { $0.navigateBackToHome = true }
             case .failure(let e):
                 updateState {
-                    $0.showMyAddressesSheet = true
+                    $0.errorMessage = e.shouldSuppressUserMessage ? nil : message(for: e)
+                }
+            }
+        }
+    }
+
+    func onSetAsDefault(_ address: UserAddress) {
+        Task {
+            switch await userAddressRepository.setDefaultAddress(id: address.id) {
+            case .success:
+                loadSavedAddresses()
+            case .failure(let e):
+                updateState {
+                    $0.errorMessage = e.shouldSuppressUserMessage ? nil : message(for: e)
+                }
+            }
+        }
+    }
+
+    func onDeleteAddress(_ address: UserAddress) {
+        Task {
+            switch await userAddressRepository.deleteAddress(id: address.id) {
+            case .success:
+                loadSavedAddresses()
+            case .failure(let e):
+                updateState {
                     $0.errorMessage = e.shouldSuppressUserMessage ? nil : message(for: e)
                 }
             }

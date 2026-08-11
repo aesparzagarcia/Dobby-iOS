@@ -54,6 +54,7 @@ protocol UserAddressRepository: Sendable {
         isDefault: Bool
     ) async -> Result<UserAddress, HomeRepositoryError>
     func setDefaultAddress(id: String) async -> Result<Void, HomeRepositoryError>
+    func deleteAddress(id: String) async -> Result<Void, HomeRepositoryError>
 }
 
 private extension AddressDTO {
@@ -80,6 +81,7 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         case "RESTAURANT": typeLabel = "Restaurante"
         case "SHOP": typeLabel = "Tienda"
         case "SERVICE_PROVIDER": typeLabel = "Servicio"
+        case "CAR_WASH": typeLabel = "Autolavado"
         default: typeLabel = p.type ?? "Tienda"
         }
     case "service": typeLabel = "Servicio"
@@ -143,7 +145,8 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         ratingCount: dto.ratingCount ?? 0,
         hasPromotion: dto.hasPromotion,
         discount: dto.discount,
-        shopId: CartShopSwitchPolicy.normalized(dto.shopId)
+        shopId: CartShopSwitchPolicy.normalized(dto.shopId),
+        shopType: CartShopSwitchPolicy.normalized(dto.shopType)
     )
 }
 
@@ -227,7 +230,13 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
                     shopStatus: response.shop.status,
                     openingHour: response.shop.openingHour,
                     closingHour: response.shop.closingHour,
-                    products: products
+                    products: products,
+                    shopName: response.shop.name,
+                    shopType: response.shop.type,
+                    logoUrl: AppConfiguration.fullImageURL(response.shop.logoUrl),
+                    rate: response.shop.rate ?? 0,
+                    ratingCount: response.shop.ratingCount ?? 0,
+                    jobsDone: response.shop.jobsDone ?? 0
                 )
             )
         case .failure(let e):
@@ -404,6 +413,20 @@ final class UserAddressRepositoryImpl: UserAddressRepository, @unchecked Sendabl
         }
         let path = "addresses/\(id)/default"
         switch await api.patch(path, bearerToken: token) {
+        case .success:
+            return .success(())
+        case .failure(let e):
+            AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
+            return .failure(.http(e))
+        }
+    }
+
+    func deleteAddress(id: String) async -> Result<Void, HomeRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            return .failure(.notAuthenticated)
+        }
+        let path = "addresses/\(id)"
+        switch await api.delete(path: path, bearerToken: token) {
         case .success:
             return .success(())
         case .failure(let e):

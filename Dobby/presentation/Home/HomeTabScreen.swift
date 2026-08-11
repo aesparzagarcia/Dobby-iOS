@@ -71,6 +71,12 @@ struct HomeTabScreen: View {
     @State private var productPromotionDeepLinkTask: Task<Void, Never>?
     @State private var showShopSwitchAlert = false
     @State private var pendingShopPlace: FeaturedPlace?
+    @State private var pendingOpenCartAfterAddress = false
+
+    private func openAddressForPendingCart(openCartAfter: Bool = false) {
+        pendingOpenCartAfterAddress = openCartAfter
+        showCurrentAddress = true
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -98,16 +104,24 @@ struct HomeTabScreen: View {
                                     )
                                 )
                             },
-                            onAddToCart: { product in
-                                viewModel.addShopProductToCart(
+                            onAddToCart: { product, shopType in
+                                return viewModel.addShopProductToCart(
                                     product,
                                     pickupLatitude: r.pickupLatitude,
                                     pickupLongitude: r.pickupLongitude,
-                                    shopId: r.shopId
+                                    shopId: r.shopId,
+                                    shopType: shopType,
+                                    isLoggedIn: isLoggedIn
                                 )
                             },
                             onCartClick: {
                                 pushCartIfNeeded()
+                            },
+                            onNeedsAddress: {
+                                openAddressForPendingCart()
+                            },
+                            onCancelNeedsAddress: {
+                                viewModel.clearPendingCartAdd()
                             }
                         )
                     case .featuredPlaces:
@@ -142,15 +156,23 @@ struct HomeTabScreen: View {
                             onAddToCart: { product in
                                 let shopId = CartShopSwitchPolicy.normalized(product.shopId) ?? ""
                                 let place = viewModel.featuredPlaces.first { $0.id == shopId && !$0.isService }
-                                viewModel.addShopProductToCart(
+                                return viewModel.addShopProductToCart(
                                     product,
                                     pickupLatitude: place?.latitude,
                                     pickupLongitude: place?.longitude,
-                                    shopId: shopId
+                                    shopId: shopId,
+                                    shopType: place?.shopType,
+                                    isLoggedIn: isLoggedIn
                                 )
                             },
                             onCartClick: {
                                 pushCartIfNeeded()
+                            },
+                            onNeedsAddress: {
+                                openAddressForPendingCart()
+                            },
+                            onCancelNeedsAddress: {
+                                viewModel.clearPendingCartAdd()
                             }
                         )
                     case .service(let serviceId):
@@ -189,8 +211,23 @@ struct HomeTabScreen: View {
                                 pushCartIfNeeded()
                             },
                             onAddToCart: { quantity, detail in
-                                viewModel.addProductToCart(r, quantity: quantity, detail: detail)
-                                openCartAfterAddingFromProduct()
+                                let result = viewModel.addProductToCart(
+                                    r,
+                                    quantity: quantity,
+                                    detail: detail,
+                                    isLoggedIn: isLoggedIn
+                                )
+                                if result == .success {
+                                    openCartAfterAddingFromProduct()
+                                }
+                                return result
+                            },
+                            onNeedsAddress: {
+                                openAddressForPendingCart(openCartAfter: true)
+                            },
+                            onCancelNeedsAddress: {
+                                viewModel.clearPendingCartAdd()
+                                pendingOpenCartAfterAddress = false
                             }
                         )
                     case .cart:
@@ -402,15 +439,33 @@ struct HomeTabScreen: View {
                 discountPercent: pendingOpenProductDiscount
             )
         }
-        .fullScreenCover(isPresented: $showCurrentAddress) {
+        .fullScreenCover(isPresented: $showCurrentAddress, onDismiss: {
+            if !viewModel.hasValidDeliveryAddress {
+                viewModel.clearPendingCartAdd()
+                pendingOpenCartAfterAddress = false
+            }
+        }) {
             NavigationStack {
                 CurrentAddressScreen(
                     placesAutocompleteRepository: placesAutocompleteRepository,
                     userAddressRepository: userAddressRepository,
                     httpClient: httpClient,
-                    onDefaultAddressUpdated: { viewModel.loadAddresses() },
+                    onDefaultAddressUpdated: {
+                        Task {
+                            let result = await viewModel.resumePendingCartAddIfPossible()
+                            showCurrentAddress = false
+                            if result == .success, pendingOpenCartAfterAddress {
+                                pendingOpenCartAfterAddress = false
+                                openCartAfterAddingFromProduct()
+                            } else {
+                                pendingOpenCartAfterAddress = false
+                            }
+                        }
+                    },
                     isLoggedIn: isLoggedIn,
                     onRequireLogin: {
+                        viewModel.clearPendingCartAdd()
+                        pendingOpenCartAfterAddress = false
                         showCurrentAddress = false
                         onRequireLogin()
                     }

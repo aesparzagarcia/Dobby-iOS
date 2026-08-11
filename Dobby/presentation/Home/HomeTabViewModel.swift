@@ -5,6 +5,12 @@
 
 import Foundation
 
+enum AddToCartResult: Equatable {
+    case success
+    case blockedCarWash
+    case needsAddress
+}
+
 @MainActor
 @Observable
 final class HomeTabViewModel {
@@ -15,6 +21,19 @@ final class HomeTabViewModel {
     private let deliveryPricingConfigRepository: DeliveryPricingConfigRepository
     private let http: DobbyHTTPClient
     private let cartLocalStore: CartLocalStore
+
+    private enum PendingCartAdd {
+        case shopProduct(
+            product: ShopProduct,
+            pickupLatitude: Double?,
+            pickupLongitude: Double?,
+            shopId: String,
+            shopType: String?
+        )
+        case productDetail(route: ProductDetailRoute, quantity: Int, detail: ProductDetail?)
+    }
+
+    private var pendingCartAdd: PendingCartAdd?
 
     /// Tarifas desde `GET app/delivery-pricing-config` (panel web).
     var deliveryPricingSettings: DeliveryPricingSettings = .default
@@ -102,8 +121,83 @@ final class HomeTabViewModel {
         )
     }
 
-    func addProductToCart(_ product: ProductDetailRoute, quantity: Int, detail: ProductDetail? = nil) {
-        guard quantity > 0 else { return }
+    /// Returns outcome so UI can show car-wash alert or open address search.
+    @discardableResult
+    func addProductToCart(
+        _ product: ProductDetailRoute,
+        quantity: Int,
+        detail: ProductDetail? = nil,
+        isLoggedIn: Bool = true
+    ) -> AddToCartResult {
+        guard quantity > 0 else { return .success }
+        if isLoggedIn && !hasValidDeliveryAddress {
+            pendingCartAdd = .productDetail(route: product, quantity: quantity, detail: detail)
+            return .needsAddress
+        }
+        return performAddProductToCart(product, quantity: quantity, detail: detail)
+    }
+
+    /// Returns outcome so UI can show car-wash alert or open address search.
+    @discardableResult
+    func addShopProductToCart(
+        _ product: ShopProduct,
+        pickupLatitude: Double?,
+        pickupLongitude: Double?,
+        shopId: String,
+        shopType: String? = nil,
+        isLoggedIn: Bool = true
+    ) -> AddToCartResult {
+        if isLoggedIn && !hasValidDeliveryAddress {
+            pendingCartAdd = .shopProduct(
+                product: product,
+                pickupLatitude: pickupLatitude,
+                pickupLongitude: pickupLongitude,
+                shopId: shopId,
+                shopType: shopType
+            )
+            return .needsAddress
+        }
+        return performAddShopProductToCart(
+            product,
+            pickupLatitude: pickupLatitude,
+            pickupLongitude: pickupLongitude,
+            shopId: shopId,
+            shopType: shopType
+        )
+    }
+
+    func clearPendingCartAdd() {
+        pendingCartAdd = nil
+    }
+
+    /// Call after the address flow finishes (save or select). Resumes pending add if address is valid.
+    func resumePendingCartAddIfPossible() async -> AddToCartResult? {
+        await refreshAddresses()
+        guard let pending = pendingCartAdd else { return nil }
+        guard hasValidDeliveryAddress else {
+            pendingCartAdd = nil
+            return nil
+        }
+        pendingCartAdd = nil
+        switch pending {
+        case let .shopProduct(product, pickupLatitude, pickupLongitude, shopId, shopType):
+            return performAddShopProductToCart(
+                product,
+                pickupLatitude: pickupLatitude,
+                pickupLongitude: pickupLongitude,
+                shopId: shopId,
+                shopType: shopType
+            )
+        case let .productDetail(route, quantity, detail):
+            return performAddProductToCart(route, quantity: quantity, detail: detail)
+        }
+    }
+
+    private func performAddProductToCart(
+        _ product: ProductDetailRoute,
+        quantity: Int,
+        detail: ProductDetail? = nil
+    ) -> AddToCartResult {
         let route: ProductDetailRoute
         if let detail {
             route = ProductDetailRoute(
@@ -122,6 +216,18 @@ final class HomeTabViewModel {
         let resolvedShopId = CartShopSwitchPolicy.normalized(route.shopId)
             ?? CartShopSwitchPolicy.normalized(detail?.shopId)
             ?? CartShopSwitchPolicy.normalized(product.shopId)
+        let shopType = detail?.shopType
+            ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+
+        if CartCarWashSingleProductPolicy.blocksAdd(
+            shopType: shopType,
+            lines: cartLines,
+            productId: route.id,
+            shopId: resolvedShopId,
+            quantityToAdd: quantity
+        ) {
+            return .blockedCarWash
+        }
 
         if let i = cartLines.firstIndex(where: { $0.productId == route.id }) {
             cartLines[i].quantity += quantity
@@ -148,14 +254,16 @@ final class HomeTabViewModel {
             )
         }
         cartLocalStore.persist(lines: cartLines)
+        return .success
     }
 
-    func addShopProductToCart(
+    private func performAddShopProductToCart(
         _ product: ShopProduct,
         pickupLatitude: Double?,
         pickupLongitude: Double?,
-        shopId: String
-    ) {
+        shopId: String,
+        shopType: String? = nil
+    ) -> AddToCartResult {
         let validDiscount = max(0, min(100, product.discount))
         let showPromotion = product.hasPromotion && validDiscount > 0
         let unitAfterDiscount = showPromotion
@@ -163,6 +271,18 @@ final class HomeTabViewModel {
             : product.price
         let resolvedShopId = CartShopSwitchPolicy.normalized(product.shopId)
             ?? CartShopSwitchPolicy.normalized(shopId)
+        let resolvedType = shopType
+            ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+
+        if CartCarWashSingleProductPolicy.blocksAdd(
+            shopType: resolvedType,
+            lines: cartLines,
+            productId: product.id,
+            shopId: resolvedShopId,
+            quantityToAdd: 1
+        ) {
+            return .blockedCarWash
+        }
 
         if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
             cartLines[i].quantity += 1
@@ -189,6 +309,7 @@ final class HomeTabViewModel {
             )
         }
         cartLocalStore.persist(lines: cartLines)
+        return .success
     }
 
     func removeCartLine(productId: String) {

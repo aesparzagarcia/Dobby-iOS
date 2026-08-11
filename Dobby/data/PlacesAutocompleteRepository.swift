@@ -8,7 +8,11 @@
 import Foundation
 
 protocol PlacesAutocompleteRepository: Sendable {
-    func getAddressPredictions(input: String) async -> Result<[AddressPrediction], PlacesAutocompleteError>
+    func getAddressPredictions(
+        input: String,
+        latitude: Double?,
+        longitude: Double?
+    ) async -> Result<[AddressPrediction], PlacesAutocompleteError>
     func getPlaceLocation(placeId: String) async -> Result<(Double, Double), PlacesAutocompleteError>
     func getAddressFromLocation(latitude: Double, longitude: Double) async -> Result<String, PlacesAutocompleteError>
 }
@@ -22,8 +26,17 @@ final class PlacesAutocompleteRepositoryImpl: PlacesAutocompleteRepository, @unc
         self.apiKey = apiKey
     }
 
-    func getAddressPredictions(input: String) async -> Result<[AddressPrediction], PlacesAutocompleteError> {
-        await client.getAddressPredictions(input: input, apiKey: apiKey)
+    func getAddressPredictions(
+        input: String,
+        latitude: Double?,
+        longitude: Double?
+    ) async -> Result<[AddressPrediction], PlacesAutocompleteError> {
+        await client.getAddressPredictions(
+            input: input,
+            apiKey: apiKey,
+            latitude: latitude,
+            longitude: longitude
+        )
     }
 
     func getPlaceLocation(placeId: String) async -> Result<(Double, Double), PlacesAutocompleteError> {

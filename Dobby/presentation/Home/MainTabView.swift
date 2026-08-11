@@ -124,6 +124,9 @@ struct MainTabView: View {
                 case .promotions:
                     PromotionsTabScreen(
                         placesRepository: placesRepository,
+                        placesAutocompleteRepository: placesAutocompleteRepository,
+                        userAddressRepository: userAddressRepository,
+                        httpClient: httpClient,
                         favoritesStore: favoritesStore,
                         promotionsViewModel: promotionsViewModel,
                         homeViewModel: homeViewModel,
@@ -135,6 +138,9 @@ struct MainTabView: View {
                 case .favorites:
                     FavoritesTabScreen(
                         placesRepository: placesRepository,
+                        placesAutocompleteRepository: placesAutocompleteRepository,
+                        userAddressRepository: userAddressRepository,
+                        httpClient: httpClient,
                         favoritesStore: favoritesStore,
                         homeViewModel: homeViewModel,
                         mainTabBarHidden: $favoritesHidesFloatingTabBar,

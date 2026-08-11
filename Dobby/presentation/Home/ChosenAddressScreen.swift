@@ -169,6 +169,7 @@ struct ChosenAddressScreen: View {
     @State private var sheetDescription = ""
     @State private var sheetSelectedLabel = "Casa"
     @State private var isRecentering = false
+    @State private var saveSheetContentHeight: CGFloat = 620
 
     private let navigateData: NavigateToMapData
     private let onSaveSuccess: () -> Void
@@ -257,13 +258,14 @@ struct ChosenAddressScreen: View {
         .toolbarBackground(Visibility.visible, for: ToolbarPlacement.navigationBar)
         .sheet(isPresented: $showSaveSheet) {
             saveAddressSheet
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(saveSheetContentHeight)])
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(saveSheetCornerRadius)
                 .presentationBackground {
                     RoundedRectangle(cornerRadius: saveSheetCornerRadius, style: .continuous)
                         .fill(Color.white)
                 }
+                .presentationContentInteraction(.scrolls)
         }
         .onChange(of: showSaveSheet) { _, open in
             if open {
@@ -455,16 +457,48 @@ struct ChosenAddressScreen: View {
                     .foregroundStyle(.primary)
                     .padding(.bottom, 22)
 
+                Text("Dirección")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.bottom, 8)
+
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(SaveAddressSheetPalette.accent)
+                        .padding(.top, 2)
+                    TextField(
+                        "Calle, número, colonia…",
+                        text: Binding(
+                            get: { viewModel.editableAddress },
+                            set: { viewModel.editableAddress = $0 }
+                        ),
+                        axis: .vertical
+                    )
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .lineLimit(2...4)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(SaveAddressSheetPalette.fieldBorder, lineWidth: 1)
+                )
+                .padding(.bottom, 16)
+
                 Text("Descripción")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .padding(.bottom, 8)
 
                 HStack(spacing: 10) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 22))
+                    Image(systemName: "pencil")
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(SaveAddressSheetPalette.accent)
-                    TextField("ej. Casa verde, piso 2", text: $sheetDescription)
+                    TextField("ej. Casa verde, piso 2, int 15", text: $sheetDescription)
                         .textFieldStyle(.plain)
                         .font(.body)
                 }
@@ -551,12 +585,30 @@ struct ChosenAddressScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .disabled(viewModel.isSaving)
+                    .disabled(
+                        viewModel.isSaving ||
+                        viewModel.editableAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 28)
+            .padding(.top, 12)
             .padding(.bottom, 28)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: SaveAddressSheetHeightKey.self, value: proxy.size.height)
+                }
+            )
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .onPreferenceChange(SaveAddressSheetHeightKey.self) { height in
+            let maxHeight = UIScreen.main.bounds.height * 0.92
+            // Drag indicator + safe area breathing room.
+            let fitted = min(height + 28, maxHeight)
+            if abs(fitted - saveSheetContentHeight) > 1 {
+                saveSheetContentHeight = fitted
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: saveSheetCornerRadius, style: .continuous))
     }
@@ -612,5 +664,12 @@ struct ChosenAddressScreen: View {
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SaveAddressSheetHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }

@@ -26,6 +26,7 @@
 		4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000400000000000A /* GoogleService-Info.plist */; };
 		4CF8A200000500000000000A /* service_area.kml in Resources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000500000000000A /* service_area.kml */; };
 		4CF8A200000600000000000A /* DeliveryServiceArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000600000000000A /* DeliveryServiceArea.swift */; };
+		4CF8A200000F00000000000A /* AddressSearchRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000F00000000000A /* AddressSearchRegion.swift */; };
 		4CF8A200000700000000000A /* DeliveryEtaEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000700000000000A /* DeliveryEtaEstimator.swift */; };
 		4CF8A200000800000000000A /* DeliveryPricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000800000000000A /* DeliveryPricing.swift */; };
 		4CF8A200000900000000000A /* DeliveryPricingRepositories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000900000000000A /* DeliveryPricingRepositories.swift */; };
@@ -59,6 +60,7 @@
 		C121DDCF362F4382A049EA99 /* DobbyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50810FB3FDE4E649C683C80 /* DobbyApp.swift */; };
 		C7C7C7C7C7C7C443893848901 /* ProductDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C7C7C7C7C7C443893848902 /* ProductDetailScreen.swift */; };
 		CSS1CSS1CSS144389384901 /* CartShopSwitchPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */; };
+		CSS1CSS1CSS144389384903 /* CartCarWashSingleProductPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CSS2CSS2CSS244389384904 /* CartCarWashSingleProductPolicy.swift */; };
 		D0D0D0D0D0D0D443893848901 /* DeviceLocationFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D0D0D0D0D0D443893848902 /* DeviceLocationFetcher.swift */; };
 		D2D2D2D2D2D2D443893848901 /* CartScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2D2D2D2D2D2D443893848902 /* CartScreen.swift */; };
 		D38A27B5D5D54569A8AB54A9 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77756B392EDB4F0C9287280E /* SplashView.swift */; };
@@ -160,6 +162,7 @@
 		4CF8A100000400000000000A /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		4CF8A100000500000000000A /* service_area.kml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = service_area.kml; sourceTree = "<group>"; };
 		4CF8A100000600000000000A /* DeliveryServiceArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveryServiceArea.swift; sourceTree = "<group>"; };
+		4CF8A100000F00000000000A /* AddressSearchRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressSearchRegion.swift; sourceTree = "<group>"; };
 		4CF8A100000700000000000A /* DeliveryEtaEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveryEtaEstimator.swift; sourceTree = "<group>"; };
 		4CF8A100000800000000000A /* DeliveryPricing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveryPricing.swift; sourceTree = "<group>"; };
 		4CF8A100000900000000000A /* DeliveryPricingRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeliveryPricingRepositories.swift; sourceTree = "<group>"; };
@@ -197,6 +200,7 @@
 		CFGSEC0012F7F0C7300140ABA /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		CFGSHR0012F7F0C7300140ABA /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartShopSwitchPolicy.swift; sourceTree = "<group>"; };
+		CSS2CSS2CSS244389384904 /* CartCarWashSingleProductPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartCarWashSingleProductPolicy.swift; sourceTree = "<group>"; };
 		D0D0D0D0D0D0D443893848902 /* DeviceLocationFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceLocationFetcher.swift; sourceTree = "<group>"; };
 		D2D2D2D2D2D2D443893848902 /* CartScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartScreen.swift; sourceTree = "<group>"; };
 		D4D4D4D4D4D4D443893848902 /* UniversalProductCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalProductCard.swift; sourceTree = "<group>"; };
@@ -327,6 +331,7 @@
 				HSH2HSH2HSH244389384902 /* HomeShopHours.swift */,
 				DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */,
 				4CF8A100000600000000000A /* DeliveryServiceArea.swift */,
+				4CF8A100000F00000000000A /* AddressSearchRegion.swift */,
 				4CF8A100000700000000000A /* DeliveryEtaEstimator.swift */,
 				4CF8A100000800000000000A /* DeliveryPricing.swift */,
 				H1H1H1H1H1H1H443893848902 /* AccessTokenJwtParser.swift */,
@@ -383,6 +388,7 @@
 				HB04HB04HB0444389384902 /* HomeBootstrapCache.swift */,
 				HB06HB06HB0644389384902 /* HomeBootstrapLoader.swift */,
 				CSS2CSS2CSS244389384902 /* CartShopSwitchPolicy.swift */,
+				CSS2CSS2CSS244389384904 /* CartCarWashSingleProductPolicy.swift */,
 			);
 			path = domain;
 			sourceTree = "<group>";
@@ -794,6 +800,7 @@
 				HLC1HLC1HLC144389384901 /* HomeLayoutConstants.swift in Sources */,
 				HSH1HSH1HSH144389384901 /* HomeShopHours.swift in Sources */,
 				4CF8A200000600000000000A /* DeliveryServiceArea.swift in Sources */,
+				4CF8A200000F00000000000A /* AddressSearchRegion.swift in Sources */,
 				4CF8A200000700000000000A /* DeliveryEtaEstimator.swift in Sources */,
 				4CF8A200000800000000000A /* DeliveryPricing.swift in Sources */,
 				4CF8A200000900000000000A /* DeliveryPricingRepositories.swift in Sources */,
@@ -874,6 +881,7 @@
 				HB03HB03HB0344389384901 /* HomeBootstrapCache.swift in Sources */,
 				HB05HB05HB0544389384901 /* HomeBootstrapLoader.swift in Sources */,
 				CSS1CSS1CSS144389384901 /* CartShopSwitchPolicy.swift in Sources */,
+				CSS1CSS1CSS144389384903 /* CartCarWashSingleProductPolicy.swift in Sources */,
 				D38A27B5D5D54569A8AB54A9 /* SplashView.swift in Sources */,
 				D705109EA661463D938B10B1 /* SplashViewModel.swift in Sources */,
 				757C93BB846A4502BFEC4453 /* AppRoute.swift in Sources */,

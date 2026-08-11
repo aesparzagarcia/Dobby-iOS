@@ -12,6 +12,7 @@ struct FeaturedPlacesUiState: Equatable {
     var searchQuery: String = ""
     var selectedCategory: HomeQuickCategory = .all
     var isLoading: Bool = false
+    var isRefreshing: Bool = false
     var errorMessage: String?
 
     var filteredPlaces: [FeaturedPlace] {
@@ -28,17 +29,21 @@ final class FeaturedPlacesViewModel {
     private let placesRepository: PlacesRepository
     private let http: DobbyHTTPClient
 
-    var uiState: FeaturedPlacesUiState
+    var uiState = FeaturedPlacesUiState()
 
     init(placesRepository: PlacesRepository, http: DobbyHTTPClient) {
         self.placesRepository = placesRepository
         self.http = http
-        uiState = FeaturedPlacesUiState(isLoading: true)
-        Task { await loadFeaturedPlacesAsync() }
+        uiState.isLoading = true
+        Task { await loadFeaturedPlacesAsync(isRefresh: false) }
     }
 
     func loadFeaturedPlaces() {
-        Task { await loadFeaturedPlacesAsync() }
+        Task { await loadFeaturedPlacesAsync(isRefresh: false) }
+    }
+
+    func refresh() async {
+        await loadFeaturedPlacesAsync(isRefresh: true)
     }
 
     func onSearchQueryChange(_ query: String) {
@@ -49,9 +54,15 @@ final class FeaturedPlacesViewModel {
         uiState.selectedCategory = category
     }
 
-    private func loadFeaturedPlacesAsync() async {
-        uiState.errorMessage = nil
-        uiState.isLoading = true
+    private func loadFeaturedPlacesAsync(isRefresh: Bool) async {
+        if isRefresh {
+            guard !uiState.isRefreshing, !uiState.isLoading else { return }
+            uiState.isRefreshing = true
+            uiState.errorMessage = nil
+        } else {
+            uiState.errorMessage = nil
+            uiState.isLoading = true
+        }
 
         switch await placesRepository.getFeaturedPlaces() {
         case .success(let places):
@@ -60,14 +71,16 @@ final class FeaturedPlacesViewModel {
                 searchQuery: uiState.searchQuery,
                 selectedCategory: uiState.selectedCategory,
                 isLoading: false,
+                isRefreshing: false,
                 errorMessage: nil
             )
         case .failure(let e):
             uiState = FeaturedPlacesUiState(
-                places: [],
+                places: isRefresh ? uiState.places : [],
                 searchQuery: uiState.searchQuery,
                 selectedCategory: uiState.selectedCategory,
                 isLoading: false,
+                isRefreshing: false,
                 errorMessage: e.shouldSuppressUserMessage ? nil : message(for: e)
             )
         }

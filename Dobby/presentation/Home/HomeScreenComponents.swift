@@ -31,9 +31,9 @@ func filterPlacesByCategory(_ places: [FeaturedPlace], category: HomeQuickCatego
     case .all:
         return places
     case .restaurants:
-        return places.filter { !$0.isService && $0.shopType != "SHOP" }
+        return places.filter { !$0.isService && $0.shopType != "SHOP" && $0.shopType != "CAR_WASH" }
     case .shops:
-        return places.filter { !$0.isService && $0.shopType == "SHOP" }
+        return places.filter { !$0.isService && ($0.shopType == "SHOP" || $0.shopType == "CAR_WASH") }
     case .services:
         return places.filter(\.isService)
     case .offers:

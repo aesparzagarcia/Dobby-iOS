@@ -21,8 +21,13 @@ struct ShopDetailScreen: View {
     let cartItemCount: Int
     let onBack: () -> Void
     let onProductTap: (ShopProduct, Bool) -> Void
-    let onAddToCart: (ShopProduct) -> Void
+    let onAddToCart: (ShopProduct, String?) -> AddToCartResult
     let onCartClick: () -> Void
+    var onNeedsAddress: () -> Void = {}
+    var onCancelNeedsAddress: () -> Void = {}
+
+    @State private var showCarWashSingleProductAlert = false
+    @State private var showAddressRequiredForCartAlert = false
 
     init(
         shopId: String,
@@ -32,14 +37,18 @@ struct ShopDetailScreen: View {
         cartItemCount: Int,
         onBack: @escaping () -> Void = {},
         onProductTap: @escaping (ShopProduct, Bool) -> Void = { _, _ in },
-        onAddToCart: @escaping (ShopProduct) -> Void = { _ in },
-        onCartClick: @escaping () -> Void = {}
+        onAddToCart: @escaping (ShopProduct, String?) -> AddToCartResult = { _, _ in .success },
+        onCartClick: @escaping () -> Void = {},
+        onNeedsAddress: @escaping () -> Void = {},
+        onCancelNeedsAddress: @escaping () -> Void = {}
     ) {
         self.cartItemCount = cartItemCount
         self.onBack = onBack
         self.onProductTap = onProductTap
         self.onAddToCart = onAddToCart
         self.onCartClick = onCartClick
+        self.onNeedsAddress = onNeedsAddress
+        self.onCancelNeedsAddress = onCancelNeedsAddress
         _viewModel = State(
             initialValue: ShopDetailViewModel(
                 shopId: shopId,
@@ -105,7 +114,14 @@ struct ShopDetailScreen: View {
                                         onTap: { onProductTap(product, viewModel.uiState.isShopAvailableForOrders) },
                                         onAddTap: {
                                             guard viewModel.uiState.isShopAvailableForOrders else { return }
-                                            onAddToCart(product)
+                                            switch onAddToCart(product, viewModel.uiState.shopType) {
+                                            case .blockedCarWash:
+                                                showCarWashSingleProductAlert = true
+                                            case .needsAddress:
+                                                showAddressRequiredForCartAlert = true
+                                            case .success:
+                                                break
+                                            }
                                         }
                                     )
                                     .id(product.id)
@@ -132,6 +148,21 @@ struct ShopDetailScreen: View {
                 .buttonStyle(.plain)
             }
             .hideToolbarSharedBackgroundIfAvailable()
+        }
+        .alert("Un solo producto", isPresented: $showCarWashSingleProductAlert) {
+            Button("Entendido", role: .cancel) {}
+        } message: {
+            Text(CartCarWashSingleProductPolicy.message)
+        }
+        .alert("Dirección requerida", isPresented: $showAddressRequiredForCartAlert) {
+            Button("Cancelar", role: .cancel) {
+                onCancelNeedsAddress()
+            }
+            Button("Agregar dirección") {
+                onNeedsAddress()
+            }
+        } message: {
+            Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
         }
     }
 

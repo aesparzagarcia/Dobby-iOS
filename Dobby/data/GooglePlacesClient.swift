@@ -26,14 +26,29 @@ struct GooglePlacesClient: Sendable {
         self.session = session
     }
 
-    func getAddressPredictions(input: String, apiKey: String) async -> Result<[AddressPrediction], PlacesAutocompleteError> {
+    func getAddressPredictions(
+        input: String,
+        apiKey: String,
+        latitude: Double? = nil,
+        longitude: Double? = nil
+    ) async -> Result<[AddressPrediction], PlacesAutocompleteError> {
         guard !apiKey.isEmpty else { return .failure(.missingApiKey) }
+        // Por ahora siempre Tala (ignora GPS). Cuando se amplíe, usar latitude/longitude.
+        _ = latitude
+        _ = longitude
         var components = URLComponents(string: "https://maps.googleapis.com/maps/api/place/autocomplete/json")!
         components.queryItems = [
-            URLQueryItem(name: "input", value: input),
+            URLQueryItem(name: "input", value: AddressSearchRegion.localizedQuery(input)),
             URLQueryItem(name: "key", value: apiKey),
-            URLQueryItem(name: "types", value: "address"),
-            URLQueryItem(name: "language", value: "en"),
+            URLQueryItem(name: "types", value: "geocode"),
+            URLQueryItem(name: "language", value: "es"),
+            URLQueryItem(name: "components", value: "country:mx"),
+            URLQueryItem(
+                name: "location",
+                value: "\(AddressSearchRegion.centerLat),\(AddressSearchRegion.centerLng)"
+            ),
+            URLQueryItem(name: "radius", value: "\(AddressSearchRegion.radiusMeters)"),
+            URLQueryItem(name: "strictbounds", value: "true"),
         ]
         guard let url = components.url else { return .failure(.invalidURL) }
 
@@ -63,13 +78,21 @@ struct GooglePlacesClient: Sendable {
                     .joined(separator: ": ")
                 return .failure(.apiStatus(detail))
             }
-            let list = (decoded.predictions ?? []).map { p in
-                AddressPrediction(
-                    placeId: p.placeId,
-                    mainText: p.structuredFormatting?.mainText ?? p.description,
-                    secondaryText: p.structuredFormatting?.secondaryText
-                )
-            }
+            let list = (decoded.predictions ?? [])
+                .map { p in
+                    AddressPrediction(
+                        placeId: p.placeId,
+                        mainText: p.structuredFormatting?.mainText ?? p.description,
+                        secondaryText: p.structuredFormatting?.secondaryText
+                    )
+                }
+                .filter { prediction in
+                    let haystack = [prediction.mainText, prediction.secondaryText]
+                        .compactMap { $0 }
+                        .joined(separator: " ")
+                        .lowercased()
+                    return haystack.contains("tala")
+                }
             return .success(list)
         } catch {
             return .failure(.transport(error))
@@ -121,7 +144,7 @@ struct GooglePlacesClient: Sendable {
         components.queryItems = [
             URLQueryItem(name: "latlng", value: "\(latitude),\(longitude)"),
             URLQueryItem(name: "key", value: apiKey),
-            URLQueryItem(name: "language", value: "en"),
+            URLQueryItem(name: "language", value: "es"),
         ]
         guard let url = components.url else { return .failure(.invalidURL) }
 
