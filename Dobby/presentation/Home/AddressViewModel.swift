@@ -218,6 +218,18 @@ final class AddressViewModel {
 
     func onDeleteAddress(_ address: UserAddress) {
         Task {
+            guard !address.isDefault else {
+                updateState {
+                    $0.errorMessage = "No puedes eliminar la dirección principal. Elige otra como principal primero."
+                }
+                return
+            }
+            guard uiState.myAddresses.count > 1 else {
+                updateState {
+                    $0.errorMessage = "Debes conservar al menos una dirección activa."
+                }
+                return
+            }
             switch await userAddressRepository.deleteAddress(id: address.id) {
             case .success:
                 loadSavedAddresses()

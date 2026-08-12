@@ -13,7 +13,8 @@ private enum AddressScreenPalette {
     static let cardBorder = Color(red: 232 / 255, green: 234 / 255, blue: 239 / 255)
     static let muted = Color(red: 138 / 255, green: 143 / 255, blue: 152 / 255)
     static let locationBlue = Color(red: 47 / 255, green: 107 / 255, blue: 1)
-    static let principalBg = Color(red: 232 / 255, green: 240 / 255, blue: 1)
+    static let principalBg = Color(red: 238 / 255, green: 238 / 255, blue: 240 / 255)
+    static let principalText = DobbyBrandColor.textPrimary
     static let fallbackCoordinate = CLLocationCoordinate2D(latitude: 20.6507582, longitude: -103.7029606)
 }
 
@@ -136,10 +137,12 @@ struct CurrentAddressScreen: View {
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(DobbyBrandColor.textPrimary)
 
-            Text("Selecciona o agrega la dirección donde quieres que te lleguen tus pedidos.")
-                .font(.subheadline)
-                .foregroundStyle(AddressScreenPalette.muted)
-                .fixedSize(horizontal: false, vertical: true)
+            if isLoggedIn {
+                Text("Selecciona o agrega la dirección donde quieres que te lleguen tus pedidos.")
+                    .font(.subheadline)
+                    .foregroundStyle(AddressScreenPalette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -212,6 +215,7 @@ struct CurrentAddressScreen: View {
                         ForEach(addressViewModel.uiState.myAddresses) { address in
                             SavedAddressCard(
                                 address: address,
+                                showMenu: addressViewModel.uiState.myAddresses.count > 1 && !address.isDefault,
                                 onSelect: { addressViewModel.onMyAddressSelected(address) },
                                 onSetDefault: { addressViewModel.onSetAsDefault(address) },
                                 onDelete: { addressViewModel.onDeleteAddress(address) }
@@ -333,9 +337,15 @@ struct CurrentAddressScreen: View {
                 ProgressView()
                     .scaleEffect(0.85)
                     .tint(AddressScreenPalette.locationBlue)
-            } else {
-                Image(systemName: "slider.horizontal.3")
-                    .foregroundStyle(DobbyBrandColor.textPrimary)
+            } else if !addressViewModel.uiState.searchQuery.isEmpty {
+                Button {
+                    addressViewModel.onSearchQueryChange("")
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(DobbyBrandColor.textPrimary.opacity(0.55))
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 14)
@@ -469,6 +479,7 @@ private struct CurrentLocationCard: View {
 
 private struct SavedAddressCard: View {
     let address: UserAddress
+    var showMenu: Bool = true
     let onSelect: () -> Void
     let onSetDefault: () -> Void
     let onDelete: () -> Void
@@ -492,7 +503,7 @@ private struct SavedAddressCard: View {
                             if address.isDefault {
                                 Text("Principal")
                                     .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(AddressScreenPalette.locationBlue)
+                                    .foregroundStyle(AddressScreenPalette.principalText)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 3)
                                     .background(AddressScreenPalette.principalBg, in: Capsule())
@@ -510,17 +521,19 @@ private struct SavedAddressCard: View {
             }
             .buttonStyle(.plain)
 
-            Menu {
-                if !address.isDefault {
-                    Button("Establecer como principal", action: onSetDefault)
+            if showMenu {
+                Menu {
+                    if !address.isDefault {
+                        Button("Establecer como principal", action: onSetDefault)
+                    }
+                    Button("Eliminar", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .rotationEffect(.degrees(90))
+                        .foregroundStyle(AddressScreenPalette.muted)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
-                Button("Eliminar", role: .destructive, action: onDelete)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .rotationEffect(.degrees(90))
-                    .foregroundStyle(AddressScreenPalette.muted)
-                    .frame(width: 28, height: 28)
-                    .contentShape(Rectangle())
             }
         }
         .padding(14)
@@ -542,15 +555,15 @@ private enum AddressLabelVisual {
     static func style(for label: String) -> Style {
         switch label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "casa", "home":
-            return Style(systemImage: "house.fill", background: AddressScreenPalette.locationBlue)
+            return Style(systemImage: "house.fill", background: DobbyBrandColor.primary)
         case "trabajo", "work":
-            return Style(systemImage: "briefcase.fill", background: Color(red: 52 / 255, green: 199 / 255, blue: 89 / 255))
+            return Style(systemImage: "briefcase.fill", background: DobbyBrandColor.primary)
         case "gimnasio", "gym":
             return Style(systemImage: "dumbbell.fill", background: Color(red: 175 / 255, green: 82 / 255, blue: 222 / 255))
-        case "novia":
-            return Style(systemImage: "heart.fill", background: Color(red: 1, green: 45 / 255, blue: 85 / 255))
+        case "novia", "amor":
+            return Style(systemImage: "heart.fill", background: DobbyBrandColor.primary)
         case "apartamento":
-            return Style(systemImage: "building.2.fill", background: Color(red: 88 / 255, green: 86 / 255, blue: 214 / 255))
+            return Style(systemImage: "building.2.fill", background: DobbyBrandColor.primary)
         case "fiesta":
             return Style(systemImage: "party.popper.fill", background: Color(red: 1, green: 149 / 255, blue: 0))
         default:

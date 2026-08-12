@@ -80,6 +80,7 @@ final class ChosenAddressViewModel {
     func saveAddress(
         label: String,
         description: String?,
+        addressText: String? = nil,
         latitude: Double,
         longitude: Double,
         onSuccess: @escaping () -> Void
@@ -96,7 +97,11 @@ final class ChosenAddressViewModel {
                 }
                 return
             }
-            var text = editableAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+            var text = if let edited = addressText?.trimmingCharacters(in: .whitespacesAndNewlines), !edited.isEmpty {
+                editableAddress.withEditedStreetAndColony(edited)
+            } else {
+                editableAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             if text.isEmpty {
                 switch await places.getAddressFromLocation(latitude: latitude, longitude: longitude) {
                 case .success(let a):
@@ -113,6 +118,21 @@ final class ChosenAddressViewModel {
                 let t = d.trimmingCharacters(in: .whitespacesAndNewlines)
                 return t.isEmpty ? nil : t
             }()
+            switch await userAddress.getAddresses() {
+            case .success(let existing):
+                if AddressDuplicate.isDuplicate(
+                    existing: existing,
+                    address: text,
+                    lat: latitude,
+                    lng: longitude
+                ) {
+                    isSaving = false
+                    errorMessage = AddressDuplicate.message
+                    return
+                }
+            case .failure:
+                break
+            }
             switch await userAddress.createAddress(
                 label: labelStr,
                 description: descStr,
@@ -166,6 +186,7 @@ struct ChosenAddressScreen: View {
 
     @State private var showSaveSheet = false
     @State private var showFarLocationAlert = false
+    @State private var sheetAddress = ""
     @State private var sheetDescription = ""
     @State private var sheetSelectedLabel = "Casa"
     @State private var isRecentering = false
@@ -269,6 +290,7 @@ struct ChosenAddressScreen: View {
         }
         .onChange(of: showSaveSheet) { _, open in
             if open {
+                sheetAddress = viewModel.editableAddress.addressWithColonyOnly()
                 sheetDescription = ""
                 sheetSelectedLabel = "Casa"
                 viewModel.errorMessage = nil
@@ -441,9 +463,9 @@ struct ChosenAddressScreen: View {
         static let chipBorder = Color(red: 0.90, green: 0.90, blue: 0.92)
     }
 
-    /// Grid order matches redesigned bottom sheet (Casa / Novia / Apartamento | Fiesta / Trabajo).
+    /// Grid order matches redesigned bottom sheet (Casa / Amor / Apartamento | Fiesta / Trabajo).
     private let addressLabelGridColumns: [[String]] = [
-        ["Casa", "Novia", "Apartamento"],
+        ["Casa", "Amor", "Apartamento"],
         ["Fiesta", "Trabajo"],
     ]
 
@@ -466,21 +488,18 @@ struct ChosenAddressScreen: View {
                     Image(systemName: "mappin.circle.fill")
                         .font(.system(size: 22))
                         .foregroundStyle(SaveAddressSheetPalette.accent)
-                        .padding(.top, 2)
+                        .padding(.top, 1)
                     TextField(
-                        "Calle, número, colonia…",
-                        text: Binding(
-                            get: { viewModel.editableAddress },
-                            set: { viewModel.editableAddress = $0 }
-                        ),
+                        "Calle, número, colonia",
+                        text: $sheetAddress,
                         axis: .vertical
                     )
                     .textFieldStyle(.plain)
                     .font(.body)
-                    .lineLimit(2...4)
+                    .lineLimit(1...2)
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
@@ -503,7 +522,7 @@ struct ChosenAddressScreen: View {
                         .font(.body)
                 }
                 .padding(.horizontal, 14)
-                .padding(.vertical, 14)
+                .padding(.vertical, 12)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
@@ -560,6 +579,7 @@ struct ChosenAddressScreen: View {
                         viewModel.saveAddress(
                             label: sheetSelectedLabel,
                             description: desc.isEmpty ? nil : desc,
+                            addressText: sheetAddress,
                             latitude: lastCenter.latitude,
                             longitude: lastCenter.longitude
                         ) {
@@ -587,7 +607,7 @@ struct ChosenAddressScreen: View {
                     .buttonStyle(.plain)
                     .disabled(
                         viewModel.isSaving ||
-                        viewModel.editableAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        sheetAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     )
                 }
             }
@@ -618,7 +638,7 @@ struct ChosenAddressScreen: View {
         case "Casa": return "house.fill"
         case "Apartamento": return "building.2.fill"
         case "Trabajo": return "briefcase.fill"
-        case "Novia": return "heart.fill"
+        case "Amor", "Novia": return "heart.fill"
         case "Fiesta": return "party.popper.fill"
         default: return "mappin.and.ellipse"
         }

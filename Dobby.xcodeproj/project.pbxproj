@@ -11,6 +11,7 @@
 		0F5607CAF37446D1BDB0657A /* HomeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1161CEE73B9D443893848921 /* HomeModels.swift */; };
 		102582FF06724F87AB4EBD2A /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1B989D676A4DB08EC0C373 /* AppConfiguration.swift */; };
 		1A1A1A1A1B9D443893848901 /* AddressDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1B9D443893848902 /* AddressDisplay.swift */; };
+		1A1A1A1A1B9D443893848903 /* AddressDuplicate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A1A1A1B9D443893848904 /* AddressDuplicate.swift */; };
 		20012989919C4EC1BC1FED5F /* AuthRepositoryImpl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9320781FB77C4C63829415A6 /* AuthRepositoryImpl.swift */; };
 		21AEE7CBF5AE437F969BE4A5 /* RegisterUserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDC4AD8D09194711BE5804E2 /* RegisterUserViewModel.swift */; };
 		2A2A2A2A2B9D443893848901 /* HomeDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2A2A2A2B9D443893848902 /* HomeDTOs.swift */; };
@@ -148,6 +149,7 @@
 		07DA20421D984530B9DB3F78 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		1161CEE73B9D443893848921 /* HomeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeModels.swift; sourceTree = "<group>"; };
 		1A1A1A1A1B9D443893848902 /* AddressDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressDisplay.swift; sourceTree = "<group>"; };
+		1A1A1A1A1B9D443893848904 /* AddressDuplicate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressDuplicate.swift; sourceTree = "<group>"; };
 		222222222222222222222222 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2A2A2A2A2B9D443893848902 /* HomeDTOs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDTOs.swift; sourceTree = "<group>"; };
 		3A3A3A3A3B9D443893848902 /* HomeRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeRepositories.swift; sourceTree = "<group>"; };
@@ -377,6 +379,7 @@
 			children = (
 				E1E1E1E1E1E1E443893848902 /* AddressAutocompleteModels.swift */,
 				1A1A1A1A1B9D443893848902 /* AddressDisplay.swift */,
+				1A1A1A1A1B9D443893848904 /* AddressDuplicate.swift */,
 				BDE6F0200624494F9A87CF10 /* AuthRepository.swift */,
 				91A0AD75A14047648AE48F34 /* AuthResult.swift */,
 				1161CEE73B9D443893848921 /* HomeModels.swift */,
@@ -823,6 +826,7 @@
 				21AEE7CBF5AE437F969BE4A5 /* RegisterUserViewModel.swift in Sources */,
 				0F5607CAF37446D1BDB0657A /* HomeModels.swift in Sources */,
 				1A1A1A1A1B9D443893848901 /* AddressDisplay.swift in Sources */,
+				1A1A1A1A1B9D443893848903 /* AddressDuplicate.swift in Sources */,
 				2A2A2A2A2B9D443893848901 /* HomeDTOs.swift in Sources */,
 				3A3A3A3A3B9D443893848901 /* HomeRepositories.swift in Sources */,
 				K1K1K1K1K1K144389384901 /* OrderDTOs.swift in Sources */,

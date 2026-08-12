@@ -24,9 +24,13 @@ final class PhoneViewModel {
     }
 
     func onPhoneChange(_ raw: String) {
-        let digits = raw.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits)
-        nationalDigits = String(digits)
-        errorMessage = nil
+        let digits = String(raw.filter(\.isNumber).prefix(PhoneNationalInput.maxDigits))
+        if nationalDigits != digits {
+            nationalDigits = digits
+        }
+        if errorMessage != nil {
+            errorMessage = nil
+        }
     }
 
     func sendCode(onResult: @escaping (String, Bool) -> Void) {
