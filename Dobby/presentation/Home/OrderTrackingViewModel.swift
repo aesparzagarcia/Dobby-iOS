@@ -220,6 +220,8 @@ final class OrderTrackingViewModel {
         switch error {
         case .notAuthenticated:
             return "Sesión no válida. Vuelve a iniciar sesión."
+        case .invalidRequest(let msg):
+            return msg
         case .http(let he):
             return http.userFacingMessage(from: he)
         }

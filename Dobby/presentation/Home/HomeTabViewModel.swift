@@ -31,6 +31,11 @@ final class HomeTabViewModel {
             shopType: String?
         )
         case productDetail(route: ProductDetailRoute, quantity: Int, detail: ProductDetail?)
+        case servicePayment(
+            service: ServiceDetail,
+            serviceNumber: String,
+            amount: Double
+        )
     }
 
     private var pendingCartAdd: PendingCartAdd?
@@ -137,6 +142,23 @@ final class HomeTabViewModel {
         return performAddProductToCart(product, quantity: quantity, detail: detail)
     }
 
+    /// Adds a SERVICE_PAYMENT line (parity with Android `CartRepository.addServiceItem`).
+    @discardableResult
+    func addServiceToCart(
+        service: ServiceDetail,
+        serviceNumber: String,
+        amount: Double,
+        isLoggedIn: Bool = true
+    ) -> AddToCartResult {
+        let number = serviceNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !service.id.isEmpty, !number.isEmpty, amount > 0 else { return .success }
+        if isLoggedIn && !hasValidDeliveryAddress {
+            pendingCartAdd = .servicePayment(service: service, serviceNumber: number, amount: amount)
+            return .needsAddress
+        }
+        return performAddServiceToCart(service: service, serviceNumber: number, amount: amount)
+    }
+
     /// Returns outcome so UI can show car-wash alert or open address search.
     @discardableResult
     func addShopProductToCart(
@@ -190,6 +212,8 @@ final class HomeTabViewModel {
             )
         case let .productDetail(route, quantity, detail):
             return performAddProductToCart(route, quantity: quantity, detail: detail)
+        case let .servicePayment(service, serviceNumber, amount):
+            return performAddServiceToCart(service: service, serviceNumber: serviceNumber, amount: amount)
         }
     }
 
@@ -218,6 +242,8 @@ final class HomeTabViewModel {
             ?? CartShopSwitchPolicy.normalized(product.shopId)
         let shopType = detail?.shopType
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+
+        clearServiceLinesFromCart()
 
         if CartCarWashSingleProductPolicy.blocksAdd(
             shopType: shopType,
@@ -249,7 +275,8 @@ final class HomeTabViewModel {
                     discount: validDiscount,
                     pickupLatitude: route.pickupLatitude,
                     pickupLongitude: route.pickupLongitude,
-                    shopId: resolvedShopId
+                    shopId: resolvedShopId,
+                    lineKind: CartLineKinds.product
                 )
             )
         }
@@ -273,6 +300,8 @@ final class HomeTabViewModel {
             ?? CartShopSwitchPolicy.normalized(shopId)
         let resolvedType = shopType
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+
+        clearServiceLinesFromCart()
 
         if CartCarWashSingleProductPolicy.blocksAdd(
             shopType: resolvedType,
@@ -304,12 +333,55 @@ final class HomeTabViewModel {
                     discount: validDiscount,
                     pickupLatitude: pickupLatitude,
                     pickupLongitude: pickupLongitude,
-                    shopId: resolvedShopId
+                    shopId: resolvedShopId,
+                    lineKind: CartLineKinds.product
                 )
             )
         }
         cartLocalStore.persist(lines: cartLines)
         return .success
+    }
+
+    private func performAddServiceToCart(
+        service: ServiceDetail,
+        serviceNumber: String,
+        amount: Double
+    ) -> AddToCartResult {
+        let number = serviceNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !service.id.isEmpty, !number.isEmpty, amount > 0 else { return .success }
+        clearProductLinesFromCart()
+        let lineId = CartLineKinds.serviceLineId(serviceId: service.id, serviceNumber: number)
+        let line = CartLineItem(
+            productId: lineId,
+            name: service.name,
+            imageUrl: service.imageUrl,
+            quantity: 1,
+            unitPrice: amount,
+            listUnitPrice: 0,
+            hasPromotion: false,
+            discount: 0,
+            pickupLatitude: service.lat,
+            pickupLongitude: service.lng,
+            shopId: nil,
+            lineKind: CartLineKinds.service,
+            serviceId: service.id,
+            serviceNumber: number
+        )
+        if let i = cartLines.firstIndex(where: { $0.productId == lineId }) {
+            cartLines[i] = line
+        } else {
+            cartLines.append(line)
+        }
+        cartLocalStore.persist(lines: cartLines)
+        return .success
+    }
+
+    private func clearServiceLinesFromCart() {
+        cartLines.removeAll { $0.isServicePayment }
+    }
+
+    private func clearProductLinesFromCart() {
+        cartLines.removeAll { !$0.isServicePayment }
     }
 
     func removeCartLine(productId: String) {
@@ -372,7 +444,22 @@ final class HomeTabViewModel {
             isCheckoutLoading = false
             return false
         }
-        switch await orderRepository.createOrder(addressId: addressId, items: cartLines, deliveryFee: deliveryFee) {
+        let isServicePaymentCart = cartLines.allSatisfy(\.isServicePayment)
+        let createResult: Result<Void, OrderRepositoryError>
+        if isServicePaymentCart {
+            createResult = await orderRepository.createServicePaymentOrder(
+                addressId: addressId,
+                items: cartLines,
+                deliveryFee: deliveryFee
+            )
+        } else {
+            createResult = await orderRepository.createOrder(
+                addressId: addressId,
+                items: cartLines,
+                deliveryFee: deliveryFee
+            )
+        }
+        switch createResult {
         case .success:
             cartLines = []
             cartLocalStore.persist(lines: [])
@@ -398,6 +485,8 @@ final class HomeTabViewModel {
         switch error {
         case .notAuthenticated:
             return "Sesión no válida. Vuelve a iniciar sesión."
+        case .invalidRequest(let msg):
+            return msg
         case .http(let he):
             return http.userFacingMessage(from: he)
         }
@@ -667,8 +756,13 @@ final class HomeTabViewModel {
             }
         }
         if let e = error as? OrderRepositoryError, !e.shouldSuppressUserMessage {
-            if case .http(let he) = e {
+            switch e {
+            case .http(let he):
                 warningMessage = http.userFacingMessage(from: he)
+            case .invalidRequest(let msg):
+                warningMessage = msg
+            case .notAuthenticated:
+                break
             }
         }
     }

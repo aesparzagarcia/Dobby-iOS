@@ -184,8 +184,28 @@ struct HomeTabScreen: View {
                             onBack: { popNavigation() },
                             onCartClick: {
                                 pushCartIfNeeded()
+                            },
+                            onPay: { service, serviceNumber, amount in
+                                let result = viewModel.addServiceToCart(
+                                    service: service,
+                                    serviceNumber: serviceNumber,
+                                    amount: amount,
+                                    isLoggedIn: isLoggedIn
+                                )
+                                if result == .success {
+                                    openCartAfterAddingFromProduct()
+                                }
+                                return result
+                            },
+                            onNeedsAddress: {
+                                openAddressForPendingCart(openCartAfter: true)
+                            },
+                            onCancelNeedsAddress: {
+                                viewModel.clearPendingCartAdd()
+                                pendingOpenCartAfterAddress = false
                             }
                         )
+                        .id(serviceId)
                     case .ad(let adId):
                         AdDetailScreen(
                             adId: adId,

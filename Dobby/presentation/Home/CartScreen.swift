@@ -150,10 +150,17 @@ struct CartScreen: View {
         .background(Color.white)
     }
 
+    private var isServicePaymentCart: Bool {
+        !viewModel.cartLines.isEmpty && viewModel.cartLines.allSatisfy(\.isServicePayment)
+    }
+
     @ViewBuilder
     private var cartPricingFooter: some View {
         if let pricing = viewModel.orderPricing {
-            pricingLine(label: "Subtotal productos", amount: pricing.productsSubtotal)
+            pricingLine(
+                label: isServicePaymentCart ? "Subtotal servicios" : "Subtotal productos",
+                amount: pricing.productsSubtotal
+            )
             pricingLine(label: "Tarifa de servicio", amount: pricing.serviceFee)
             pricingLine(label: "Envío", amount: pricing.delivery.finalDeliveryFee)
             if pricing.delivery.dynamicMultiplier > 1 {
@@ -178,7 +185,9 @@ struct CartScreen: View {
             }
             Text(
                 viewModel.hasValidDeliveryAddress
-                    ? "No se pudo calcular el envío. La tienda no tiene ubicación válida configurada."
+                    ? (isServicePaymentCart
+                        ? "No se pudo calcular el envío. El servicio no tiene ubicación válida configurada."
+                        : "No se pudo calcular el envío. La tienda no tiene ubicación válida configurada.")
                     : "El costo de envío se calculará al tener una dirección de entrega válida."
             )
                 .font(.caption)
@@ -222,23 +231,35 @@ struct CartScreen: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
 
-                Text("\(line.quantity) × \(money(line.unitPrice)) = \(money(line.lineTotal))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if line.isServicePayment {
+                    if let number = line.serviceNumber?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !number.isEmpty {
+                        Text("Nº \(number)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(money(line.lineTotal))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(line.quantity) × \(money(line.unitPrice)) = \(money(line.lineTotal))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                if line.hasPromotion && line.discount > 0 {
-                    HStack(spacing: 6) {
-                        Text("-\(line.discount)%")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color(red: 1, green: 0.89, blue: 0.3))
-                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                        Text(money(line.lineTotalAtListPrice))
-                            .font(.caption2)
-                            .strikethrough()
-                            .foregroundStyle(.tertiary)
+                    if line.hasPromotion && line.discount > 0 {
+                        HStack(spacing: 6) {
+                            Text("-\(line.discount)%")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color(red: 1, green: 0.89, blue: 0.3))
+                                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                            Text(money(line.lineTotalAtListPrice))
+                                .font(.caption2)
+                                .strikethrough()
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
             }

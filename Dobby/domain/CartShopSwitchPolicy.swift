@@ -16,6 +16,8 @@ enum CartShopSwitchPolicy {
 
     static func needsConfirmation(lines: [CartLineItem], targetShopId: String) -> Bool {
         if lines.isEmpty { return false }
+        // Servicios y productos de tienda no se mezclan: vaciar al entrar a una tienda.
+        if lines.contains(where: \.isServicePayment) { return true }
         guard let target = normalized(targetShopId) else { return true }
         let cartShopIds = Set(lines.compactMap { normalized($0.shopId) })
         // Legacy rows without shopId: don't block (same-shop false positive). New adds always persist shopId.

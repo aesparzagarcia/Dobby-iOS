@@ -130,6 +130,20 @@ struct ServiceDetail: Sendable, Equatable {
     let imageUrl: String?
     let category: String?
     let rate: Float
+    let address: String?
+    let lat: Double?
+    let lng: Double?
+}
+
+/// Parity with Android `CartLineKinds`.
+enum CartLineKinds {
+    static let product = "PRODUCT"
+    static let service = "SERVICE"
+
+    static func serviceLineId(serviceId: String, serviceNumber: String) -> String {
+        let number = serviceNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        return "svc:\(serviceId):\(number)"
+    }
 }
 
 /// Payload for `NavigationStack` product detail (home best sellers + shop grid).
@@ -279,8 +293,16 @@ struct CartLineItem: Identifiable, Hashable, Sendable {
     var pickupLatitude: Double?
     var pickupLongitude: Double?
     var shopId: String?
+    /// `PRODUCT` (tienda) o `SERVICE` (pago de servicio).
+    var lineKind: String = CartLineKinds.product
+    var serviceId: String? = nil
+    var serviceNumber: String? = nil
 
     var id: String { productId }
+
+    var isServicePayment: Bool {
+        lineKind.caseInsensitiveCompare(CartLineKinds.service) == .orderedSame
+    }
 
     var lineTotal: Double {
         Double(quantity) * unitPrice

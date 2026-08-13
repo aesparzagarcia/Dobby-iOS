@@ -10,6 +10,7 @@ import Foundation
 enum OrderRepositoryError: Error, Sendable {
     case notAuthenticated
     case http(HTTPClientError)
+    case invalidRequest(String)
 
     var shouldSuppressUserMessage: Bool {
         switch self {
@@ -17,12 +18,15 @@ enum OrderRepositoryError: Error, Sendable {
             return true
         case .http(let e):
             return AuthSessionNavigation.shouldSuppressUserMessage(for: e)
+        case .invalidRequest:
+            return false
         }
     }
 }
 
 protocol OrderRepository: Sendable {
     func createOrder(addressId: String, items: [CartLineItem], deliveryFee: Double) async -> Result<Void, OrderRepositoryError>
+    func createServicePaymentOrder(addressId: String, items: [CartLineItem], deliveryFee: Double) async -> Result<Void, OrderRepositoryError>
     func getActiveOrders() async -> Result<[ActiveOrder], OrderRepositoryError>
     func getOrderHistory() async -> Result<[OrderHistoryItem], OrderRepositoryError>
     func getOrderTracking(orderId: String) async -> Result<OrderTrackingDetail?, OrderRepositoryError>
@@ -47,7 +51,47 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
         let bodyItems = items.map {
             CreateOrderItemRequestDTO(productId: $0.productId, quantity: $0.quantity, price: $0.unitPrice)
         }
-        let body = CreateOrderRequestDTO(addressId: addressId, items: bodyItems, deliveryFee: deliveryFee)
+        let body = CreateOrderRequestDTO(
+            addressId: addressId,
+            items: bodyItems,
+            orderType: "SHOP",
+            deliveryFee: deliveryFee
+        )
+        return await postCreateOrder(body: body, token: token)
+    }
+
+    func createServicePaymentOrder(
+        addressId: String,
+        items: [CartLineItem],
+        deliveryFee: Double
+    ) async -> Result<Void, OrderRepositoryError> {
+        guard let token = sessionStore.accessToken() else {
+            return .failure(.notAuthenticated)
+        }
+        let serviceItems = items.compactMap { item -> CreateServicePaymentItemRequestDTO? in
+            let serviceId = item.serviceId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let serviceNumber = item.serviceNumber?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !serviceId.isEmpty, !serviceNumber.isEmpty else { return nil }
+            return CreateServicePaymentItemRequestDTO(
+                serviceId: serviceId,
+                serviceNumber: serviceNumber,
+                amount: item.unitPrice
+            )
+        }
+        guard !serviceItems.isEmpty else {
+            return .failure(.invalidRequest("Carrito de servicios vacío"))
+        }
+        let body = CreateOrderRequestDTO(
+            addressId: addressId,
+            items: [],
+            serviceItems: serviceItems,
+            orderType: "SERVICE_PAYMENT",
+            deliveryFee: deliveryFee
+        )
+        return await postCreateOrder(body: body, token: token)
+    }
+
+    private func postCreateOrder(body: CreateOrderRequestDTO, token: String) async -> Result<Void, OrderRepositoryError> {
         let result: Result<CreateOrderResponseDTO, HTTPClientError> = await api.post("orders", body: body, bearerToken: token)
         switch result {
         case .success:
@@ -125,6 +169,10 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
             let detail = OrderTrackingDetail(
                 id: dto.id,
                 status: dto.status,
+                orderType: {
+                    let raw = dto.orderType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    return raw.isEmpty ? "SHOP" : raw
+                }(),
                 total: dto.total,
                 serviceFee: dto.serviceFee,
                 deliveryFee: dto.deliveryFee,
@@ -145,15 +193,16 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                 canRateDelivery: dto.canRateDelivery,
                 shopRating: dto.shopRating,
                 canRateShop: dto.canRateShop,
-                items: dto.items.map {
+                items: dto.items.enumerated().map { index, item in
                     OrderTrackingLineItem(
-                        productId: $0.productId,
-                        productName: $0.productName,
-                        quantity: $0.quantity,
-                        price: $0.price,
-                        imageUrl: AppConfiguration.fullImageURL($0.imageUrl),
-                        rating: $0.rating,
-                        canRate: $0.canRate
+                        id: "\(item.productId.isEmpty ? "line" : item.productId)-\(index)",
+                        productId: item.productId,
+                        productName: item.productName,
+                        quantity: item.quantity,
+                        price: item.price,
+                        imageUrl: AppConfiguration.fullImageURL(item.imageUrl),
+                        rating: item.rating,
+                        canRate: item.canRate
                     )
                 },
                 deliveryMan: dto.deliveryMan.map {

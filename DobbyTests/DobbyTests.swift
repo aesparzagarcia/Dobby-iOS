@@ -49,4 +49,24 @@ struct DobbyTests {
         #expect(CartShopSwitchPolicy.normalized("shop-a") == "shop-a")
     }
 
+    @Test func shopSwitchRequiresConfirmWhenCartHasService() {
+        let lines = [
+            CartLineItem(
+                productId: "svc:s1:123",
+                name: "CFE",
+                imageUrl: nil,
+                quantity: 1,
+                unitPrice: 250,
+                listUnitPrice: 0,
+                hasPromotion: false,
+                discount: 0,
+                lineKind: CartLineKinds.service,
+                serviceId: "s1",
+                serviceNumber: "123"
+            )
+        ]
+        #expect(CartShopSwitchPolicy.needsConfirmation(lines: lines, targetShopId: "shop-a") == true)
+        #expect(lines[0].isServicePayment)
+    }
+
 }

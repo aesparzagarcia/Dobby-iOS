@@ -10,6 +10,8 @@ import Foundation
 struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let id: String
     let status: String
+    /// SHOP | SERVICE_PAYMENT
+    let orderType: String
     var total: Double
     let serviceFee: Double
     let deliveryFee: Double
@@ -32,6 +34,8 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let canRateShop: Bool
     let items: [OrderTrackingLineItem]
     let deliveryMan: OrderTrackingCourier?
+
+    var isServicePayment: Bool { orderType.uppercased() == "SERVICE_PAYMENT" }
 
     var isDelivered: Bool { status.uppercased() == "DELIVERED" }
 
@@ -117,7 +121,9 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     ]
 }
 
-struct OrderTrackingLineItem: Hashable, Sendable {
+struct OrderTrackingLineItem: Identifiable, Hashable, Sendable {
+    /// Unique per line in the order (not just productId — duplicates / empty ids break ForEach).
+    let id: String
     let productId: String
     let productName: String
     let quantity: Int

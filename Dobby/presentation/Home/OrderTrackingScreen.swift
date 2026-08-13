@@ -513,7 +513,7 @@ struct OrderTrackingScreen: View {
                     .kerning(0.6)
                     .padding(.top, 4)
 
-                ForEach(tracking.items, id: \.productId) { item in
+                ForEach(tracking.items) { item in
                     orderTrackingProductRow(item: item)
                 }
 
@@ -805,7 +805,7 @@ struct OrderTrackingScreen: View {
             )
         }
 
-        ForEach(tracking.items.filter { $0.canRate || $0.rating != nil }, id: \.productId) { item in
+        ForEach(tracking.items.filter { $0.canRate || $0.rating != nil }) { item in
             starRatingBlock(
                 title: "Producto",
                 subtitle: "\(item.productName) ×\(item.quantity)",
@@ -969,7 +969,7 @@ private func orderTrackingStatusTitle(_ tracking: OrderTrackingDetail) -> String
         if !name.isEmpty { return "\(name) está afuera" }
         return "Repartidor afuera"
     }
-    return orderStatusLabel(tracking.status)
+    return orderStatusLabel(tracking.status, servicePayment: tracking.isServicePayment)
 }
 
 private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> String {
@@ -979,19 +979,32 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         }
         return "Tu pedido te está esperando en la puerta"
     }
+    let service = tracking.isServicePayment
     switch tracking.status.uppercased() {
     case "PENDING":
-        return "Esperando confirmación de la tienda"
+        return service ? "Procesando tu pago de servicios" : "Esperando confirmación de la tienda"
     case "CONFIRMED":
-        return "Gracias por tu compra"
+        return service ? "Tu solicitud fue confirmada" : "Gracias por tu compra"
     case "PREPARING":
         if let mins = tracking.estimatedPreparationMinutes {
             return "Tiempo estimado de preparación: \(mins) min"
         }
         return "Tu pedido se está preparando"
     case "READY_FOR_PICKUP":
-        return "Listo para que el repartidor lo recoja"
+        return service
+            ? "Estamos buscando un repartidor para pagar tus servicios"
+            : "Listo para que el repartidor lo recoja"
     case "ASSIGNED":
+        if service {
+            if let mins = tracking.estimatedDeliveryMinutes {
+                return "Llegada estimada al punto de pago: ~\(mins) min"
+            }
+            let name = tracking.deliveryMan?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !name.isEmpty {
+                return "El repartidor \(name) va en camino a pagar tus servicios"
+            }
+            return "El repartidor va en camino a pagar tus servicios"
+        }
         if let mins = tracking.estimatedDeliveryMinutes {
             return "Llegada estimada al recoger: ~\(mins) min"
         }
@@ -1000,9 +1013,11 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         if let mins = tracking.estimatedDeliveryMinutes {
             return "Llegada estimada: ~\(mins) min"
         }
-        return "Tu pedido va en camino a tu domicilio"
+        return service
+            ? "Tus servicios ya fueron pagados y van rumbo a tu domicilio"
+            : "Tu pedido va en camino a tu domicilio"
     case "DELIVERED":
-        return "¡Buen provecho!"
+        return service ? "Tu pago de servicios fue entregado" : "¡Buen provecho!"
     case "CANCELLED":
         return "Este pedido fue cancelado"
     default:
@@ -1023,12 +1038,12 @@ private func showsOrderTrackingStatusCheck(_ status: String) -> Bool {
     !["PENDING", "CANCELLED"].contains(status.uppercased())
 }
 
-private func orderStatusLabel(_ status: String) -> String {
+private func orderStatusLabel(_ status: String, servicePayment: Bool = false) -> String {
     switch status.uppercased() {
     case "PENDING": return "Pendiente"
     case "CONFIRMED": return "Confirmado"
     case "PREPARING": return "En preparación"
-    case "READY_FOR_PICKUP": return "Listo para recoger"
+    case "READY_FOR_PICKUP": return servicePayment ? "Buscando repartidor" : "Listo para recoger"
     case "ASSIGNED": return "Asignado a repartidor"
     case "ON_DELIVERY": return "En camino"
     case "DELIVERED": return "Entregado"

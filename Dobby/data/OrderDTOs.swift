@@ -13,15 +13,39 @@ struct CreateOrderItemRequestDTO: Encodable, Sendable {
     let price: Double
 }
 
+struct CreateServicePaymentItemRequestDTO: Encodable, Sendable {
+    let serviceId: String
+    let serviceNumber: String
+    let amount: Double
+}
+
 struct CreateOrderRequestDTO: Encodable, Sendable {
     let addressId: String
     let items: [CreateOrderItemRequestDTO]
+    let serviceItems: [CreateServicePaymentItemRequestDTO]?
+    let orderType: String?
     let deliveryFee: Double
 
     enum CodingKeys: String, CodingKey {
         case addressId
         case items
+        case serviceItems
+        case orderType
         case deliveryFee
+    }
+
+    init(
+        addressId: String,
+        items: [CreateOrderItemRequestDTO] = [],
+        serviceItems: [CreateServicePaymentItemRequestDTO]? = nil,
+        orderType: String? = nil,
+        deliveryFee: Double
+    ) {
+        self.addressId = addressId
+        self.items = items
+        self.serviceItems = serviceItems
+        self.orderType = orderType
+        self.deliveryFee = deliveryFee
     }
 }
 
@@ -84,6 +108,7 @@ struct ActiveOrderDTO: Decodable, Sendable {
 struct OrderTrackingDTO: Decodable, Sendable {
     let id: String
     let status: String
+    let orderType: String?
     let total: Double
     let serviceFee: Double
     let deliveryFee: Double
@@ -109,6 +134,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id, status, total, lat, lng, items
+        case orderType = "order_type"
         case serviceFee = "service_fee"
         case deliveryFee = "delivery_fee"
         case productsSubtotal = "products_subtotal"
@@ -133,6 +159,7 @@ struct OrderTrackingDTO: Decodable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         status = try c.decode(String.self, forKey: .status)
+        orderType = try c.decodeIfPresent(String.self, forKey: .orderType)
         total = try c.decodeIfPresent(Double.self, forKey: .total) ?? 0
         serviceFee = try c.decodeIfPresent(Double.self, forKey: .serviceFee) ?? 0
         deliveryFee = try c.decodeIfPresent(Double.self, forKey: .deliveryFee) ?? 0
@@ -169,6 +196,7 @@ struct OrderTrackingItemDTO: Decodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case productId = "product_id"
+        case productIdCamel = "productId"
         case productName = "product_name"
         case quantity, price, rating
         case imageUrl = "image_url"
@@ -177,7 +205,11 @@ struct OrderTrackingItemDTO: Decodable, Sendable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        productId = try c.decodeIfPresent(String.self, forKey: .productId) ?? ""
+        let snake = (try c.decodeIfPresent(String.self, forKey: .productId))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let camel = (try c.decodeIfPresent(String.self, forKey: .productIdCamel))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        productId = !snake.isEmpty ? snake : camel
         productName = try c.decode(String.self, forKey: .productName)
         quantity = try c.decode(Int.self, forKey: .quantity)
         price = try c.decodeIfPresent(Double.self, forKey: .price) ?? 0

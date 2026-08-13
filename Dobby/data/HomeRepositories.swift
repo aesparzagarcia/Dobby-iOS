@@ -157,7 +157,10 @@ private func mapServiceDetail(_ dto: ServiceDetailDTO) -> ServiceDetail {
         description: dto.description,
         imageUrl: AppConfiguration.fullImageURL(dto.logoUrl),
         category: dto.category,
-        rate: dto.rate
+        rate: dto.rate,
+        address: dto.address,
+        lat: dto.lat,
+        lng: dto.lng
     )
 }
 

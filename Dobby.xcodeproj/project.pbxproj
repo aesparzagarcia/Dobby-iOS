@@ -117,12 +117,14 @@
 		K7K7K7K7K7K744389384901 /* OrderTrackingScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */; };
 		K8K8K8K8K8K844389384901 /* OrderPushNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */; };
 		LRI1LRI1LRI144389384901 /* LoadingRemoteImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = LRI2LRI2LRI244389384902 /* LoadingRemoteImage.swift */; };
+		FUT1FUT1FUT144389384901 /* FastUITextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = FUT2FUT2FUT244389384902 /* FastUITextField.swift */; };
 		LT03LT03LT0344389384901 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = LT02LT02LT0244389384902 /* Lottie */; };
 		OH01OH01OH0144389384901 /* OrderHistoryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */; };
 		OH02OH02OH0244389384901 /* OrderHistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */; };
 		PC1PC1PC1PC144389384901 /* ProductCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = PC2PC2PC2PC244389384902 /* ProductCategory.swift */; };
 		SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */; };
 		SDS1SDS1SDS144389384901 /* ServiceDetailScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */; };
+		SBS1SBS1SBS144389384901 /* ServiceBarcodeScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = SBS1SBS1SBS144389384902 /* ServiceBarcodeScanner.swift */; };
 		SDS2SDS2SDS244389384901 /* ServiceDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */; };
 		SP01SP01SP0144389384901 /* dobby_splash.json in Resources */ = {isa = PBXBuildFile; fileRef = SP02SP02SP0244389384902 /* dobby_splash.json */; };
 /* End PBXBuildFile section */
@@ -258,11 +260,13 @@
 		K7K7K7K7K7K744389384902 /* OrderTrackingScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderTrackingScreen.swift; sourceTree = "<group>"; };
 		K8K8K8K8K8K844389384902 /* OrderPushNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderPushNavigation.swift; sourceTree = "<group>"; };
 		LRI2LRI2LRI244389384902 /* LoadingRemoteImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingRemoteImage.swift; sourceTree = "<group>"; };
+		FUT2FUT2FUT244389384902 /* FastUITextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastUITextField.swift; sourceTree = "<group>"; };
 		OH01OH01OH0144389384902 /* OrderHistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderHistoryScreen.swift; sourceTree = "<group>"; };
 		OH02OH02OH0244389384902 /* OrderHistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderHistoryViewModel.swift; sourceTree = "<group>"; };
 		PC2PC2PC2PC244389384902 /* ProductCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCategory.swift; sourceTree = "<group>"; };
 		SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopDetailComponents.swift; sourceTree = "<group>"; };
 		SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailScreen.swift; sourceTree = "<group>"; };
+		SBS1SBS1SBS144389384902 /* ServiceBarcodeScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceBarcodeScanner.swift; sourceTree = "<group>"; };
 		SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailViewModel.swift; sourceTree = "<group>"; };
 		SP02SP02SP0244389384902 /* dobby_splash.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = dobby_splash.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -462,6 +466,7 @@
 				FP03FP03FP0344389384902 /* FeaturedPlacesComponents.swift */,
 				SDC2SDC2SDC244389384902 /* ShopDetailComponents.swift */,
 				SDS1SDS1SDS144389384902 /* ServiceDetailScreen.swift */,
+				SBS1SBS1SBS144389384902 /* ServiceBarcodeScanner.swift */,
 				SDS2SDS2SDS244389384902 /* ServiceDetailViewModel.swift */,
 				AD01AD01AD0144389384902 /* AdDetailScreen.swift */,
 				AD02AD02AD0244389384902 /* AdDetailViewModel.swift */,
@@ -544,6 +549,7 @@
 				FSH2FSH2FSH244389384902 /* FloatingScreenHeader.swift */,
 				NBB2NBB2NBB244389384902 /* NavigationBackButton.swift */,
 				LRI2LRI2LRI244389384902 /* LoadingRemoteImage.swift */,
+				FUT2FUT2FUT244389384902 /* FastUITextField.swift */,
 				DS02DS02DS0244389384902 /* DobbySplashLottieView.swift */,
 			);
 			path = components;
@@ -843,6 +849,7 @@
 				FSH1FSH1FSH144389384901 /* FloatingScreenHeader.swift in Sources */,
 				NBB1NBB1NBB144389384901 /* NavigationBackButton.swift in Sources */,
 				LRI1LRI1LRI144389384901 /* LoadingRemoteImage.swift in Sources */,
+				FUT1FUT1FUT144389384901 /* FastUITextField.swift in Sources */,
 				DS01DS01DS0144389384901 /* DobbySplashLottieView.swift in Sources */,
 				C7C7C7C7C7C7C443893848901 /* ProductDetailScreen.swift in Sources */,
 				D5D5D5D5D5D5D443893848901 /* PromotionsTabViewModel.swift in Sources */,
@@ -866,6 +873,7 @@
 				FP03FP03FP0344389384901 /* FeaturedPlacesComponents.swift in Sources */,
 				SDC1SDC1SDC144389384901 /* ShopDetailComponents.swift in Sources */,
 				SDS1SDS1SDS144389384901 /* ServiceDetailScreen.swift in Sources */,
+				SBS1SBS1SBS144389384901 /* ServiceBarcodeScanner.swift in Sources */,
 				SDS2SDS2SDS244389384901 /* ServiceDetailViewModel.swift in Sources */,
 				AD01AD01AD0144389384901 /* AdDetailScreen.swift in Sources */,
 				AD02AD02AD0244389384901 /* AdDetailViewModel.swift in Sources */,
@@ -1058,6 +1066,7 @@
 				INFOPLIST_FILE = Dobby/Info.plist;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobbi needs access to devices on your local network to reach the API during development.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobbi uses your location to show and save your delivery address on the map.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Dobbi necesita la cámara para escanear el código de barras de tu recibo y completar el número de servicio.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;
@@ -1090,6 +1099,7 @@
 				INFOPLIST_FILE = Dobby/Info.plist;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Dobbi needs access to devices on your local network to reach the API during development.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Dobbi uses your location to show and save your delivery address on the map.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Dobbi necesita la cámara para escanear el código de barras de tu recibo y completar el número de servicio.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = NO;

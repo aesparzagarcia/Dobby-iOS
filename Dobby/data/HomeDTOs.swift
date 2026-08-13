@@ -124,6 +124,9 @@ struct ServiceDetailDTO: Decodable {
     let logoUrl: String?
     let category: String?
     let rate: Float
+    let address: String?
+    let lat: Double?
+    let lng: Double?
 }
 
 /// `GET app/places` — solo usamos tiendas con coordenadas para ETA en carrito.

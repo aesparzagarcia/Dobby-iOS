@@ -3,68 +3,65 @@
 //  Dobby
 //
 //  Parity with Android `com.ares.ewe.presentation.viewmodel.main.home.ServiceDetailViewModel`.
+//  Plain class (not @Observable) so form typing never invalidates the screen tree.
 //
 
 import Foundation
 
-/// Parity with Android `ServiceDetailUiState`.
-struct ServiceDetailUiState: Equatable {
-    var service: ServiceDetail?
-    var amountToPay: String = ""
-    var isLoading: Bool = false
-    var errorMessage: String?
+/// Validated payload ready to add a SERVICE line to the cart.
+struct ServicePayPayload: Equatable {
+    let service: ServiceDetail
+    let serviceNumber: String
+    let amount: Double
+}
+
+enum ServiceDetailLoadResult: Equatable {
+    case success(ServiceDetail)
+    case failure(String)
 }
 
 @MainActor
-@Observable
 final class ServiceDetailViewModel {
     private let serviceId: String
     private let placesRepository: PlacesRepository
     private let http: DobbyHTTPClient
 
-    var uiState: ServiceDetailUiState
+    private(set) var service: ServiceDetail?
+    private(set) var payError: String?
 
     init(serviceId: String, placesRepository: PlacesRepository, http: DobbyHTTPClient) {
         self.serviceId = serviceId
         self.placesRepository = placesRepository
         self.http = http
-        uiState = ServiceDetailUiState(isLoading: true)
-        Task { await loadServiceAsync() }
     }
 
-    func loadService() {
-        Task { await loadServiceAsync() }
-    }
-
-    func onAmountChange(_ value: String) {
-        uiState = ServiceDetailUiState(
-            service: uiState.service,
-            amountToPay: value,
-            isLoading: uiState.isLoading,
-            errorMessage: uiState.errorMessage
-        )
-    }
-
-    private func loadServiceAsync() async {
-        uiState.errorMessage = nil
-        uiState.isLoading = true
-
+    func load() async -> ServiceDetailLoadResult {
+        payError = nil
         switch await placesRepository.getService(id: serviceId) {
         case .success(let service):
-            uiState = ServiceDetailUiState(
-                service: service,
-                amountToPay: uiState.amountToPay,
-                isLoading: false,
-                errorMessage: nil
-            )
+            self.service = service
+            return .success(service)
         case .failure(let e):
-            uiState = ServiceDetailUiState(
-                service: nil,
-                amountToPay: uiState.amountToPay,
-                isLoading: false,
-                errorMessage: e.shouldSuppressUserMessage ? nil : message(for: e)
-            )
+            self.service = nil
+            if e.shouldSuppressUserMessage {
+                return .failure("No se pudo cargar el servicio.")
+            }
+            return .failure(message(for: e))
         }
+    }
+
+    /// Validates form + service lat/lng before the parent adds to cart.
+    func preparePay(serviceNumber: String, amountToPay: String) -> ServicePayPayload? {
+        payError = nil
+        let number = serviceNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = amountToPay.replacingOccurrences(of: ",", with: ".")
+        guard let amount = Double(normalized), amount > 0, !number.isEmpty else { return nil }
+        guard let service else { return nil }
+        guard service.lat != nil, service.lng != nil else {
+            payError = "Este servicio no tiene ubicación configurada. Intenta más tarde."
+            return nil
+        }
+        return ServicePayPayload(service: service, serviceNumber: number, amount: amount)
     }
 
     private func message(for error: HomeRepositoryError) -> String {

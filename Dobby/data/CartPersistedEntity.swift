@@ -24,6 +24,10 @@ final class CartPersistedEntity {
     var pickupLatitude: Double?
     var pickupLongitude: Double?
     var shopId: String?
+    /// PRODUCT or SERVICE — default PRODUCT for lightweight migration.
+    var lineKind: String = CartLineKinds.product
+    var serviceId: String?
+    var serviceNumber: String?
 
     init(
         productId: String,
@@ -36,7 +40,10 @@ final class CartPersistedEntity {
         discount: Int,
         pickupLatitude: Double? = nil,
         pickupLongitude: Double? = nil,
-        shopId: String? = nil
+        shopId: String? = nil,
+        lineKind: String = CartLineKinds.product,
+        serviceId: String? = nil,
+        serviceNumber: String? = nil
     ) {
         self.productId = productId
         self.name = name
@@ -49,6 +56,9 @@ final class CartPersistedEntity {
         self.pickupLatitude = pickupLatitude
         self.pickupLongitude = pickupLongitude
         self.shopId = shopId
+        self.lineKind = lineKind.isEmpty ? CartLineKinds.product : lineKind
+        self.serviceId = serviceId
+        self.serviceNumber = serviceNumber
     }
 
     convenience init(from line: CartLineItem) {
@@ -63,7 +73,10 @@ final class CartPersistedEntity {
             discount: line.discount,
             pickupLatitude: line.pickupLatitude,
             pickupLongitude: line.pickupLongitude,
-            shopId: line.shopId
+            shopId: line.shopId,
+            lineKind: line.lineKind,
+            serviceId: line.serviceId,
+            serviceNumber: line.serviceNumber
         )
     }
 
@@ -79,7 +92,10 @@ final class CartPersistedEntity {
             discount: discount,
             pickupLatitude: pickupLatitude,
             pickupLongitude: pickupLongitude,
-            shopId: shopId
+            shopId: shopId,
+            lineKind: lineKind.isEmpty ? CartLineKinds.product : lineKind,
+            serviceId: serviceId,
+            serviceNumber: serviceNumber
         )
     }
 }
