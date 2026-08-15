@@ -12,6 +12,8 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let status: String
     /// SHOP | SERVICE_PAYMENT
     let orderType: String
+    /// RESTAURANT | SHOP | CAR_WASH | …
+    let shopType: String?
     var total: Double
     let serviceFee: Double
     let deliveryFee: Double
@@ -36,6 +38,11 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let deliveryMan: OrderTrackingCourier?
 
     var isServicePayment: Bool { orderType.uppercased() == "SERVICE_PAYMENT" }
+
+    var isCarWash: Bool {
+        shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare("CAR_WASH") == .orderedSame
+    }
 
     var isDelivered: Bool { status.uppercased() == "DELIVERED" }
 

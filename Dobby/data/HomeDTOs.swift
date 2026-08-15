@@ -138,6 +138,8 @@ struct AppPlaceShopDTO: Decodable {
     let id: String
     let lat: Double?
     let lng: Double?
+    /// RESTAURANT | SHOP | CAR_WASH | …
+    let type: String?
 }
 
 struct AdDTO: Decodable {

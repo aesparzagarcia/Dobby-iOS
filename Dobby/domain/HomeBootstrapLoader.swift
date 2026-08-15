@@ -18,7 +18,7 @@ enum HomeBootstrapLoader {
         let addresses = await addressesTask
         let ads = await adsTask
         let activeOrders = await activeOrdersTask
-        let shopCoords = await shopCoordsTask
+        let shopLookup = await shopCoordsTask
         let pricing = await pricingTask
 
         return HomeBootstrapSnapshot(
@@ -37,7 +37,8 @@ enum HomeBootstrapLoader {
             warningMessage: addresses.warningMessage ?? ads.warningMessage,
             errorMessage: home.errorMessage,
             deliveryPricingSettings: pricing,
-            shopCoordsByShopId: shopCoords
+            shopCoordsByShopId: shopLookup.coordinatesByShopId,
+            shopTypeByShopId: shopLookup.typeByShopId
         )
     }
 
@@ -137,12 +138,12 @@ enum HomeBootstrapLoader {
         }
     }
 
-    private static func loadShopCoords(deps: AppDependencies) async -> [String: (Double, Double)] {
-        switch await deps.placesRepository.getShopCoordinatesByShopId() {
-        case .success(let map):
-            return map
+    private static func loadShopCoords(deps: AppDependencies) async -> ShopDeliveryLookup {
+        switch await deps.placesRepository.getShopDeliveryLookup() {
+        case .success(let lookup):
+            return lookup
         case .failure:
-            return [:]
+            return ShopDeliveryLookup(coordinatesByShopId: [:], typeByShopId: [:])
         }
     }
 

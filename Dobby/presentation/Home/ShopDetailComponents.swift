@@ -23,13 +23,14 @@ private let shopDetailProductImageAspectRatio: CGFloat = 4 / 3
 
 struct ShopDetailSearchBar: View {
     @Binding var query: String
+    var placeholder: String = "Buscar productos..."
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 16))
                 .foregroundStyle(ShopDetailPalette.mutedText)
-            TextField("Buscar productos...", text: $query)
+            TextField(placeholder, text: $query)
                 .font(.body)
                 .foregroundStyle(.primary)
         }
@@ -176,6 +177,7 @@ struct ShopDetailCategoryRow: View {
 struct ShopDetailProductCard: View {
     let product: ShopProduct
     let isProductAvailable: Bool
+    var isCarWash: Bool = false
     let onTap: () -> Void
     let onAddTap: () -> Void
 
@@ -274,7 +276,7 @@ struct ShopDetailProductCard: View {
     private func productFooter(scale: CGFloat, statusColor: Color, footerBg: Color) -> some View {
         HStack(spacing: 0) {
             HStack(spacing: 6 * scale) {
-                Image(systemName: "takeoutbag.and.cup.and.straw.fill")
+                Image(systemName: isCarWash ? "car.fill" : "takeoutbag.and.cup.and.straw.fill")
                     .font(.system(size: 14 * scale))
                 Text(isProductAvailable ? "Disponible" : "No disponible")
                     .font(.caption.weight(.medium))

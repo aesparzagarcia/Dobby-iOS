@@ -426,7 +426,11 @@ struct HomeTabScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(HomeScreenPalette.screenBackground)
         .onAppear {
-            viewModel.loadInitial()
+            if viewModel.featuredPlaces.isEmpty && viewModel.bestSellerProducts.isEmpty {
+                viewModel.loadInitial()
+            } else {
+                Task { await viewModel.refreshOnForeground() }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {

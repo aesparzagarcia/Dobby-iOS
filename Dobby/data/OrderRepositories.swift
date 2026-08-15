@@ -150,6 +150,7 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
             total: dto.total,
             deliveryAddress: dto.deliveryAddress,
             createdAt: dto.createdAt,
+            shopType: dto.shopType,
             productLines: (dto.items ?? []).map {
                 ActiveOrderProductLine(name: $0.productName, quantity: $0.quantity)
             }
@@ -173,6 +174,7 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
                     let raw = dto.orderType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     return raw.isEmpty ? "SHOP" : raw
                 }(),
+                shopType: dto.shopType,
                 total: dto.total,
                 serviceFee: dto.serviceFee,
                 deliveryFee: dto.deliveryFee,

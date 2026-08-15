@@ -188,12 +188,15 @@ struct OrderTrackingScreen: View {
         let destination = tracking.routeDestinationCoordinate.map {
             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
         }
-        let destinationLabel = tracking.isAssignedToCourier ? "Restaurante" : "Entrega"
+        let destinationLabel = tracking.isAssignedToCourier
+            ? (tracking.isCarWash ? "Autolavado" : "Restaurante")
+            : "Entrega"
         let courier = coordinate(lat: tracking.deliveryMan?.lat, lng: tracking.deliveryMan?.lng)
         let route = viewModel.routePoints
         let usingStraightLineRoute = viewModel.usingStraightLineRoute
         let showsBothMarkers = tracking.showsRestaurantAndCustomerOnMap
         let showsPendingCustomer = tracking.showsPendingCustomerOnMap
+        let shopMarkerImage = tracking.isCarWash ? "IcCarWash" : "IcShop"
 
         Map(
             position: $mapPosition,
@@ -201,8 +204,8 @@ struct OrderTrackingScreen: View {
         ) {
             UserAnnotation()
             if showsBothMarkers, let c = shop {
-                Annotation("Restaurante", coordinate: c) {
-                    Image("IcShop")
+                Annotation(tracking.isCarWash ? "Autolavado" : "Restaurante", coordinate: c) {
+                    Image(shopMarkerImage)
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
@@ -230,7 +233,7 @@ struct OrderTrackingScreen: View {
             if !showsBothMarkers, !showsPendingCustomer, let c = destination {
                 Annotation(destinationLabel, coordinate: c) {
                     if tracking.isAssignedToCourier {
-                        Image("IcShop")
+                        Image(shopMarkerImage)
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
@@ -288,50 +291,20 @@ struct OrderTrackingScreen: View {
     @ViewBuilder
     private func inProgressSheetOverlay(tracking: OrderTrackingDetail) -> some View {
         ZStack(alignment: Alignment.bottom) {
-            Color.clear
-                .contentShape(Rectangle())
-                .allowsHitTesting(isOrderDetailSheetVisible)
-                .onTapGesture {
-                    guard isOrderDetailSheetVisible else { return }
-                    sheetDragOffset = 0
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        isOrderDetailSheetVisible = false
-                    }
-                }
-
             if isOrderDetailSheetVisible {
-                orderBottomSheet(tracking: tracking, fullScreen: false)
-                    .offset(y: sheetDragOffset)
-                    .transition(.move(edge: SwiftUI.Edge.bottom).combined(with: .opacity))
-            } else {
-                Button {
-                    sheetDragOffset = 0
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        isOrderDetailSheetVisible = true
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        sheetDragOffset = 0
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isOrderDetailSheetVisible = false
+                        }
                     }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "chevron.up")
-                        Text("Ver detalles del pedido")
-                    }
-                    .font(.system(size: OrderTrackingDetailsCTA.fontSize, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, OrderTrackingDetailsCTA.verticalPadding)
-                    .padding(.horizontal, OrderTrackingDetailsCTA.horizontalPadding)
-                }
-                .buttonStyle(.plain)
-                .background(
-                    OrderTrackingPalette.detailsButtonBackground,
-                    in: RoundedRectangle(
-                        cornerRadius: OrderTrackingDetailsCTA.cornerRadius,
-                        style: .continuous
-                    )
-                )
-                .padding(.horizontal, OrderTrackingDetailsCTA.outerHorizontalPadding)
-                .padding(.bottom, OrderTrackingDetailsCTA.outerBottomPadding)
-                .transition(.move(edge: SwiftUI.Edge.bottom).combined(with: .opacity))
             }
+
+            orderBottomSheet(tracking: tracking, fullScreen: false)
+                .offset(y: isOrderDetailSheetVisible ? sheetDragOffset : 0)
+                .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
         }
     }
 
@@ -415,17 +388,19 @@ struct OrderTrackingScreen: View {
         }()
         let dragReveal = DragGesture(minimumDistance: 12)
             .onChanged { value in
-                guard !fullScreen, value.translation.height > 0 else { return }
+                guard !fullScreen else { return }
                 sheetDragOffset = value.translation.height
             }
             .onEnded { value in
                 guard !fullScreen else { return }
                 let dy = value.translation.height
                 let flick = value.predictedEndTranslation.height
-                let shouldDismiss = dy > 90 || flick > 160
-                if shouldDismiss {
+                if dy > 48 || flick > 120 {
                     sheetDragOffset = 0
                     withAnimation(.easeInOut(duration: 0.25)) { isOrderDetailSheetVisible = false }
+                } else if dy < -48 || flick < -120 {
+                    sheetDragOffset = 0
+                    withAnimation(.easeInOut(duration: 0.25)) { isOrderDetailSheetVisible = true }
                 } else {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.86)) { sheetDragOffset = 0 }
                 }
@@ -435,12 +410,15 @@ struct OrderTrackingScreen: View {
             tracking: tracking,
             fullScreen: fullScreen,
             bottomInset: bottomInset,
-            dragReveal: dragReveal
+            dragReveal: dragReveal,
+            collapsed: !fullScreen && !isOrderDetailSheetVisible
         )
-        let needsScroll = fullScreen
-            || tracking.isDelivered
-            || tracking.items.count > 4
-            || tracking.hasPendingRatings
+        let needsScroll = isOrderDetailSheetVisible && (
+            fullScreen
+                || tracking.isDelivered
+                || tracking.items.count > 4
+                || tracking.hasPendingRatings
+        )
 
         return Group {
             if needsScroll {
@@ -465,28 +443,44 @@ struct OrderTrackingScreen: View {
         tracking: OrderTrackingDetail,
         fullScreen: Bool,
         bottomInset: CGFloat,
-        dragReveal: G
+        dragReveal: G,
+        collapsed: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if !fullScreen {
-                ZStack(alignment: .top) {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .gesture(dragReveal)
+                VStack(spacing: 8) {
                     Capsule()
                         .fill(Color.primary.opacity(0.12))
                         .frame(width: 40, height: 5)
                         .padding(.top, 8)
-                        .allowsHitTesting(false)
+
+                    HStack(spacing: 4) {
+                        Text(collapsed ? "Mostrar detalles" : "Ocultar detalles")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Image(systemName: collapsed ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    // Keep collapsed handle above the home indicator and a bit higher for reach.
+                    .padding(.bottom, collapsed ? max(bottomInset, 12) + 20 : 0)
                 }
-                .frame(height: 36)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    sheetDragOffset = 0
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isOrderDetailSheetVisible.toggle()
+                    }
+                }
+                .gesture(dragReveal)
                 .padding(.horizontal, 10)
                 .padding(.top, 4)
             }
 
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Tu pedido")
+            if !collapsed {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Tu pedido")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(OrderTrackingPalette.titleDark)
                     .padding(.top, 6)
@@ -535,9 +529,10 @@ struct OrderTrackingScreen: View {
                     ratingSection(tracking: tracking)
                 }
                 finishSection(tracking: tracking)
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, max(bottomInset, 12))
             }
-            .padding(.horizontal, 18)
-            .padding(.bottom, max(bottomInset, 12))
         }
         .frame(maxWidth: .infinity, alignment: .top)
     }
@@ -969,7 +964,11 @@ private func orderTrackingStatusTitle(_ tracking: OrderTrackingDetail) -> String
         if !name.isEmpty { return "\(name) está afuera" }
         return "Repartidor afuera"
     }
-    return orderStatusLabel(tracking.status, servicePayment: tracking.isServicePayment)
+    return orderStatusLabel(
+        tracking.status,
+        servicePayment: tracking.isServicePayment,
+        carWash: tracking.isCarWash
+    )
 }
 
 private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> String {
@@ -980,6 +979,7 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         return "Tu pedido te está esperando en la puerta"
     }
     let service = tracking.isServicePayment
+    let carWash = tracking.isCarWash
     switch tracking.status.uppercased() {
     case "PENDING":
         return service ? "Procesando tu pago de servicios" : "Esperando confirmación de la tienda"
@@ -987,13 +987,16 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         return service ? "Tu solicitud fue confirmada" : "Gracias por tu compra"
     case "PREPARING":
         if let mins = tracking.estimatedPreparationMinutes {
-            return "Tiempo estimado de preparación: \(mins) min"
+            return carWash
+                ? "Tiempo estimado de lavado: \(mins) min"
+                : "Tiempo estimado de preparación: \(mins) min"
         }
-        return "Tu pedido se está preparando"
+        return carWash ? "Tu vehículo se está lavando" : "Tu pedido se está preparando"
     case "READY_FOR_PICKUP":
-        return service
-            ? "Estamos buscando un repartidor para pagar tus servicios"
-            : "Listo para que el repartidor lo recoja"
+        if service {
+            return "Estamos buscando un repartidor para pagar tus servicios"
+        }
+        return carWash ? "Secado y aspirado en proceso" : "Listo para que el repartidor lo recoja"
     case "ASSIGNED":
         if service {
             if let mins = tracking.estimatedDeliveryMinutes {
@@ -1005,6 +1008,12 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
             }
             return "El repartidor va en camino a pagar tus servicios"
         }
+        if carWash {
+            if let mins = tracking.estimatedDeliveryMinutes {
+                return "Detallado en proceso · llegada estimada: ~\(mins) min"
+            }
+            return "Detallado en proceso"
+        }
         if let mins = tracking.estimatedDeliveryMinutes {
             return "Llegada estimada al recoger: ~\(mins) min"
         }
@@ -1013,11 +1022,15 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         if let mins = tracking.estimatedDeliveryMinutes {
             return "Llegada estimada: ~\(mins) min"
         }
-        return service
-            ? "Tus servicios ya fueron pagados y van rumbo a tu domicilio"
+        if service {
+            return "Tus servicios ya fueron pagados y van rumbo a tu domicilio"
+        }
+        return carWash
+            ? "Tu vehículo va en camino a tu domicilio"
             : "Tu pedido va en camino a tu domicilio"
     case "DELIVERED":
-        return service ? "Tu pago de servicios fue entregado" : "¡Buen provecho!"
+        if service { return "Tu pago de servicios fue entregado" }
+        return carWash ? "¡Servicio completado!" : "¡Buen provecho!"
     case "CANCELLED":
         return "Este pedido fue cancelado"
     default:
@@ -1038,13 +1051,19 @@ private func showsOrderTrackingStatusCheck(_ status: String) -> Bool {
     !["PENDING", "CANCELLED"].contains(status.uppercased())
 }
 
-private func orderStatusLabel(_ status: String, servicePayment: Bool = false) -> String {
+private func orderStatusLabel(
+    _ status: String,
+    servicePayment: Bool = false,
+    carWash: Bool = false
+) -> String {
     switch status.uppercased() {
     case "PENDING": return "Pendiente"
     case "CONFIRMED": return "Confirmado"
-    case "PREPARING": return "En preparación"
-    case "READY_FOR_PICKUP": return servicePayment ? "Buscando repartidor" : "Listo para recoger"
-    case "ASSIGNED": return "Asignado a repartidor"
+    case "PREPARING": return carWash ? "Lavando" : "En preparación"
+    case "READY_FOR_PICKUP":
+        if servicePayment { return "Buscando repartidor" }
+        return carWash ? "Secado y Aspirado" : "Listo para recoger"
+    case "ASSIGNED": return carWash ? "Detallado" : "Asignado a repartidor"
     case "ON_DELIVERY": return "En camino"
     case "DELIVERED": return "Entregado"
     case "CANCELLED": return "Cancelado"

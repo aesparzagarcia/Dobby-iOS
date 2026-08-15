@@ -82,19 +82,25 @@ struct ShopDetailScreen: View {
                 }
             default:
                 VStack(spacing: 0) {
-                    ShopDetailSearchBar(query: Binding(
-                        get: { viewModel.uiState.searchQuery },
-                        set: { viewModel.onSearchQueryChange($0) }
-                    ))
+                    ShopDetailSearchBar(
+                        query: Binding(
+                            get: { viewModel.uiState.searchQuery },
+                            set: { viewModel.onSearchQueryChange($0) }
+                        ),
+                        placeholder: viewModel.uiState.isCarWash ? "Buscar servicios..." : "Buscar productos..."
+                    )
+                    .padding(.bottom, viewModel.uiState.isCarWash ? 12 : 0)
 
                     if viewModel.uiState.showShopClosedBanner {
                         ShopClosedBanner(reopensLabel: viewModel.uiState.shopReopensLabel)
                     }
 
-                    ShopDetailCategoryRow(
-                        selectedCategoryId: viewModel.uiState.selectedCategoryId,
-                        onCategorySelected: { viewModel.onCategorySelected($0) }
-                    )
+                    if !viewModel.uiState.isCarWash {
+                        ShopDetailCategoryRow(
+                            selectedCategoryId: viewModel.uiState.selectedCategoryId,
+                            onCategorySelected: { viewModel.onCategorySelected($0) }
+                        )
+                    }
 
                     if viewModel.uiState.filteredProducts.isEmpty {
                         Spacer()
@@ -111,6 +117,7 @@ struct ShopDetailScreen: View {
                                     ShopDetailProductCard(
                                         product: product,
                                         isProductAvailable: viewModel.uiState.isShopAvailableForOrders,
+                                        isCarWash: viewModel.uiState.isCarWash,
                                         onTap: { onProductTap(product, viewModel.uiState.isShopAvailableForOrders) },
                                         onAddTap: {
                                             guard viewModel.uiState.isShopAvailableForOrders else { return }
@@ -168,12 +175,17 @@ struct ShopDetailScreen: View {
 
     private var emptyProductsMessage: String {
         let query = viewModel.uiState.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isCarWash = viewModel.uiState.isCarWash
         if !query.isEmpty {
-            return "Ningún producto coincide con la búsqueda"
+            return isCarWash
+                ? "Ningún servicio coincide con la búsqueda"
+                : "Ningún producto coincide con la búsqueda"
         }
         if viewModel.uiState.selectedCategoryId != nil {
             return "No hay productos en esta categoría"
         }
-        return "Este restaurante aún no tiene productos"
+        return isCarWash
+            ? "Este carwash aún no tiene servicios"
+            : "Este restaurante aún no tiene productos"
     }
 }

@@ -34,6 +34,13 @@ protocol PlacesRepository: Sendable {
     func getService(id: String) async -> Result<ServiceDetail, HomeRepositoryError>
     /// Tiendas con coordenadas desde `GET app/places` (ETA por `shop_id` en carrito).
     func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError>
+    /// Coords + tipos de tienda (`GET app/places`) para ETA y envío gratis CAR_WASH.
+    func getShopDeliveryLookup() async -> Result<ShopDeliveryLookup, HomeRepositoryError>
+}
+
+struct ShopDeliveryLookup: Sendable {
+    var coordinatesByShopId: [String: (Double, Double)]
+    var typeByShopId: [String: String]
 }
 
 protocol AdsRepository: Sendable {
@@ -273,17 +280,30 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
     }
 
     func getShopCoordinatesByShopId() async -> Result<[String: (Double, Double)], HomeRepositoryError> {
+        switch await getShopDeliveryLookup() {
+        case .success(let lookup):
+            return .success(lookup.coordinatesByShopId)
+        case .failure(let e):
+            return .failure(e)
+        }
+    }
+
+    func getShopDeliveryLookup() async -> Result<ShopDeliveryLookup, HomeRepositoryError> {
         let token = optionalBearer
         let result: Result<PlacesResponseDTO, HTTPClientError> = await api.get("app/places", bearerToken: token)
         switch result {
         case .success(let dto):
             var coords: [String: (Double, Double)] = [:]
+            var types: [String: String] = [:]
             for s in dto.shops {
+                if let type = s.type?.trimmingCharacters(in: .whitespacesAndNewlines), !type.isEmpty {
+                    types[s.id] = type
+                }
                 if let la = s.lat, let lo = s.lng, GeoDistance.isUsableWgs84Point(lat: la, lng: lo) {
                     coords[s.id] = (la, lo)
                 }
             }
-            return .success(coords)
+            return .success(ShopDeliveryLookup(coordinatesByShopId: coords, typeByShopId: types))
         case .failure(let e):
             AuthSessionNavigation.notifyIfUnauthorized(e, sessionStore: sessionStore)
             return .failure(.http(e))

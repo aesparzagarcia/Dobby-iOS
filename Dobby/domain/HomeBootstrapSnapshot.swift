@@ -22,4 +22,5 @@ struct HomeBootstrapSnapshot {
     var errorMessage: String?
     var deliveryPricingSettings: DeliveryPricingSettings = .default
     var shopCoordsByShopId: [String: (Double, Double)] = [:]
+    var shopTypeByShopId: [String: String] = [:]
 }

@@ -31,10 +31,17 @@ struct ShopDetailUiState: Equatable {
 
     var filteredProducts: [ShopProduct] {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isCarWash = shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare("CAR_WASH") == .orderedSame
         return products.filter { product in
-            ProductCategory.matchesFilter(productCategory: product.category, filterId: selectedCategoryId)
+            (isCarWash || ProductCategory.matchesFilter(productCategory: product.category, filterId: selectedCategoryId))
                 && (query.isEmpty || product.name.localizedCaseInsensitiveContains(query))
         }
+    }
+
+    var isCarWash: Bool {
+        shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare("CAR_WASH") == .orderedSame
     }
 }
 
@@ -73,12 +80,14 @@ final class ShopDetailViewModel {
 
         switch await placesRepository.getShopProducts(shopId: shopId) {
         case .success(let page):
+            let isCarWash = page.shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare("CAR_WASH") == .orderedSame
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
                 shopType: page.shopType,
                 products: page.products,
                 searchQuery: uiState.searchQuery,
-                selectedCategoryId: uiState.selectedCategoryId,
+                selectedCategoryId: isCarWash ? nil : uiState.selectedCategoryId,
                 shopStatus: page.shopStatus,
                 openingHour: page.openingHour,
                 closingHour: page.closingHour,

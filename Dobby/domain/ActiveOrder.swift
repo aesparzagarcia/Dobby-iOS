@@ -18,6 +18,8 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
     var total: Double
     var deliveryAddress: String?
     var createdAt: String?
+    /// RESTAURANT | SHOP | CAR_WASH | …
+    var shopType: String?
     var productLines: [ActiveOrderProductLine]
 
     init(
@@ -26,6 +28,7 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
         total: Double = 0,
         deliveryAddress: String? = nil,
         createdAt: String? = nil,
+        shopType: String? = nil,
         productLines: [ActiveOrderProductLine] = []
     ) {
         self.id = id
@@ -33,7 +36,13 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
         self.total = total
         self.deliveryAddress = deliveryAddress
         self.createdAt = createdAt
+        self.shopType = shopType
         self.productLines = productLines
+    }
+
+    var isCarWash: Bool {
+        shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare("CAR_WASH") == .orderedSame
     }
 
     /// Step index 0…6 for the 7-stage home progress UI (6 = delivered).

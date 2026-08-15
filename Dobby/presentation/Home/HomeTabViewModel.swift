@@ -74,6 +74,8 @@ final class HomeTabViewModel {
     var cartLines: [CartLineItem] = []
     /// `GET app/places` — tiendas con lat/lng (para ETA por `shop_id` en líneas del carrito).
     var shopCoordsByShopId: [String: (Double, Double)] = [:]
+    /// Tipos de tienda por id (para envío gratis CAR_WASH).
+    var shopTypeByShopId: [String: String] = [:]
 
     var cartItemCount: Int {
         cartLines.reduce(0) { $0 + $1.quantity }
@@ -83,15 +85,39 @@ final class HomeTabViewModel {
         roundMoney(cartLines.reduce(0) { $0 + $1.lineTotal })
     }
 
-    /// Desglose con envío; `nil` si faltan coordenadas de entrega o de tienda.
+    private var isCarWashCart: Bool {
+        let shopIds = Set(
+            cartLines
+                .filter { !$0.isServicePayment }
+                .compactMap { $0.shopId?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
+        guard !shopIds.isEmpty else { return false }
+        return shopIds.allSatisfy { id in
+            let fromLookup = shopTypeByShopId[id]
+            let fromFeatured = featuredPlaces.first(where: { $0.id == id && !$0.isService })?.shopType
+            let type = (fromLookup ?? fromFeatured ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return type.caseInsensitiveCompare("CAR_WASH") == .orderedSame
+        }
+    }
+
+    /// Desglose con envío; `nil` si faltan coordenadas de entrega o de tienda (salvo CAR_WASH).
     var orderPricing: OrderPricing? {
         let subtotal = productsSubtotal
-        guard let km = GeoDistance.maxRoadKmFromPickups(
+        let km = GeoDistance.maxRoadKmFromPickups(
             userLat: deliveryLatitude,
             userLng: deliveryLongitude,
             cartLines: cartLines,
             shopCoordsByShopId: shopCoordsByShopId
-        ) else { return nil }
+        )
+        if isCarWashCart, !cartLines.isEmpty {
+            return OrderPricing(
+                productsSubtotal: subtotal,
+                delivery: DeliveryPricingCalculator.waived(distanceKm: km ?? 0)
+            )
+        }
+        guard let km else { return nil }
         let delivery = DeliveryPricingCalculator.calculate(
             DeliveryPricingInput(
                 distanceKm: km,
@@ -571,6 +597,7 @@ final class HomeTabViewModel {
         errorMessage = snapshot.errorMessage
         deliveryPricingSettings = snapshot.deliveryPricingSettings
         shopCoordsByShopId = snapshot.shopCoordsByShopId
+        shopTypeByShopId = snapshot.shopTypeByShopId
         isLoading = false
     }
 
@@ -690,11 +717,13 @@ final class HomeTabViewModel {
     }
 
     private func refreshShopCoords() async {
-        switch await placesRepository.getShopCoordinatesByShopId() {
-        case .success(let m):
-            shopCoordsByShopId = m
+        switch await placesRepository.getShopDeliveryLookup() {
+        case .success(let lookup):
+            shopCoordsByShopId = lookup.coordinatesByShopId
+            shopTypeByShopId = lookup.typeByShopId
         case .failure:
             shopCoordsByShopId = [:]
+            shopTypeByShopId = [:]
         }
     }
 

@@ -112,6 +112,20 @@ enum DeliveryPricingCalculator {
             finalDeliveryFee: finalFee
         )
     }
+
+    /// Envío sin costo (p. ej. CAR_WASH con repartidor propio).
+    static func waived(distanceKm: Double = 0) -> DeliveryPricingBreakdown {
+        DeliveryPricingBreakdown(
+            distanceKm: roundMoney(max(0, distanceKm)),
+            baseFee: 0,
+            distanceFee: 0,
+            zoneFee: 0,
+            weatherFee: 0,
+            deliverySubtotal: 0,
+            dynamicMultiplier: 1,
+            finalDeliveryFee: 0
+        )
+    }
 }
 
 enum GeoDistance {

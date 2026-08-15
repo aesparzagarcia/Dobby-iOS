@@ -74,15 +74,17 @@ private struct TrackingStage {
     let systemImage: String
 }
 
-private let trackingStages: [TrackingStage] = [
-    TrackingStage(label: "Pendiente", systemImage: "checkmark"),
-    TrackingStage(label: "Confirmado", systemImage: "bag.fill"),
-    TrackingStage(label: "En preparación", systemImage: "shippingbox.fill"),
-    TrackingStage(label: "Listo para recoger", systemImage: "storefront.fill"),
-    TrackingStage(label: "Asignado", systemImage: "person.fill"),
-    TrackingStage(label: "En camino", systemImage: "scooter"),
-    TrackingStage(label: "Entregado", systemImage: "checkmark"),
-]
+private func trackingStages(isCarWash: Bool) -> [TrackingStage] {
+    [
+        TrackingStage(label: "Pendiente", systemImage: "checkmark"),
+        TrackingStage(label: "Confirmado", systemImage: "bag.fill"),
+        TrackingStage(label: isCarWash ? "Lavando" : "En preparación", systemImage: "shippingbox.fill"),
+        TrackingStage(label: isCarWash ? "Secado y Aspirado" : "Listo para recoger", systemImage: "storefront.fill"),
+        TrackingStage(label: isCarWash ? "Detallado" : "Asignado", systemImage: "person.fill"),
+        TrackingStage(label: "En camino", systemImage: "scooter"),
+        TrackingStage(label: "Entregado", systemImage: "checkmark"),
+    ]
+}
 
 /// Slot must fit the current-step halo (52pt); a 48pt frame was clipping the circle at the top.
 private let trackingStageIconSlotSize: CGFloat = 56
@@ -105,6 +107,7 @@ struct OrderTrackingSectionView: View {
 
     var body: some View {
         let step = activeOrder.stepIndex.clamped(to: 0...lastStep)
+        let stages = trackingStages(isCarWash: activeOrder.isCarWash)
 
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 8) {
@@ -128,28 +131,37 @@ struct OrderTrackingSectionView: View {
             }
             .padding(.bottom, 14)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(trackingStages.enumerated()), id: \.offset) { index, stage in
-                        if index > 0 {
-                            trackingConnector(
-                                style: connectorStyle(leftStageIndex: index - 1, currentStepIndex: step)
-                            )
-                            .frame(width: 14)
-                            .padding(.top, (trackingStageIconSlotSize - 3) / 2)
-                        }
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(Array(stages.enumerated()), id: \.offset) { index, stage in
+                            if index > 0 {
+                                trackingConnector(
+                                    style: connectorStyle(leftStageIndex: index - 1, currentStepIndex: step)
+                                )
+                                .frame(width: 14)
+                                .padding(.top, (trackingStageIconSlotSize - 3) / 2)
+                            }
 
-                        trackingStage(
-                            label: stage.label,
-                            systemImage: stage.systemImage,
-                            isCompleted: index < step,
-                            isCurrent: index == step
-                        )
-                        .frame(width: 72)
+                            trackingStage(
+                                label: stage.label,
+                                systemImage: stage.systemImage,
+                                isCompleted: index < step,
+                                isCurrent: index == step
+                            )
+                            .frame(width: 72)
+                            .id(trackingStageScrollId(index))
+                        }
                     }
+                    .padding(.top, 4)
+                    .padding(.bottom, 2)
                 }
-                .padding(.top, 4)
-                .padding(.bottom, 2)
+                .onAppear {
+                    scrollToCurrentStage(proxy: proxy, step: step, animated: false)
+                }
+                .onChange(of: step) { _, newStep in
+                    scrollToCurrentStage(proxy: proxy, step: newStep, animated: true)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -158,6 +170,19 @@ struct OrderTrackingSectionView: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+    }
+
+    private func trackingStageScrollId(_ index: Int) -> String { "tracking-stage-\(index)" }
+
+    private func scrollToCurrentStage(proxy: ScrollViewProxy, step: Int, animated: Bool) {
+        let action = {
+            proxy.scrollTo(trackingStageScrollId(step), anchor: UnitPoint(x: 0.5, y: 0.5))
+        }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.35), action)
+        } else {
+            action()
+        }
     }
 
     private func connectorStyle(leftStageIndex: Int, currentStepIndex: Int) -> TrackingConnectorStyle {
