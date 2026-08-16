@@ -126,6 +126,8 @@ func orderStatusLabelEs(_ status: String) -> String {
     switch status.uppercased() {
     case "PENDING": return "Pendiente"
     case "CONFIRMED": return "Confirmado"
+    case "OUT_FOR_PICKUP": return "En camino"
+    case "PICKED_UP": return "Recogido"
     case "PREPARING": return "En preparación"
     case "READY_FOR_PICKUP": return "Listo para recoger"
     case "ASSIGNED": return "Asignado"

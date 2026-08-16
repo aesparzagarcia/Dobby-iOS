@@ -59,21 +59,32 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
 
     var isOnDelivery: Bool { status.uppercased() == "ON_DELIVERY" }
 
-    /// Shop while ASSIGNED; customer address when ON_DELIVERY / DELIVERED.
+    /// Carwash: vehicle collected, returning to the shop.
+    var isPickedUp: Bool { status.uppercased() == "PICKED_UP" }
+
+    /// Carwash going to the customer to pick up the vehicle.
+    var isOutForPickup: Bool { status.uppercased() == "OUT_FOR_PICKUP" }
+
+    /// Shop while ASSIGNED / PICKED_UP; customer address when ON_DELIVERY / DELIVERED / OUT_FOR_PICKUP.
     var routeDestinationCoordinate: (lat: Double, lng: Double)? {
         switch status.uppercased() {
-        case "ASSIGNED":
+        case "ASSIGNED", "PICKED_UP":
             return shopCoordinate
-        case "ON_DELIVERY", "DELIVERED":
+        case "ON_DELIVERY", "DELIVERED", "OUT_FOR_PICKUP":
             return customerCoordinate
         default:
             return nil
         }
     }
 
-    /// After the shop confirmed: show restaurant + delivery address (before courier is assigned).
+    /// After the shop confirmed: show shop + delivery address (before courier is assigned).
+    /// Carwash: also while Detallado / Recogido / En entrega — not during OUT_FOR_PICKUP (house hidden).
     var showsRestaurantAndCustomerOnMap: Bool {
-        Self.preCourierBothMarkerStatuses.contains(status.uppercased())
+        let s = status.uppercased()
+        if isCarWash {
+            return Self.carWashShopAndCustomerMarkerStatuses.contains(s)
+        }
+        return Self.preCourierBothMarkerStatuses.contains(s)
     }
 
     var shopCoordinate: (lat: Double, lng: Double)? {
@@ -84,6 +95,22 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     var customerCoordinate: (lat: Double, lng: Double)? {
         guard let lat, let lng else { return nil }
         return (lat, lng)
+    }
+
+    /// Live courier when present; for carwash pickup/return without a DobbyGo courier,
+    /// the vehicle originates at the shop (or customer when returning).
+    var routeOriginCoordinate: (lat: Double, lng: Double)? {
+        if let dm = deliveryMan, let lat = dm.lat, let lng = dm.lng,
+           Self.isValidMapCoordinate((lat, lng)) {
+            return (lat, lng)
+        }
+        if isCarWash, isPickedUp {
+            return customerCoordinate
+        }
+        if isCarWash, isOnDelivery || isAssignedToCourier || isOutForPickup {
+            return shopCoordinate
+        }
+        return nil
     }
 
     /// Points for fitting the map camera.
@@ -125,6 +152,10 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
 
     private static let preCourierBothMarkerStatuses: Set<String> = [
         "CONFIRMED", "PREPARING", "READY_FOR_PICKUP",
+    ]
+
+    private static let carWashShopAndCustomerMarkerStatuses: Set<String> = [
+        "CONFIRMED", "PICKED_UP", "PREPARING", "READY_FOR_PICKUP", "ASSIGNED", "ON_DELIVERY",
     ]
 }
 

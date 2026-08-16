@@ -75,12 +75,25 @@ private struct TrackingStage {
 }
 
 private func trackingStages(isCarWash: Bool) -> [TrackingStage] {
-    [
+    if isCarWash {
+        return [
+            TrackingStage(label: "Pendiente", systemImage: "checkmark"),
+            TrackingStage(label: "Confirmado", systemImage: "bag.fill"),
+            TrackingStage(label: "En camino", systemImage: "car.fill"),
+            TrackingStage(label: "Recogido", systemImage: "car.fill"),
+            TrackingStage(label: "Lavando", systemImage: "shippingbox.fill"),
+            TrackingStage(label: "Secado y Aspirado", systemImage: "storefront.fill"),
+            TrackingStage(label: "Detallado", systemImage: "person.fill"),
+            TrackingStage(label: "En entrega", systemImage: "scooter"),
+            TrackingStage(label: "Entregado", systemImage: "checkmark"),
+        ]
+    }
+    return [
         TrackingStage(label: "Pendiente", systemImage: "checkmark"),
         TrackingStage(label: "Confirmado", systemImage: "bag.fill"),
-        TrackingStage(label: isCarWash ? "Lavando" : "En preparación", systemImage: "shippingbox.fill"),
-        TrackingStage(label: isCarWash ? "Secado y Aspirado" : "Listo para recoger", systemImage: "storefront.fill"),
-        TrackingStage(label: isCarWash ? "Detallado" : "Asignado", systemImage: "person.fill"),
+        TrackingStage(label: "En preparación", systemImage: "shippingbox.fill"),
+        TrackingStage(label: "Listo para recoger", systemImage: "storefront.fill"),
+        TrackingStage(label: "Asignado", systemImage: "person.fill"),
         TrackingStage(label: "En camino", systemImage: "scooter"),
         TrackingStage(label: "Entregado", systemImage: "checkmark"),
     ]
@@ -103,11 +116,13 @@ struct OrderTrackingSectionView: View {
     var onViewDetails: () -> Void = {}
     var headerTitle: String = "Tu pedido"
 
-    private let lastStep = 6
+    private let lastStepFood = 6
+    private let lastStepCarWash = 8
 
     var body: some View {
-        let step = activeOrder.stepIndex.clamped(to: 0...lastStep)
         let stages = trackingStages(isCarWash: activeOrder.isCarWash)
+        let lastStep = activeOrder.isCarWash ? lastStepCarWash : lastStepFood
+        let step = activeOrder.stepIndex.clamped(to: 0...lastStep)
 
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 8) {

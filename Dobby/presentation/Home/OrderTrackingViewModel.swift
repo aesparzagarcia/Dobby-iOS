@@ -66,7 +66,10 @@ final class OrderTrackingViewModel {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: locationPollIntervalNs)
                 let status = self.tracking?.status.uppercased() ?? ""
-                guard status == "ASSIGNED" || status == "ON_DELIVERY" else { continue }
+                guard status == "ASSIGNED"
+                    || status == "ON_DELIVERY"
+                    || status == "OUT_FOR_PICKUP"
+                    || status == "PICKED_UP" else { continue }
                 switch await self.orderRepository.getOrderTracking(orderId: self.orderId) {
                 case .success(let t):
                     if let t { self.onTrackingRefreshed(t) }
@@ -137,46 +140,10 @@ final class OrderTrackingViewModel {
     }
 
     private func maybeRefreshRoute(_ tracking: OrderTrackingDetail) {
-        let statusKey = tracking.status.uppercased()
-        if lastRouteStatus != statusKey {
-            lastRouteStatus = statusKey
-            lastRouteFetchAt = 0
-            if !routePoints.isEmpty {
-                routePoints = []
-                usingStraightLineRoute = false
-            }
-        }
-        guard let routeDest = tracking.routeDestinationCoordinate,
-              let dm = tracking.deliveryMan,
-              let oLat = dm.lat, let oLng = dm.lng
-        else {
-            if !routePoints.isEmpty {
-                routePoints = []
-                usingStraightLineRoute = false
-            }
-            return
-        }
-
-        let origin = CLLocationCoordinate2D(latitude: oLat, longitude: oLng)
-        let destination = CLLocationCoordinate2D(latitude: routeDest.lat, longitude: routeDest.lng)
-        let now = DispatchTime.now().uptimeNanoseconds
-        if !routePoints.isEmpty, now &- lastRouteFetchAt < routeMinIntervalNs { return }
-        lastRouteFetchAt = now
-
-        Task {
-            switch await directionsRepository.getRoutePoints(origin: origin, destination: destination) {
-            case .success(let points):
-                if points.isEmpty {
-                    routePoints = [origin, destination]
-                    usingStraightLineRoute = true
-                } else {
-                    routePoints = points
-                    usingStraightLineRoute = false
-                }
-            case .failure:
-                routePoints = [origin, destination]
-                usingStraightLineRoute = true
-            }
+        // Dobby no dibuja la ruta en el mapa de seguimiento.
+        if !routePoints.isEmpty || usingStraightLineRoute {
+            routePoints = []
+            usingStraightLineRoute = false
         }
     }
 

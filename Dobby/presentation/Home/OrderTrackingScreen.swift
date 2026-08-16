@@ -42,8 +42,8 @@ private enum OrderTrackingDetailsCTA {
 
 /// Custom bottom sheet height (not system `presentationDetents`).
 private enum OrderTrackingSheetMetrics {
-    /// Map strip visible above the sheet while tracking in progress.
-    static let expandedHeightFraction: CGFloat = 0.82
+    /// Map strip visible above the sheet while tracking in progress / delivered.
+    static let expandedHeightFraction: CGFloat = 0.68
     /// Delivered / full-detail mode: leave room for floating header + status bar.
     static let fullScreenTopReserve: CGFloat = 100
 }
@@ -103,7 +103,9 @@ struct OrderTrackingScreen: View {
             }
 
             FloatingScreenHeader(
-                title: "Seguimiento del pedido",
+                title: viewModel.tracking?.isCarWash == true
+                    ? "Seguimiento del servicio"
+                    : "Seguimiento del pedido",
                 onBack: onBack
             )
             .safeAreaPadding(.top)
@@ -152,10 +154,9 @@ struct OrderTrackingScreen: View {
 
     @ViewBuilder
     private func deliveredLayout(tracking: OrderTrackingDetail) -> some View {
-        VStack(spacing: 0) {
-            trackingMap(tracking: tracking, compact: true)
-                .frame(height: 112)
-            orderBottomSheet(tracking: tracking, fullScreen: true)
+        ZStack(alignment: Alignment.bottom) {
+            trackingMap(tracking: tracking, compact: false)
+            orderBottomSheet(tracking: tracking, fullScreen: false)
         }
         .ignoresSafeArea(edges: SwiftUI.Edge.Set.bottom)
         .onAppear { fitMapCamera() }
@@ -179,6 +180,9 @@ struct OrderTrackingScreen: View {
 
     @ViewBuilder
     private func trackingMap(tracking: OrderTrackingDetail, compact: Bool) -> some View {
+        let destinationLabel = tracking.isAssignedToCourier
+            ? (tracking.isCarWash ? "Autolavado" : "Restaurante")
+            : "Entrega"
         let shop = tracking.shopCoordinate.map {
             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
         }
@@ -188,22 +192,54 @@ struct OrderTrackingScreen: View {
         let destination = tracking.routeDestinationCoordinate.map {
             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
         }
-        let destinationLabel = tracking.isAssignedToCourier
-            ? (tracking.isCarWash ? "Autolavado" : "Restaurante")
-            : "Entrega"
-        let courier = coordinate(lat: tracking.deliveryMan?.lat, lng: tracking.deliveryMan?.lng)
-        let route = viewModel.routePoints
-        let usingStraightLineRoute = viewModel.usingStraightLineRoute
+        let courierFromApi = coordinate(lat: tracking.deliveryMan?.lat, lng: tracking.deliveryMan?.lng)
+        let courierFallback: CLLocationCoordinate2D? = {
+            guard tracking.isCarWash else { return nil }
+            if tracking.isPickedUp, let customer { return customer }
+            if tracking.isOnDelivery || tracking.isAssignedToCourier || tracking.isOutForPickup,
+               let shop {
+                return shop
+            }
+            return nil
+        }()
+        let courier = courierFromApi ?? courierFallback
         let showsBothMarkers = tracking.showsRestaurantAndCustomerOnMap
         let showsPendingCustomer = tracking.showsPendingCustomerOnMap
         let shopMarkerImage = tracking.isCarWash ? "IcCarWash" : "IcShop"
+        let showShopMarker: Bool = {
+            guard let shop else { return false }
+            if tracking.isCarWash {
+                if let courier {
+                    let far =
+                        abs(shop.latitude - courier.latitude) > 1e-4 ||
+                        abs(shop.longitude - courier.longitude) > 1e-4
+                    return far || showsBothMarkers && !(
+                        tracking.isOnDelivery
+                            || tracking.isAssignedToCourier
+                            || tracking.isOutForPickup
+                            || tracking.isPickedUp
+                    )
+                }
+                return true
+            }
+            return showsBothMarkers
+        }()
+        // Durante recolección no mostramos la casa; sí desde Recogido en adelante.
+        let showCustomerMarker =
+            (showsBothMarkers
+                || (tracking.isCarWash
+                    && (tracking.isOnDelivery || tracking.isAssignedToCourier || tracking.isPickedUp)))
+            && !tracking.isOutForPickup
+            && customer != nil
+        let vehicleTitle = tracking.isCarWash ? "Tu vehículo" : "Repartidor"
+        let vehicleImage = tracking.isCarWash ? "IcCar" : "IcDelivery"
 
         Map(
             position: $mapPosition,
-            interactionModes: (!compact && isOrderDetailSheetVisible) ? MapInteractionModes() : .all
+            interactionModes: .all
         ) {
             UserAnnotation()
-            if showsBothMarkers, let c = shop {
+            if showShopMarker, let c = shop {
                 Annotation(tracking.isCarWash ? "Autolavado" : "Restaurante", coordinate: c) {
                     Image(shopMarkerImage)
                         .resizable()
@@ -212,7 +248,7 @@ struct OrderTrackingScreen: View {
                         .frame(width: 44, height: 44)
                 }
             }
-            if showsBothMarkers, let c = customer {
+            if showCustomerMarker, let c = customer {
                 Annotation("Entrega", coordinate: c) {
                     Image("IcHouse")
                         .resizable()
@@ -221,7 +257,7 @@ struct OrderTrackingScreen: View {
                         .frame(width: 44, height: 44)
                 }
             }
-            if showsPendingCustomer, let c = customer {
+            if showsPendingCustomer, let c = customer, !showCustomerMarker {
                 Annotation("Entrega", coordinate: c) {
                     Image("IcHouse")
                         .resizable()
@@ -230,7 +266,7 @@ struct OrderTrackingScreen: View {
                         .frame(width: 44, height: 44)
                 }
             }
-            if !showsBothMarkers, !showsPendingCustomer, let c = destination {
+            if !showsBothMarkers, !showsPendingCustomer, !tracking.isCarWash, let c = destination {
                 Annotation(destinationLabel, coordinate: c) {
                     if tracking.isAssignedToCourier {
                         Image(shopMarkerImage)
@@ -248,64 +284,31 @@ struct OrderTrackingScreen: View {
                 }
             }
             if let c = courier {
-                Annotation("Repartidor", coordinate: c) {
-                    Image("IcDelivery")
+                Annotation(vehicleTitle, coordinate: c) {
+                    Image(vehicleImage)
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
                         .frame(width: 44, height: 44)
                 }
             }
-            if route.count >= 2 {
-                MapPolyline(coordinates: route)
-                    .stroke(OrderTrackingPalette.primary, lineWidth: 4)
-            }
         }
         .id(viewModel.orderId)
         .mapStyle(.standard)
         .mapControls {
-            if compact || !isOrderDetailSheetVisible {
+            if !compact {
                 MapUserLocationButton()
                 MapCompass()
-            }
-        }
-        .overlay(alignment: .top) {
-            if usingStraightLineRoute, destination != nil, courier != nil {
-                Text(
-                    "La ruta por calles no está disponible (solo línea recta). " +
-                    "Habilita Directions API y facturación en Google Cloud, y define DIRECTIONS_API_KEY " +
-                    "con una clave apta para el servicio web (no solo restricción «aplicaciones iOS»)."
-                )
-                .font(.caption)
-                .foregroundStyle(Color(.label))
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemRed).opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
             }
         }
     }
 
     @ViewBuilder
     private func inProgressSheetOverlay(tracking: OrderTrackingDetail) -> some View {
-        ZStack(alignment: Alignment.bottom) {
-            if isOrderDetailSheetVisible {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        sheetDragOffset = 0
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            isOrderDetailSheetVisible = false
-                        }
-                    }
-            }
-
-            orderBottomSheet(tracking: tracking, fullScreen: false)
-                .offset(y: isOrderDetailSheetVisible ? sheetDragOffset : 0)
-                .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
-        }
+        // Solo el sheet ocupa hits; el área del mapa queda libre para pan/zoom (como DobbyShop).
+        orderBottomSheet(tracking: tracking, fullScreen: false)
+            .offset(y: isOrderDetailSheetVisible ? sheetDragOffset : 0)
+            .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
     }
 
     private func coordinate(lat: Double?, lng: Double?) -> CLLocationCoordinate2D? {
@@ -415,7 +418,6 @@ struct OrderTrackingScreen: View {
         )
         let needsScroll = isOrderDetailSheetVisible && (
             fullScreen
-                || tracking.isDelivered
                 || tracking.items.count > 4
                 || tracking.hasPendingRatings
         )
@@ -429,6 +431,8 @@ struct OrderTrackingScreen: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.automatic)
                 .frame(maxWidth: .infinity, maxHeight: maxSheetHeight, alignment: .top)
+                // Evita que el ScrollView crezca hasta maxHeight dejando blanco vacío.
+                .fixedSize(horizontal: false, vertical: true)
             } else {
                 sheetBody
                     .frame(maxWidth: .infinity, alignment: .top)
@@ -437,6 +441,8 @@ struct OrderTrackingScreen: View {
         .background(Color(.systemBackground))
         .clipShape(sheetShape)
         .shadow(color: .black.opacity(0.1), radius: 16, y: -2)
+        // Sin scroll: altura = contenido para no tapar el mapa. Con scroll: respeta maxHeight.
+        .fixedSize(horizontal: false, vertical: !fullScreen && !needsScroll)
     }
 
     private func orderBottomSheetBody<G: Gesture>(
@@ -480,28 +486,29 @@ struct OrderTrackingScreen: View {
 
             if !collapsed {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Tu pedido")
+                    Text(tracking.isCarWash ? "Tu servicio" : "Tu pedido")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(OrderTrackingPalette.titleDark)
-                    .padding(.top, 6)
+                    .padding(.top, 14)
 
                 orderTrackingStatusCard(tracking: tracking)
 
                 if tracking.courierArrivedAtCustomer,
-                   tracking.isOnDelivery,
+                   (tracking.isOnDelivery || tracking.isOutForPickup),
                    let code = tracking.deliveryCode?.trimmingCharacters(in: .whitespacesAndNewlines),
                    !code.isEmpty {
-                    orderTrackingDeliveryCodeCard(code: code)
+                    orderTrackingDeliveryCodeCard(code: code, isPickupHandoff: tracking.isOutForPickup)
                 }
 
                 if let shop = tracking.shopName {
                     orderTrackingShopRow(
                         shopName: shop,
-                        shopAddress: tracking.shopAddress ?? tracking.deliveryAddress
+                        shopAddress: tracking.shopAddress ?? tracking.deliveryAddress,
+                        isCarWash: tracking.isCarWash
                     )
                 }
 
-                Text("PRODUCTOS")
+                Text(tracking.isCarWash ? "SERVICIOS" : "PRODUCTOS")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(OrderTrackingPalette.muted)
                     .kerning(0.6)
@@ -537,9 +544,9 @@ struct OrderTrackingScreen: View {
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
-    private func orderTrackingDeliveryCodeCard(code: String) -> some View {
+    private func orderTrackingDeliveryCodeCard(code: String, isPickupHandoff: Bool = false) -> some View {
         VStack(spacing: 10) {
-            Text("TU CÓDIGO DE ENTREGA")
+            Text(isPickupHandoff ? "TU CÓDIGO DE RECOLECCIÓN" : "TU CÓDIGO DE ENTREGA")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(OrderTrackingPalette.muted)
                 .kerning(0.6)
@@ -547,7 +554,11 @@ struct OrderTrackingScreen: View {
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(OrderTrackingPalette.primary)
                 .kerning(6)
-            Text("Muéstralo al repartidor para confirmar la entrega.")
+            Text(
+                isPickupHandoff
+                    ? "Muéstralo al carwash para entregar tu carro."
+                    : "Muéstralo al repartidor para confirmar la entrega."
+            )
                 .font(.subheadline)
                 .foregroundStyle(OrderTrackingPalette.statusSubtitle)
                 .multilineTextAlignment(.center)
@@ -602,18 +613,26 @@ struct OrderTrackingScreen: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func orderTrackingShopRow(shopName: String, shopAddress: String?) -> some View {
+    private func orderTrackingShopRow(shopName: String, shopAddress: String?, isCarWash: Bool) -> some View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(OrderTrackingPalette.iconTileBackground)
                     .frame(width: 44, height: 44)
-                Image(systemName: "storefront.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(OrderTrackingPalette.primary)
+                if isCarWash {
+                    Image("IcCarWash")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                } else {
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(OrderTrackingPalette.primary)
+                }
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("Tienda: \(shopName)")
+                Text(isCarWash ? "Lavado: \(shopName)" : "Tienda: \(shopName)")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(OrderTrackingPalette.titleDark)
                 if let shopAddress, !shopAddress.isEmpty {
@@ -707,25 +726,27 @@ struct OrderTrackingScreen: View {
 
     @ViewBuilder
     private func orderTrackingCourierFooter(tracking: OrderTrackingDetail) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            OrderTrackingDashedDivider()
-            if let dm = tracking.deliveryMan {
-                courierAssignedCard(dm: dm)
-            } else {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(OrderTrackingPalette.primary)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Aún no se ha asignado un repartidor.")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(OrderTrackingPalette.titleDark)
-                        Text("Te notificaremos cuando tu pedido esté en camino.")
-                            .font(.footnote)
-                            .foregroundStyle(OrderTrackingPalette.muted)
+        if !tracking.isCarWash {
+            VStack(alignment: .leading, spacing: 8) {
+                OrderTrackingDashedDivider()
+                if let dm = tracking.deliveryMan {
+                    courierAssignedCard(dm: dm)
+                } else {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(OrderTrackingPalette.primary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Aún no se ha asignado un repartidor.")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(OrderTrackingPalette.titleDark)
+                            Text("Te notificaremos cuando tu pedido esté en camino.")
+                                .font(.footnote)
+                                .foregroundStyle(OrderTrackingPalette.muted)
+                        }
                     }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
             }
         }
     }
@@ -782,8 +803,8 @@ struct OrderTrackingScreen: View {
 
         if tracking.canRateShop || tracking.shopRating != nil {
             starRatingBlock(
-                title: "Restaurante",
-                subtitle: tracking.shopName ?? "Tienda",
+                title: tracking.isCarWash ? "Lavado" : "Restaurante",
+                subtitle: tracking.shopName ?? (tracking.isCarWash ? "Lavado" : "Tienda"),
                 existingRating: tracking.shopRating,
                 canRate: tracking.canRateShop,
                 onSelect: { viewModel.submitShopRating($0) }
@@ -959,7 +980,11 @@ private struct OrderTrackingDashedDivider: View {
 }
 
 private func orderTrackingStatusTitle(_ tracking: OrderTrackingDetail) -> String {
-    if tracking.courierArrivedAtCustomer, tracking.status.uppercased() == "ON_DELIVERY" {
+    if tracking.courierArrivedAtCustomer,
+       tracking.isOnDelivery || tracking.isOutForPickup {
+        if tracking.isCarWash {
+            return tracking.isOutForPickup ? "El carwash llegó" : "Tu coche está afuera"
+        }
         let name = tracking.deliveryMan?.name.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !name.isEmpty { return "\(name) está afuera" }
         return "Repartidor afuera"
@@ -972,7 +997,13 @@ private func orderTrackingStatusTitle(_ tracking: OrderTrackingDetail) -> String
 }
 
 private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> String {
-    if tracking.courierArrivedAtCustomer, tracking.status.uppercased() == "ON_DELIVERY" {
+    if tracking.courierArrivedAtCustomer,
+       tracking.isOnDelivery || tracking.isOutForPickup {
+        if tracking.isCarWash {
+            return tracking.isOutForPickup
+                ? "Comparte tu código de 6 dígitos para entregar el carro"
+                : "Abre la Dobbi y comparte tu código de entrega"
+        }
         if let code = tracking.deliveryCode?.trimmingCharacters(in: .whitespacesAndNewlines), !code.isEmpty {
             return "Comparte tu código de entrega con el repartidor"
         }
@@ -984,7 +1015,21 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
     case "PENDING":
         return service ? "Procesando tu pago de servicios" : "Esperando confirmación de la tienda"
     case "CONFIRMED":
-        return service ? "Tu solicitud fue confirmada" : "Gracias por tu compra"
+        if service { return "Tu solicitud fue confirmada" }
+        return carWash ? "El carwash aceptó tu servicio" : "Gracias por tu compra"
+    case "OUT_FOR_PICKUP":
+        if let mins = tracking.estimatedDeliveryMinutes {
+            return "El carwash va a recoger tu carro · llegada estimada: ~\(mins) min"
+        }
+        if let mins = tracking.estimatedPreparationMinutes {
+            return "Tiempo estimado para recoger carro: \(mins) min"
+        }
+        return "El carwash va en camino a recoger tu carro"
+    case "PICKED_UP":
+        if let mins = tracking.estimatedDeliveryMinutes {
+            return "Tu carro va al autolavado · llegada estimada: ~\(mins) min"
+        }
+        return "Tu carro ya fue recogido y va en camino al autolavado"
     case "PREPARING":
         if let mins = tracking.estimatedPreparationMinutes {
             return carWash
@@ -1059,6 +1104,8 @@ private func orderStatusLabel(
     switch status.uppercased() {
     case "PENDING": return "Pendiente"
     case "CONFIRMED": return "Confirmado"
+    case "OUT_FOR_PICKUP": return carWash ? "En camino" : status
+    case "PICKED_UP": return carWash ? "Recogido" : status
     case "PREPARING": return carWash ? "Lavando" : "En preparación"
     case "READY_FOR_PICKUP":
         if servicePayment { return "Buscando repartidor" }

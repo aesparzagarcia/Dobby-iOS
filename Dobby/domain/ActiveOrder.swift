@@ -45,9 +45,9 @@ struct ActiveOrder: Identifiable, Hashable, Sendable {
             .caseInsensitiveCompare("CAR_WASH") == .orderedSame
     }
 
-    /// Step index 0…6 for the 7-stage home progress UI (6 = delivered).
+    /// Step index for the home progress UI (last = delivered).
     var stepIndex: Int {
-        orderStatusToTrackingStep(status)
+        orderStatusToTrackingStep(status, isCarWash: isCarWash)
     }
 
     /// Etiqueta para listas con varios pedidos activos.
@@ -95,7 +95,22 @@ struct OrderHistoryItem: Identifiable, Hashable, Sendable {
     }
 }
 
-func orderStatusToTrackingStep(_ status: String) -> Int {
+func orderStatusToTrackingStep(_ status: String, isCarWash: Bool = false) -> Int {
+    if isCarWash {
+        switch status.uppercased() {
+        case "PENDING": return 0
+        case "CONFIRMED": return 1
+        case "OUT_FOR_PICKUP": return 2
+        case "PICKED_UP": return 3
+        case "PREPARING": return 4
+        case "READY_FOR_PICKUP": return 5
+        case "ASSIGNED": return 6
+        case "ON_DELIVERY": return 7
+        case "DELIVERED": return 8
+        case "CANCELLED": return 0
+        default: return 0
+        }
+    }
     switch status.uppercased() {
     case "PENDING": return 0
     case "CONFIRMED": return 1
