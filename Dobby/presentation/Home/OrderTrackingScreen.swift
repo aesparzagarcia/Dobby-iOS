@@ -25,9 +25,21 @@ private enum OrderTrackingPalette {
 /// Map camera parity with Android `MAP_BOUNDS_EXPANSION_FACTOR` / `DEFAULT_ZOOM`.
 private enum OrderTrackingMapCamera {
     static let boundsExpansionFactor = 1.35
+    /// Extra zoom-out while car is at the shop (Recogido / Lavando / Secado y Aspirado).
+    static let washPhaseBoundsExpansionFactor = 1.85
     static let minCoordinateSpan = 0.0035
     /// Single-marker span (~zoom 14.25 on Google Maps).
     static let singleMarkerSpan = 0.022
+    static let washPhaseSingleMarkerSpan = 0.038
+    /// When the bottom sheet covers most of the map, shift the camera south so markers sit in the visible top strip.
+    static let sheetVisibleCenterBias = 0.34
+
+    static func isWashPhaseStatus(_ status: String?) -> Bool {
+        switch status?.uppercased() {
+        case "PICKED_UP", "PREPARING", "READY_FOR_PICKUP": return true
+        default: return false
+        }
+    }
 }
 
 /// CTA parity with Android OrderTrackingScreen (18dp radius, 20sp, 15dp vertical padding).
@@ -172,6 +184,9 @@ struct OrderTrackingScreen: View {
         .animation(.easeInOut(duration: 0.25), value: isOrderDetailSheetVisible)
         .onChange(of: isOrderDetailSheetVisible) { _, visible in
             if visible { sheetDragOffset = 0 }
+            // Re-center so markers stay in the visible map strip above the sheet.
+            hasFittedCamera = false
+            fitMapCamera()
         }
         .onAppear {
             fitMapCamera()
@@ -341,6 +356,13 @@ struct OrderTrackingScreen: View {
 
     private func applyMapCamera(to fitCoords: [CLLocationCoordinate2D]) {
         guard let first = fitCoords.first else { return }
+        let washPhase = OrderTrackingMapCamera.isWashPhaseStatus(viewModel.tracking?.status)
+        let expansion = washPhase
+            ? OrderTrackingMapCamera.washPhaseBoundsExpansionFactor
+            : OrderTrackingMapCamera.boundsExpansionFactor
+        let singleSpan = washPhase
+            ? OrderTrackingMapCamera.washPhaseSingleMarkerSpan
+            : OrderTrackingMapCamera.singleMarkerSpan
 
         if fitCoords.count >= 2 {
             let minLat = fitCoords.map(\.latitude).min()!
@@ -349,25 +371,37 @@ struct OrderTrackingScreen: View {
             let maxLon = fitCoords.map(\.longitude).max()!
             let latSpanRaw = maxLat - minLat
             let lonSpanRaw = maxLon - minLon
-            let center = CLLocationCoordinate2D(
+            var center = CLLocationCoordinate2D(
                 latitude: (minLat + maxLat) / 2,
                 longitude: (minLon + maxLon) / 2
             )
-            let factor = OrderTrackingMapCamera.boundsExpansionFactor
             let span = MKCoordinateSpan(
-                latitudeDelta: max(latSpanRaw * factor, OrderTrackingMapCamera.minCoordinateSpan),
-                longitudeDelta: max(lonSpanRaw * factor, OrderTrackingMapCamera.minCoordinateSpan)
+                latitudeDelta: max(latSpanRaw * expansion, OrderTrackingMapCamera.minCoordinateSpan),
+                longitudeDelta: max(lonSpanRaw * expansion, OrderTrackingMapCamera.minCoordinateSpan)
             )
+            center = cameraCenterBiasedForSheet(center, latitudeDelta: span.latitudeDelta)
             mapPosition = .region(MKCoordinateRegion(center: center, span: span))
         } else {
-            let single = OrderTrackingMapCamera.singleMarkerSpan
+            let center = cameraCenterBiasedForSheet(first, latitudeDelta: singleSpan)
             mapPosition = .region(
                 MKCoordinateRegion(
-                    center: first,
-                    span: MKCoordinateSpan(latitudeDelta: single, longitudeDelta: single)
+                    center: center,
+                    span: MKCoordinateSpan(latitudeDelta: singleSpan, longitudeDelta: singleSpan)
                 )
             )
         }
+    }
+
+    /// Moves the geographic center south so markers appear higher on screen (above the bottom sheet).
+    private func cameraCenterBiasedForSheet(
+        _ center: CLLocationCoordinate2D,
+        latitudeDelta: CLLocationDegrees
+    ) -> CLLocationCoordinate2D {
+        guard isOrderDetailSheetVisible else { return center }
+        return CLLocationCoordinate2D(
+            latitude: center.latitude - latitudeDelta * OrderTrackingMapCamera.sheetVisibleCenterBias,
+            longitude: center.longitude
+        )
     }
 
     private func orderBottomSheet(tracking: OrderTrackingDetail, fullScreen: Bool) -> some View {
@@ -1031,12 +1065,14 @@ private func orderTrackingStatusSubtitle(_ tracking: OrderTrackingDetail) -> Str
         }
         return "Tu carro ya fue recogido y va en camino al autolavado"
     case "PREPARING":
-        if let mins = tracking.estimatedPreparationMinutes {
-            return carWash
-                ? "Tiempo estimado de lavado: \(mins) min"
-                : "Tiempo estimado de preparación: \(mins) min"
+        // Carwash: never show estimatedPreparationMinutes here (pickup ETA only).
+        if carWash {
+            return "Tu vehículo se está lavando"
         }
-        return carWash ? "Tu vehículo se está lavando" : "Tu pedido se está preparando"
+        if let mins = tracking.estimatedPreparationMinutes {
+            return "Tiempo estimado de preparación: \(mins) min"
+        }
+        return "Tu pedido se está preparando"
     case "READY_FOR_PICKUP":
         if service {
             return "Estamos buscando un repartidor para pagar tus servicios"

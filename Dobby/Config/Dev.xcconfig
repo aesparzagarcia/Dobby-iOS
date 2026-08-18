@@ -2,7 +2,7 @@
 #include "Shared.xcconfig"
 
 APP_ENV = dev
-API_BASE_URL = http:/$()/192.168.1.21:3001/api/
+API_BASE_URL = http:/$()/192.168.100.61:3001/api/
 PRODUCT_BUNDLE_IDENTIFIER = com.ares.Dobby.dev
 INFOPLIST_KEY_CFBundleDisplayName = Dobbi Dev
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Dev
