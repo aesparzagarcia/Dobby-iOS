@@ -78,7 +78,7 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     }
 
     /// After the shop confirmed: show shop + delivery address (before courier is assigned).
-    /// Carwash: also while Detallado / Recogido / En entrega — not during OUT_FOR_PICKUP (house hidden).
+    /// Carwash: shop + house also while En camino / Recogido / En entrega.
     var showsRestaurantAndCustomerOnMap: Bool {
         let s = status.uppercased()
         if isCarWash {
@@ -113,7 +113,7 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
         return nil
     }
 
-    /// Points for fitting the map camera.
+        /// Points for fitting the map camera.
     var mapCameraFitCoordinates: [(lat: Double, lng: Double)] {
         var points: [(lat: Double, lng: Double)] = []
         if showsRestaurantAndCustomerOnMap {
@@ -133,6 +133,8 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
         if let dm = deliveryMan, let lat = dm.lat, let lng = dm.lng,
            Self.isValidMapCoordinate((lat, lng)) {
             points.append((lat, lng))
+        } else if isCarWash, let origin = routeOriginCoordinate, Self.isValidMapCoordinate(origin) {
+            points.append(origin)
         }
         return points
     }
@@ -155,7 +157,7 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     ]
 
     private static let carWashShopAndCustomerMarkerStatuses: Set<String> = [
-        "CONFIRMED", "PICKED_UP", "PREPARING", "READY_FOR_PICKUP", "ASSIGNED", "ON_DELIVERY",
+        "CONFIRMED", "OUT_FOR_PICKUP", "PICKED_UP", "PREPARING", "READY_FOR_PICKUP", "ASSIGNED", "ON_DELIVERY",
     ]
 }
 

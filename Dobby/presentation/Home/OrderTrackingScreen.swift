@@ -22,17 +22,18 @@ private enum OrderTrackingPalette {
     static let detailsButtonBackground = Color.black
 }
 
-/// Map camera parity with Android `MAP_BOUNDS_EXPANSION_FACTOR` / `DEFAULT_ZOOM`.
+/// Map camera: zoom out enough so markers stay visible above the bottom sheet (~68% height).
 private enum OrderTrackingMapCamera {
-    static let boundsExpansionFactor = 1.35
+    /// Expands fitted bounds (1.0 = tight). Large sheet needs ~2.5–3× so both ends stay in the top strip.
+    static let boundsExpansionFactor = 2.65
     /// Extra zoom-out while car is at the shop (Recogido / Lavando / Secado y Aspirado).
-    static let washPhaseBoundsExpansionFactor = 1.85
-    static let minCoordinateSpan = 0.0035
-    /// Single-marker span (~zoom 14.25 on Google Maps).
-    static let singleMarkerSpan = 0.022
-    static let washPhaseSingleMarkerSpan = 0.038
+    static let washPhaseBoundsExpansionFactor = 3.1
+    static let minCoordinateSpan = 0.006
+    /// Single-marker span (~zoom 13.5 on Google Maps).
+    static let singleMarkerSpan = 0.036
+    static let washPhaseSingleMarkerSpan = 0.055
     /// When the bottom sheet covers most of the map, shift the camera south so markers sit in the visible top strip.
-    static let sheetVisibleCenterBias = 0.34
+    static let sheetVisibleCenterBias = 0.38
 
     static func isWashPhaseStatus(_ status: String?) -> Bool {
         switch status?.uppercased() {
@@ -221,46 +222,64 @@ struct OrderTrackingScreen: View {
         let showsBothMarkers = tracking.showsRestaurantAndCustomerOnMap
         let showsPendingCustomer = tracking.showsPendingCustomerOnMap
         let shopMarkerImage = tracking.isCarWash ? "IcCarWash" : "IcShop"
+        /// Casa / tienda: 40pt. Moto: 37pt. Carro negro: 15% más chico (34pt).
+        let mapMarkerSize: CGFloat = 40
+        let deliveryMarkerSize: CGFloat = 37
+        let carMarkerSize: CGFloat = 34
         let showShopMarker: Bool = {
-            guard let shop else { return false }
-            if tracking.isCarWash {
-                if let courier {
-                    let far =
-                        abs(shop.latitude - courier.latitude) > 1e-4 ||
-                        abs(shop.longitude - courier.longitude) > 1e-4
-                    return far || showsBothMarkers && !(
-                        tracking.isOnDelivery
-                            || tracking.isAssignedToCourier
-                            || tracking.isOutForPickup
-                            || tracking.isPickedUp
-                    )
-                }
-                return true
-            }
+            guard shop != nil else { return false }
+            if tracking.isCarWash { return true }
             return showsBothMarkers
         }()
-        // Durante recolección no mostramos la casa; sí desde Recogido en adelante.
+        // Casa del cliente visible también en En camino (recolección).
         let showCustomerMarker =
             (showsBothMarkers
                 || (tracking.isCarWash
-                    && (tracking.isOnDelivery || tracking.isAssignedToCourier || tracking.isPickedUp)))
-            && !tracking.isOutForPickup
+                    && (tracking.isOnDelivery
+                        || tracking.isAssignedToCourier
+                        || tracking.isOutForPickup
+                        || tracking.isPickedUp)))
             && customer != nil
-        let vehicleTitle = tracking.isCarWash ? "Tu vehículo" : "Repartidor"
-        let vehicleImage = tracking.isCarWash ? "IcCar" : "IcDelivery"
+        // En camino (recolección): casa + autolavado + repartidor (IcDelivery).
+        // Con el carro ya recogido: icono de auto.
+        let isPickupTrip = tracking.isCarWash && tracking.isOutForPickup
+        let vehicleTitle = if isPickupTrip {
+            "Repartidor"
+        } else if tracking.isCarWash {
+            "Tu vehículo"
+        } else {
+            "Repartidor"
+        }
+        let vehicleImage = if isPickupTrip {
+            "IcDelivery"
+        } else if tracking.isCarWash {
+            "IcCar"
+        } else {
+            "IcDelivery"
+        }
+        let vehicleMarkerSize: CGFloat = {
+            switch vehicleImage {
+            case "IcDelivery": return deliveryMarkerSize
+            case "IcCar": return carMarkerSize
+            default: return mapMarkerSize
+            }
+        }()
 
         Map(
             position: $mapPosition,
             interactionModes: .all
         ) {
-            UserAnnotation()
+            // En recolección carwash solo casa / lavado / repartidor (sin punto azul de GPS).
+            if !(tracking.isCarWash && tracking.isOutForPickup) {
+                UserAnnotation()
+            }
             if showShopMarker, let c = shop {
                 Annotation(tracking.isCarWash ? "Autolavado" : "Restaurante", coordinate: c) {
                     Image(shopMarkerImage)
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 44, height: 44)
+                        .frame(width: mapMarkerSize, height: mapMarkerSize)
                 }
             }
             if showCustomerMarker, let c = customer {
@@ -269,7 +288,7 @@ struct OrderTrackingScreen: View {
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 44, height: 44)
+                        .frame(width: mapMarkerSize, height: mapMarkerSize)
                 }
             }
             if showsPendingCustomer, let c = customer, !showCustomerMarker {
@@ -278,7 +297,7 @@ struct OrderTrackingScreen: View {
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 44, height: 44)
+                        .frame(width: mapMarkerSize, height: mapMarkerSize)
                 }
             }
             if !showsBothMarkers, !showsPendingCustomer, !tracking.isCarWash, let c = destination {
@@ -288,13 +307,13 @@ struct OrderTrackingScreen: View {
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
-                            .frame(width: 44, height: 44)
+                            .frame(width: mapMarkerSize, height: mapMarkerSize)
                     } else {
                         Image("IcHouse")
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
-                            .frame(width: 44, height: 44)
+                            .frame(width: mapMarkerSize, height: mapMarkerSize)
                     }
                 }
             }
@@ -304,7 +323,7 @@ struct OrderTrackingScreen: View {
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 44, height: 44)
+                        .frame(width: vehicleMarkerSize, height: vehicleMarkerSize)
                 }
             }
         }
@@ -331,16 +350,34 @@ struct OrderTrackingScreen: View {
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
 
-    /// Fits delivery + courier once on first load. Falls back to user GPS when no order coordinates exist yet (e.g. PENDING).
+    /// Fits delivery + courier (+ live user GPS) once on first load so “yo” and tienda/repartidor caben arriba del sheet.
     private func fitMapCamera() {
         guard isScreenVisible, let t = viewModel.tracking, !hasFittedCamera else { return }
-        let fitCoords: [CLLocationCoordinate2D] = t.mapCameraFitCoordinates.map {
+        var fitCoords: [CLLocationCoordinate2D] = t.mapCameraFitCoordinates.map {
             CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+        }
+        if let cached = locationManager.location?.coordinate {
+            fitCoords.append(cached)
         }
 
         if !fitCoords.isEmpty {
             applyMapCamera(to: fitCoords)
             hasFittedCamera = true
+            // Si aún no había GPS, re-encuadra cuando llegue para incluir “mi ubicación”.
+            if locationManager.location == nil {
+                Task {
+                    guard let location = try? await OneShotLocationRequest().getLocation() else { return }
+                    await MainActor.run {
+                        guard isScreenVisible, let tracking = viewModel.tracking else { return }
+                        var coords = tracking.mapCameraFitCoordinates.map {
+                            CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lng)
+                        }
+                        coords.append(location.coordinate)
+                        guard !coords.isEmpty else { return }
+                        applyMapCamera(to: coords)
+                    }
+                }
+            }
             return
         }
 
