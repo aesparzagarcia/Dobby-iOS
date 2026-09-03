@@ -25,6 +25,7 @@ struct BestSellersScreen: View {
         placesRepository: PlacesRepository,
         httpClient: DobbyHTTPClient,
         cartItemCount: Int,
+        initialFeaturedPlaces: [FeaturedPlace] = [],
         onBack: @escaping () -> Void = {},
         onProductTap: @escaping (ShopProduct, Bool) -> Void = { _, _ in },
         onAddToCart: @escaping (ShopProduct) -> AddToCartResult = { _ in .success },
@@ -40,7 +41,11 @@ struct BestSellersScreen: View {
         self.onNeedsAddress = onNeedsAddress
         self.onCancelNeedsAddress = onCancelNeedsAddress
         _viewModel = State(
-            initialValue: BestSellersViewModel(placesRepository: placesRepository, http: httpClient)
+            initialValue: BestSellersViewModel(
+                placesRepository: placesRepository,
+                http: httpClient,
+                initialFeaturedPlaces: initialFeaturedPlaces
+            )
         )
     }
 

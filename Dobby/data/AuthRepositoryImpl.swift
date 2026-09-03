@@ -88,6 +88,13 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
     }
 
     func logout() async {
+        if let refresh = sessionStore.refreshTokenValue()?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !refresh.isEmpty {
+            let _: Result<PushOkDTO, HTTPClientError> = await api.post(
+                "auth/session/logout",
+                body: AppRefreshRequestDTO(refreshToken: refresh)
+            )
+        }
         let bearer = sessionStore.accessToken()
         _ = await api.unregisterPushDevice(bearerToken: bearer)
         DobbyOrderRealtime.signOut()

@@ -17,13 +17,18 @@ struct FeaturedPlacesScreen: View {
     init(
         placesRepository: PlacesRepository,
         httpClient: DobbyHTTPClient,
+        initialPlaces: [FeaturedPlace] = [],
         onBack: @escaping () -> Void = {},
         onPlaceTap: @escaping (FeaturedPlace) -> Void = { _ in }
     ) {
         self.onBack = onBack
         self.onPlaceTap = onPlaceTap
         _viewModel = State(
-            initialValue: FeaturedPlacesViewModel(placesRepository: placesRepository, http: httpClient)
+            initialValue: FeaturedPlacesViewModel(
+                placesRepository: placesRepository,
+                http: httpClient,
+                initialPlaces: initialPlaces
+            )
         )
     }
 

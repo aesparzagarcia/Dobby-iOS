@@ -13,6 +13,9 @@ struct ShopDetailRoute: Hashable {
     let shopName: String
     var pickupLatitude: Double?
     var pickupLongitude: Double?
+    var shopType: String?
+    var openingHour: String?
+    var closingHour: String?
 }
 
 struct ShopDetailScreen: View {
@@ -40,7 +43,10 @@ struct ShopDetailScreen: View {
         onAddToCart: @escaping (ShopProduct, String?) -> AddToCartResult = { _, _ in .success },
         onCartClick: @escaping () -> Void = {},
         onNeedsAddress: @escaping () -> Void = {},
-        onCancelNeedsAddress: @escaping () -> Void = {}
+        onCancelNeedsAddress: @escaping () -> Void = {},
+        shopType: String? = nil,
+        openingHour: String? = nil,
+        closingHour: String? = nil
     ) {
         self.cartItemCount = cartItemCount
         self.onBack = onBack
@@ -54,7 +60,10 @@ struct ShopDetailScreen: View {
                 shopId: shopId,
                 shopName: shopName,
                 placesRepository: placesRepository,
-                http: httpClient
+                http: httpClient,
+                shopType: shopType,
+                openingHour: openingHour,
+                closingHour: closingHour
             )
         )
     }
@@ -63,11 +72,8 @@ struct ShopDetailScreen: View {
         ZStack {
             Color.white.ignoresSafeArea()
 
-            switch (viewModel.uiState.isLoading, viewModel.uiState.errorMessage) {
-            case (true, _):
-                ProgressView()
-                    .tint(DobbyBrandColor.primary)
-            case (false, let err?) where !err.isEmpty:
+            if let err = viewModel.uiState.errorMessage, !err.isEmpty,
+               viewModel.uiState.products.isEmpty, !viewModel.uiState.isLoading {
                 VStack(spacing: 16) {
                     Text(err)
                         .font(.body)
@@ -80,7 +86,7 @@ struct ShopDetailScreen: View {
                     .buttonStyle(.borderedProminent)
                     .tint(DobbyBrandColor.primary)
                 }
-            default:
+            } else {
                 VStack(spacing: 0) {
                     ShopDetailSearchBar(
                         query: Binding(
@@ -102,7 +108,12 @@ struct ShopDetailScreen: View {
                         )
                     }
 
-                    if viewModel.uiState.filteredProducts.isEmpty {
+                    if viewModel.uiState.isLoading && viewModel.uiState.products.isEmpty {
+                        Spacer()
+                        ProgressView()
+                            .tint(DobbyBrandColor.primary)
+                        Spacer()
+                    } else if viewModel.uiState.filteredProducts.isEmpty {
                         Spacer()
                         Text(emptyProductsMessage)
                             .font(.body)

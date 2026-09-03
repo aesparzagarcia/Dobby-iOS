@@ -54,11 +54,30 @@ final class ShopDetailViewModel {
 
     var uiState: ShopDetailUiState
 
-    init(shopId: String, shopName: String, placesRepository: PlacesRepository, http: DobbyHTTPClient) {
+    init(
+        shopId: String,
+        shopName: String,
+        placesRepository: PlacesRepository,
+        http: DobbyHTTPClient,
+        shopType: String? = nil,
+        openingHour: String? = nil,
+        closingHour: String? = nil
+    ) {
         self.shopId = shopId
         self.placesRepository = placesRepository
         self.http = http
-        uiState = ShopDetailUiState(shopName: shopName, isLoading: true)
+        uiState = ShopDetailUiState(
+            shopName: shopName,
+            shopType: shopType,
+            openingHour: openingHour,
+            closingHour: closingHour,
+            isShopAvailableForOrders: HomeShopHours.isShopAvailableForOrders(
+                shopStatus: "ACTIVE",
+                openingHour: openingHour,
+                closingHour: closingHour
+            ),
+            isLoading: true
+        )
         Task { await loadProductsAsync() }
     }
 

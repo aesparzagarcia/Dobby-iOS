@@ -32,10 +32,14 @@ final class BestSellersViewModel {
 
     var uiState: BestSellersUiState
 
-    init(placesRepository: PlacesRepository, http: DobbyHTTPClient) {
+    init(
+        placesRepository: PlacesRepository,
+        http: DobbyHTTPClient,
+        initialFeaturedPlaces: [FeaturedPlace] = []
+    ) {
         self.placesRepository = placesRepository
         self.http = http
-        uiState = BestSellersUiState(isLoading: true)
+        uiState = BestSellersUiState(featuredPlaces: initialFeaturedPlaces, isLoading: true)
         Task { await loadBestSellersAsync() }
     }
 
@@ -70,17 +74,21 @@ final class BestSellersViewModel {
         uiState.errorMessage = nil
         uiState.isLoading = true
 
-        async let productsResult = placesRepository.getBestSellers()
-        async let homeResult = placesRepository.getHome()
-
-        switch await productsResult {
-        case .success(let products):
-            let featuredPlaces: [FeaturedPlace]
-            if case .success(let home) = await homeResult {
+        let cachedPlaces = uiState.featuredPlaces
+        let productsResult = await placesRepository.getBestSellers()
+        let featuredPlaces: [FeaturedPlace]
+        if cachedPlaces.isEmpty {
+            if case .success(let home) = await placesRepository.getHome() {
                 featuredPlaces = home.featuredPlaces
             } else {
-                featuredPlaces = uiState.featuredPlaces
+                featuredPlaces = cachedPlaces
             }
+        } else {
+            featuredPlaces = cachedPlaces
+        }
+
+        switch productsResult {
+        case .success(let products):
             uiState = BestSellersUiState(
                 products: HomeShopHours.sortShopProductsByShopAvailability(
                     products: products,

@@ -63,8 +63,12 @@ final class SessionStore: @unchecked Sendable {
         SecItemDelete(query as CFDictionary)
         var attrs = query
         attrs[kSecValueData as String] = data
+        // After first unlock; not synced to other devices via iCloud Keychain.
         attrs[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(attrs as CFDictionary, nil)
+        let addStatus = SecItemAdd(attrs as CFDictionary, nil)
+        if addStatus == errSecDuplicateItem {
+            SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        }
     }
 
     private func read(_ item: Item) -> String? {

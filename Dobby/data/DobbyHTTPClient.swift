@@ -70,6 +70,7 @@ struct DobbyHTTPClient: Sendable {
             || s.contains("auth/verify-otp")
             || s.contains("auth/complete-registration")
             || s.contains("/auth/refresh")
+            || s.contains("auth/session/logout")
     }
 
     private func clearSessionAndNotify() {
@@ -526,7 +527,7 @@ extension DobbyHTTPClient {
     func userFacingMessage(from error: HTTPClientError) -> String {
         switch error {
         case .invalidURL:
-            return "URL del servidor inválida. En Info.plist usa API_BASE_URL con http://<IP>:3001/api/"
+            return "No se pudo conectar al servidor."
         case let .statusCode(code, data):
             if let data, let message = Self.serverErrorMessage(from: data), !message.isEmpty {
                 return message
@@ -540,11 +541,11 @@ extension DobbyHTTPClient {
                 case .notConnectedToInternet, .networkConnectionLost:
                     return "Sin conexión a internet."
                 case .timedOut:
-                    return "Tiempo de espera: no respondió tu Mac. En Info.plist (API_BASE_URL) o en el scheme (variable API_BASE_URL) pon http://<IP-de-tu-Mac>:3001/api/ — Terminal: ipconfig getifaddr en0. Misma Wi‑Fi, API escuchando en 0.0.0.0:3001 y firewall abierto al puerto 3001."
+                    return "El servidor no respondió. Intenta de nuevo."
                 case .cannotConnectToHost, .cannotFindHost:
-                    return "No se pudo conectar: revisa API_BASE_URL, que la API esté en marcha y el puerto."
+                    return "No se pudo conectar al servidor. Intenta de nuevo."
                 case .unsupportedURL:
-                    return "URL del servidor inválida. En Info.plist define API_BASE_URL como http://<IP-de-tu-Mac>:3001/api/"
+                    return "No se pudo conectar al servidor."
                 default:
                     break
                 }

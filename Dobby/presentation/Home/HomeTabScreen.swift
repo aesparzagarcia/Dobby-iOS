@@ -122,12 +122,16 @@ struct HomeTabScreen: View {
                             },
                             onCancelNeedsAddress: {
                                 viewModel.clearPendingCartAdd()
-                            }
+                            },
+                            shopType: r.shopType,
+                            openingHour: r.openingHour,
+                            closingHour: r.closingHour
                         )
                     case .featuredPlaces:
                         FeaturedPlacesScreen(
                             placesRepository: placesRepository,
                             httpClient: httpClient,
+                            initialPlaces: viewModel.featuredPlaces,
                             onBack: { popNavigation() },
                             onPlaceTap: { onFeaturedPlaceTap($0) }
                         )
@@ -136,6 +140,7 @@ struct HomeTabScreen: View {
                             placesRepository: placesRepository,
                             httpClient: httpClient,
                             cartItemCount: viewModel.cartItemCount,
+                            initialFeaturedPlaces: viewModel.featuredPlaces,
                             onBack: { popNavigation() },
                             onProductTap: { product, isAvailable in
                                 let place = viewModel.featuredPlaces.first {
@@ -519,7 +524,10 @@ struct HomeTabScreen: View {
                     shopId: place.id,
                     shopName: place.name,
                     pickupLatitude: place.latitude,
-                    pickupLongitude: place.longitude
+                    pickupLongitude: place.longitude,
+                    shopType: place.shopType,
+                    openingHour: place.openingHour,
+                    closingHour: place.closingHour
                 )
             )
         )

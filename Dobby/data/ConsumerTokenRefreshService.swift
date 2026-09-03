@@ -91,6 +91,9 @@ private actor ConsumerRefreshCoordinator {
                 return .sessionInvalid
             case .statusCode(let code, _) where code == 400:
                 return .sessionInvalid
+            case .statusCode(let code, _) where code == 409:
+                // Concurrent refresh race — keep local session (Rappi-style sticky login).
+                return .transientFailure
             case .statusCode(let code, _) where (500 ... 599).contains(code):
                 return .transientFailure
             case .statusCode:

@@ -221,7 +221,6 @@ struct OrderTrackingScreen: View {
         let courier = courierFromApi ?? courierFallback
         let showsBothMarkers = tracking.showsRestaurantAndCustomerOnMap
         let showsPendingCustomer = tracking.showsPendingCustomerOnMap
-        let shopMarkerImage = tracking.isCarWash ? "IcCarWash" : "IcShop"
         /// Casa / tienda: 40pt. Moto: 37pt. Carro negro: 15% más chico (34pt).
         let mapMarkerSize: CGFloat = 40
         let deliveryMarkerSize: CGFloat = 37
@@ -257,6 +256,7 @@ struct OrderTrackingScreen: View {
         } else {
             "IcDelivery"
         }
+        let shopMarkerImage = tracking.isCarWash ? "IcCarWash" : "IcShop"
         let vehicleMarkerSize: CGFloat = {
             switch vehicleImage {
             case "IcDelivery": return deliveryMarkerSize
@@ -324,6 +324,7 @@ struct OrderTrackingScreen: View {
                         .interpolation(.high)
                         .scaledToFit()
                         .frame(width: vehicleMarkerSize, height: vehicleMarkerSize)
+                        .frame(width: 44, height: 44)
                 }
             }
         }
@@ -349,7 +350,6 @@ struct OrderTrackingScreen: View {
         guard let lat, let lng else { return nil }
         return CLLocationCoordinate2D(latitude: lat, longitude: lng)
     }
-
     /// Fits delivery + courier (+ live user GPS) once on first load so “yo” and tienda/repartidor caben arriba del sheet.
     private func fitMapCamera() {
         guard isScreenVisible, let t = viewModel.tracking, !hasFittedCamera else { return }
@@ -378,6 +378,7 @@ struct OrderTrackingScreen: View {
                     }
                 }
             }
+            hasFittedCamera = true
             return
         }
 

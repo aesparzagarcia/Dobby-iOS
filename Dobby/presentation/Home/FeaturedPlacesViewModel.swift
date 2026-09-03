@@ -31,11 +31,16 @@ final class FeaturedPlacesViewModel {
 
     var uiState = FeaturedPlacesUiState()
 
-    init(placesRepository: PlacesRepository, http: DobbyHTTPClient) {
+    init(placesRepository: PlacesRepository, http: DobbyHTTPClient, initialPlaces: [FeaturedPlace] = []) {
         self.placesRepository = placesRepository
         self.http = http
-        uiState.isLoading = true
-        Task { await loadFeaturedPlacesAsync(isRefresh: false) }
+        if initialPlaces.isEmpty {
+            uiState.isLoading = true
+            Task { await loadFeaturedPlacesAsync(isRefresh: false) }
+        } else {
+            uiState.places = HomeShopHours.sortFeaturedPlacesByAvailability(places: initialPlaces)
+            uiState.isLoading = false
+        }
     }
 
     func loadFeaturedPlaces() {
