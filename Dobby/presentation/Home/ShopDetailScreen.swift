@@ -16,6 +16,7 @@ struct ShopDetailRoute: Hashable {
     var shopType: String?
     var openingHour: String?
     var closingHour: String?
+    var openingDays: [String] = []
 }
 
 struct ShopDetailScreen: View {
@@ -46,7 +47,8 @@ struct ShopDetailScreen: View {
         onCancelNeedsAddress: @escaping () -> Void = {},
         shopType: String? = nil,
         openingHour: String? = nil,
-        closingHour: String? = nil
+        closingHour: String? = nil,
+        openingDays: [String] = []
     ) {
         self.cartItemCount = cartItemCount
         self.onBack = onBack
@@ -63,7 +65,8 @@ struct ShopDetailScreen: View {
                 http: httpClient,
                 shopType: shopType,
                 openingHour: openingHour,
-                closingHour: closingHour
+                closingHour: closingHour,
+                openingDays: openingDays
             )
         )
     }

@@ -30,6 +30,7 @@ struct FeaturedPlace: Identifiable, Hashable {
     let rate: Float
     let openingHour: String?
     let closingHour: String?
+    let openingDays: [String]
     let latitude: Double?
     let longitude: Double?
 }
@@ -64,6 +65,7 @@ struct ShopProductsPage: Sendable {
     let shopStatus: String
     let openingHour: String?
     let closingHour: String?
+    let openingDays: [String]
     let products: [ShopProduct]
     let shopName: String?
     let shopType: String?
@@ -76,7 +78,8 @@ struct ShopProductsPage: Sendable {
         HomeShopHours.isShopAvailableForOrders(
             shopStatus: shopStatus,
             openingHour: openingHour,
-            closingHour: closingHour
+            closingHour: closingHour,
+            openingDays: openingDays
         )
     }
 }

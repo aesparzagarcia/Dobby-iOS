@@ -105,6 +105,7 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         rate: p.rate,
         openingHour: p.openingHour,
         closingHour: p.closingHour,
+        openingDays: p.openingDays ?? [],
         latitude: p.lat,
         longitude: p.lng
     )
@@ -240,6 +241,7 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
                     shopStatus: response.shop.status,
                     openingHour: response.shop.openingHour,
                     closingHour: response.shop.closingHour,
+                    openingDays: response.shop.openingDays ?? [],
                     products: products,
                     shopName: response.shop.name,
                     shopType: response.shop.type,

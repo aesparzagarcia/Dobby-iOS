@@ -17,6 +17,7 @@ struct ShopDetailUiState: Equatable {
     var shopStatus: String?
     var openingHour: String?
     var closingHour: String?
+    var openingDays: [String] = []
     var isShopAvailableForOrders: Bool = true
     var isLoading: Bool = false
     var errorMessage: String?
@@ -26,7 +27,11 @@ struct ShopDetailUiState: Equatable {
     }
 
     var shopReopensLabel: String? {
-        HomeShopHours.formatShopReopensLabel(shopStatus: shopStatus, openingHour: openingHour)
+        HomeShopHours.formatShopReopensLabel(
+            shopStatus: shopStatus,
+            openingHour: openingHour,
+            openingDays: openingDays
+        )
     }
 
     var filteredProducts: [ShopProduct] {
@@ -61,7 +66,8 @@ final class ShopDetailViewModel {
         http: DobbyHTTPClient,
         shopType: String? = nil,
         openingHour: String? = nil,
-        closingHour: String? = nil
+        closingHour: String? = nil,
+        openingDays: [String] = []
     ) {
         self.shopId = shopId
         self.placesRepository = placesRepository
@@ -71,10 +77,12 @@ final class ShopDetailViewModel {
             shopType: shopType,
             openingHour: openingHour,
             closingHour: closingHour,
+            openingDays: openingDays,
             isShopAvailableForOrders: HomeShopHours.isShopAvailableForOrders(
                 shopStatus: "ACTIVE",
                 openingHour: openingHour,
-                closingHour: closingHour
+                closingHour: closingHour,
+                openingDays: openingDays
             ),
             isLoading: true
         )
@@ -110,6 +118,7 @@ final class ShopDetailViewModel {
                 shopStatus: page.shopStatus,
                 openingHour: page.openingHour,
                 closingHour: page.closingHour,
+                openingDays: page.openingDays,
                 isShopAvailableForOrders: page.isShopAvailableForOrders,
                 isLoading: false,
                 errorMessage: nil

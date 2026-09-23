@@ -299,7 +299,11 @@ struct HomeFeaturedPlaceCard: View {
     private var imageHeight: CGFloat { width / (1.65 / max(scale, 0.8)) }
 
     var body: some View {
-        let isOpen = HomeShopHours.isPlaceOpenNow(openingHour: place.openingHour, closingHour: place.closingHour)
+        let isOpen = HomeShopHours.isPlaceOpenNow(
+            openingHour: place.openingHour,
+            closingHour: place.closingHour,
+            openingDays: place.openingDays
+        )
         let hoursLabel = HomeShopHours.formatPlaceHoursRange(openingHour: place.openingHour, closingHour: place.closingHour)
 
         Button(action: onTap) {

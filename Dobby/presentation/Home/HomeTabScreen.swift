@@ -125,7 +125,8 @@ struct HomeTabScreen: View {
                             },
                             shopType: r.shopType,
                             openingHour: r.openingHour,
-                            closingHour: r.closingHour
+                            closingHour: r.closingHour,
+                            openingDays: r.openingDays
                         )
                     case .featuredPlaces:
                         FeaturedPlacesScreen(
@@ -527,7 +528,8 @@ struct HomeTabScreen: View {
                     pickupLongitude: place.longitude,
                     shopType: place.shopType,
                     openingHour: place.openingHour,
-                    closingHour: place.closingHour
+                    closingHour: place.closingHour,
+                    openingDays: place.openingDays
                 )
             )
         )

@@ -22,11 +22,13 @@ struct FeaturedPlaceDTO: Decodable {
     let lng: Double?
     let openingHour: String?
     let closingHour: String?
+    let openingDays: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, logoUrl, type, category, kind, rate, lat, lng
         case openingHour = "opening_hour"
         case closingHour = "closing_hour"
+        case openingDays = "opening_days"
     }
 }
 
@@ -62,6 +64,7 @@ struct ShopInfoDTO: Decodable {
     let status: String
     let openingHour: String?
     let closingHour: String?
+    let openingDays: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, type, status, rate
@@ -70,6 +73,7 @@ struct ShopInfoDTO: Decodable {
         case jobsDone = "jobs_done"
         case openingHour = "opening_hour"
         case closingHour = "closing_hour"
+        case openingDays = "opening_days"
     }
 }
 

@@ -6,18 +6,37 @@
 import Foundation
 
 enum HomeShopHours {
+    static let weekdayCodes = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
     /// Whether the place is open now; `nil` if hours are unknown.
-    static func isPlaceOpenNow(openingHour: String?, closingHour: String?) -> Bool? {
+    static func isPlaceOpenNow(
+        openingHour: String?,
+        closingHour: String?,
+        openingDays: [String] = []
+    ) -> Bool? {
+        let days = normalizedDays(openingDays)
+        let today = weekdayCode(from: Date())
+        let hoursKnown = parseHour(openingHour) != nil && parseHour(closingHour) != nil
+        if !hoursKnown {
+            if days.count < 7, !days.contains(today) { return false }
+            return nil
+        }
         guard let open = parseHour(openingHour), let close = parseHour(closingHour) else { return nil }
         let now = Date()
         let cal = Calendar.current
         let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
         let openMinutes = open.hour * 60 + open.minute
         let closeMinutes = close.hour * 60 + close.minute
-        if closeMinutes > openMinutes || closeMinutes == openMinutes {
-            return nowMinutes >= openMinutes && nowMinutes < closeMinutes
+        let overnight = closeMinutes < openMinutes
+        if overnight {
+            if nowMinutes >= openMinutes {
+                return days.contains(today)
+            }
+            let yesterday = weekdayCode(from: cal.date(byAdding: .day, value: -1, to: now) ?? now)
+            return days.contains(yesterday)
         }
-        return nowMinutes >= openMinutes || nowMinutes < closeMinutes
+        if !days.contains(today) { return false }
+        return nowMinutes >= openMinutes && nowMinutes < closeMinutes
     }
 
     static func formatPlaceHoursRange(openingHour: String?, closingHour: String?) -> String? {
@@ -31,19 +50,49 @@ enum HomeShopHours {
     static func isShopAvailableForOrders(
         shopStatus: String?,
         openingHour: String?,
-        closingHour: String?
+        closingHour: String?,
+        openingDays: [String] = []
     ) -> Bool {
         if let shopStatus, shopStatus != "ACTIVE" { return false }
-        return isPlaceOpenNow(openingHour: openingHour, closingHour: closingHour) != false
+        return isPlaceOpenNow(
+            openingHour: openingHour,
+            closingHour: closingHour,
+            openingDays: openingDays
+        ) != false
     }
 
-    /// e.g. "Abre hoy a las 8:00 AM" when closed outside hours.
-    static func formatShopReopensLabel(shopStatus: String?, openingHour: String?) -> String? {
+    /// e.g. "Abre hoy a las 8:00 AM" or "Abre el lunes a las 8:00 AM".
+    static func formatShopReopensLabel(
+        shopStatus: String?,
+        openingHour: String?,
+        openingDays: [String] = []
+    ) -> String? {
         if let shopStatus, shopStatus != "ACTIVE" { return nil }
         let openRaw = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if openRaw.isEmpty { return nil }
         guard parseHour(openRaw) != nil else { return nil }
-        return "Abre hoy a las \(formatHour12(openRaw))"
+        let days = normalizedDays(openingDays)
+        let today = weekdayCode(from: Date())
+        let cal = Calendar.current
+        let now = Date()
+        let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        if let open = parseHour(openRaw) {
+            let openMinutes = open.hour * 60 + open.minute
+            if days.contains(today), nowMinutes < openMinutes {
+                return "Abre hoy a las \(formatHour12(openRaw))"
+            }
+        }
+        for offset in 1 ... 7 {
+            guard let date = cal.date(byAdding: .day, value: offset, to: now) else { continue }
+            let code = weekdayCode(from: date)
+            if days.contains(code) {
+                if offset == 1 {
+                    return "Abre mañana a las \(formatHour12(openRaw))"
+                }
+                return "Abre el \(weekdayNameEs(code)) a las \(formatHour12(openRaw))"
+            }
+        }
+        return "Abre a las \(formatHour12(openRaw))"
     }
 
     /// Home/promotions list items: match shop hours from featured places (ACTIVE shops on `/home`).
@@ -59,14 +108,19 @@ enum HomeShopHours {
         return isShopAvailableForOrders(
             shopStatus: "ACTIVE",
             openingHour: shop.openingHour,
-            closingHour: shop.closingHour
+            closingHour: shop.closingHour,
+            openingDays: shop.openingDays
         )
     }
 
     /// Available shops first; preserves sales/API order within each group.
     /// Open/available featured places first; preserves API order within each group.
     static func isFeaturedPlaceAvailable(_ place: FeaturedPlace) -> Bool {
-        isPlaceOpenNow(openingHour: place.openingHour, closingHour: place.closingHour) != false
+        isPlaceOpenNow(
+            openingHour: place.openingHour,
+            closingHour: place.closingHour,
+            openingDays: place.openingDays
+        ) != false
     }
 
     static func sortFeaturedPlacesByAvailability(places: [FeaturedPlace]) -> [FeaturedPlace] {
@@ -111,6 +165,34 @@ enum HomeShopHours {
             return lhs.offset < rhs.offset
         }
         .map(\.element)
+    }
+
+    private static func normalizedDays(_ raw: [String]) -> Set<String> {
+        let cleaned = Set(
+            raw.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+                .filter { weekdayCodes.contains($0) }
+        )
+        return cleaned.isEmpty ? Set(weekdayCodes) : cleaned
+    }
+
+    /// Gregorian weekday: 1 = Sunday.
+    private static func weekdayCode(from date: Date, calendar: Calendar = .current) -> String {
+        let index = calendar.component(.weekday, from: date) - 1
+        let sundayFirst = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+        return sundayFirst[(index + 7) % 7]
+    }
+
+    private static func weekdayNameEs(_ code: String) -> String {
+        switch code {
+        case "MON": return "lunes"
+        case "TUE": return "martes"
+        case "WED": return "miércoles"
+        case "THU": return "jueves"
+        case "FRI": return "viernes"
+        case "SAT": return "sábado"
+        case "SUN": return "domingo"
+        default: return code.lowercased()
+        }
     }
 
     private static func parseHour(_ raw: String?) -> (hour: Int, minute: Int)? {
