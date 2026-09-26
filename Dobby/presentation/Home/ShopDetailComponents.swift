@@ -44,6 +44,11 @@ struct ShopDetailSearchBar: View {
 
 struct ShopClosedBanner: View {
     let reopensLabel: String?
+    var shopStatus: String? = nil
+
+    private var isHighDemand: Bool {
+        HomeShopHours.normalizedOpsStatus(shopStatus) == "HIGH_DEMAND"
+    }
 
     private let closedRed = Color(red: 0.94, green: 0.27, blue: 0.27)
     private let bannerBg = Color(red: 1, green: 0.95, blue: 0.96)
@@ -60,15 +65,19 @@ struct ShopClosedBanner: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Tienda cerrada")
+                Text(isHighDemand ? "Alta demanda" : "Tienda cerrada")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(closedRed)
 
-                if let reopensLabel {
+                if !isHighDemand, let reopensLabel {
                     reopensLabelText(reopensLabel)
                 }
 
-                Text("Los productos estarán disponibles cuando la tienda abra.")
+                Text(
+                    isHighDemand
+                        ? "La tienda no puede recibir pedidos ahora."
+                        : "Los productos estarán disponibles cuando la tienda abra."
+                )
                     .font(.caption)
                     .foregroundStyle(ShopDetailPalette.mutedText)
             }

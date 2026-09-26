@@ -46,14 +46,40 @@ enum HomeShopHours {
         return "\(formatHour12(open)) - \(formatHour12(close))"
     }
 
-    /// Orders allowed when shop is ACTIVE and within opening hours (unknown hours → treat as open).
+    /// AVAILABLE / SLOW can receive orders; HIGH_DEMAND is listed but blocked.
+    static func isOrderableOpsStatus(_ shopStatus: String?) -> Bool {
+        switch normalizedOpsStatus(shopStatus) {
+        case "HIGH_DEMAND", "INACTIVE":
+            return false
+        default:
+            return true
+        }
+    }
+
+    static func normalizedOpsStatus(_ shopStatus: String?) -> String {
+        let raw = (shopStatus ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if raw == "SLOW" || raw == "LENTO" { return "SLOW" }
+        if raw == "HIGH_DEMAND" || raw == "ALTA_DEMANDA" || raw == "ALTADEMANDA" { return "HIGH_DEMAND" }
+        if raw == "INACTIVE" { return "INACTIVE" }
+        return "AVAILABLE"
+    }
+
+    static func shopOpsLabel(_ shopStatus: String?) -> String {
+        switch normalizedOpsStatus(shopStatus) {
+        case "SLOW": return "Lento"
+        case "HIGH_DEMAND": return "Alta demanda"
+        default: return "Disponible"
+        }
+    }
+
+    /// Orders allowed when shop is Disponible/Lento and within opening hours (unknown hours → treat as open).
     static func isShopAvailableForOrders(
         shopStatus: String?,
         openingHour: String?,
         closingHour: String?,
         openingDays: [String] = []
     ) -> Bool {
-        if let shopStatus, shopStatus != "ACTIVE" { return false }
+        if !isOrderableOpsStatus(shopStatus) { return false }
         return isPlaceOpenNow(
             openingHour: openingHour,
             closingHour: closingHour,
@@ -67,7 +93,7 @@ enum HomeShopHours {
         openingHour: String?,
         openingDays: [String] = []
     ) -> String? {
-        if let shopStatus, shopStatus != "ACTIVE" { return nil }
+        if !isOrderableOpsStatus(shopStatus) { return nil }
         let openRaw = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if openRaw.isEmpty { return nil }
         guard parseHour(openRaw) != nil else { return nil }
@@ -106,7 +132,7 @@ enum HomeShopHours {
             return false
         }
         return isShopAvailableForOrders(
-            shopStatus: "ACTIVE",
+            shopStatus: shop.shopStatus,
             openingHour: shop.openingHour,
             closingHour: shop.closingHour,
             openingDays: shop.openingDays
@@ -116,11 +142,14 @@ enum HomeShopHours {
     /// Available shops first; preserves sales/API order within each group.
     /// Open/available featured places first; preserves API order within each group.
     static func isFeaturedPlaceAvailable(_ place: FeaturedPlace) -> Bool {
-        isPlaceOpenNow(
-            openingHour: place.openingHour,
-            closingHour: place.closingHour,
-            openingDays: place.openingDays
-        ) != false
+        if place.isService {
+            return isPlaceOpenNow(
+                openingHour: place.openingHour,
+                closingHour: place.closingHour,
+                openingDays: place.openingDays
+            ) != false
+        }
+        return isOrderableOpsStatus(place.shopStatus)
     }
 
     static func sortFeaturedPlacesByAvailability(places: [FeaturedPlace]) -> [FeaturedPlace] {

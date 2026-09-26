@@ -101,7 +101,10 @@ struct ShopDetailScreen: View {
                     .padding(.bottom, viewModel.uiState.isCarWash ? 12 : 0)
 
                     if viewModel.uiState.showShopClosedBanner {
-                        ShopClosedBanner(reopensLabel: viewModel.uiState.shopReopensLabel)
+                        ShopClosedBanner(
+                            reopensLabel: viewModel.uiState.shopReopensLabel,
+                            shopStatus: viewModel.uiState.shopStatus
+                        )
                     }
 
                     if !viewModel.uiState.isCarWash {

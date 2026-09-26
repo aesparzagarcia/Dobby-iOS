@@ -22,6 +22,8 @@ enum HomeScreenPalette {
     static let screenBackground = DobbyPureScale.pure
     static let cardSurface = DobbyBrandColor.cardSurface
     static let openGreen = Color(red: 0.13, green: 0.77, blue: 0.37)
+    static let slowYellow = Color(red: 0.96, green: 0.62, blue: 0.04)
+    static let highDemandRed = Color(red: 0.94, green: 0.27, blue: 0.27)
     static let closedGray = DobbyBrandColor.textSecondary
     static let cardShadow = DobbyPureScale.onyx.opacity(0.08)
 }
@@ -317,13 +319,32 @@ struct HomeFeaturedPlaceCard: View {
                                 topTrailingRadius: corner
                             )
                         )
-                    if let isOpen {
-                        Text(isOpen ? "Abierto" : "Cerrado")
+                    if place.isService {
+                        if let isOpen {
+                            Text(isOpen ? "Abierto" : "Cerrado")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6 * scale)
+                                .padding(.vertical, 2 * scale)
+                                .background(isOpen ? HomeScreenPalette.openGreen : HomeScreenPalette.closedGray)
+                                .clipShape(RoundedRectangle(cornerRadius: 6 * scale, style: .continuous))
+                                .padding(6 * scale)
+                        }
+                    } else {
+                        let pill = HomeShopHours.shopOpsLabel(place.shopStatus)
+                        let color: Color = {
+                            switch HomeShopHours.normalizedOpsStatus(place.shopStatus) {
+                            case "SLOW": return HomeScreenPalette.slowYellow
+                            case "HIGH_DEMAND": return HomeScreenPalette.highDemandRed
+                            default: return HomeScreenPalette.openGreen
+                            }
+                        }()
+                        Text(pill)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6 * scale)
                             .padding(.vertical, 2 * scale)
-                            .background(isOpen ? HomeScreenPalette.openGreen : HomeScreenPalette.closedGray)
+                            .background(color)
                             .clipShape(RoundedRectangle(cornerRadius: 6 * scale, style: .continuous))
                             .padding(6 * scale)
                     }

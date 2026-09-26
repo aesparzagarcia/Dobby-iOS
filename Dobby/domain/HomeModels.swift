@@ -33,6 +33,8 @@ struct FeaturedPlace: Identifiable, Hashable {
     let openingDays: [String]
     let latitude: Double?
     let longitude: Double?
+    /// Shop operational status: AVAILABLE / SLOW / HIGH_DEMAND. Nil for services.
+    let shopStatus: String?
 }
 
 struct BestSellerProduct: Identifiable, Hashable {
@@ -343,6 +345,10 @@ struct AdCarouselSlide: Identifiable, Hashable {
     let ad: Ad
 
     static func weighted(from ads: [Ad]) -> [AdCarouselSlide] {
+        // Un solo anuncio: un slide, sin rotar.
+        if ads.count <= 1 {
+            return ads.map { AdCarouselSlide(id: $0.id, ad: $0) }
+        }
         let sorted = ads.sorted { lhs, rhs in
             if lhs.priority != rhs.priority { return lhs.priority > rhs.priority }
             return lhs.id > rhs.id

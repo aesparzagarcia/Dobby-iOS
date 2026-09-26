@@ -107,7 +107,8 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         closingHour: p.closingHour,
         openingDays: p.openingDays ?? [],
         latitude: p.lat,
-        longitude: p.lng
+        longitude: p.lng,
+        shopStatus: isService ? nil : p.status
     )
 }
 

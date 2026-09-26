@@ -79,7 +79,7 @@ final class ShopDetailViewModel {
             closingHour: closingHour,
             openingDays: openingDays,
             isShopAvailableForOrders: HomeShopHours.isShopAvailableForOrders(
-                shopStatus: "ACTIVE",
+                shopStatus: "AVAILABLE",
                 openingHour: openingHour,
                 closingHour: closingHour,
                 openingDays: openingDays
