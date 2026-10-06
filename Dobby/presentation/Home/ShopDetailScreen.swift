@@ -17,6 +17,7 @@ struct ShopDetailRoute: Hashable {
     var openingHour: String?
     var closingHour: String?
     var openingDays: [String] = []
+    var openingSchedules: [ShopHourWindow] = []
 }
 
 struct ShopDetailScreen: View {
@@ -48,7 +49,8 @@ struct ShopDetailScreen: View {
         shopType: String? = nil,
         openingHour: String? = nil,
         closingHour: String? = nil,
-        openingDays: [String] = []
+        openingDays: [String] = [],
+        openingSchedules: [ShopHourWindow] = []
     ) {
         self.cartItemCount = cartItemCount
         self.onBack = onBack
@@ -66,7 +68,8 @@ struct ShopDetailScreen: View {
                 shopType: shopType,
                 openingHour: openingHour,
                 closingHour: closingHour,
-                openingDays: openingDays
+                openingDays: openingDays,
+                openingSchedules: openingSchedules
             )
         )
     }

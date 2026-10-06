@@ -18,6 +18,7 @@ struct ShopDetailUiState: Equatable {
     var openingHour: String?
     var closingHour: String?
     var openingDays: [String] = []
+    var openingSchedules: [ShopHourWindow] = []
     var isShopAvailableForOrders: Bool = true
     var isLoading: Bool = false
     var errorMessage: String?
@@ -30,7 +31,9 @@ struct ShopDetailUiState: Equatable {
         HomeShopHours.formatShopReopensLabel(
             shopStatus: shopStatus,
             openingHour: openingHour,
-            openingDays: openingDays
+            openingDays: openingDays,
+            closingHour: closingHour,
+            openingSchedules: openingSchedules
         )
     }
 
@@ -67,7 +70,8 @@ final class ShopDetailViewModel {
         shopType: String? = nil,
         openingHour: String? = nil,
         closingHour: String? = nil,
-        openingDays: [String] = []
+        openingDays: [String] = [],
+        openingSchedules: [ShopHourWindow] = []
     ) {
         self.shopId = shopId
         self.placesRepository = placesRepository
@@ -78,11 +82,13 @@ final class ShopDetailViewModel {
             openingHour: openingHour,
             closingHour: closingHour,
             openingDays: openingDays,
+            openingSchedules: openingSchedules,
             isShopAvailableForOrders: HomeShopHours.isShopAvailableForOrders(
                 shopStatus: "AVAILABLE",
                 openingHour: openingHour,
                 closingHour: closingHour,
-                openingDays: openingDays
+                openingDays: openingDays,
+                openingSchedules: openingSchedules
             ),
             isLoading: true
         )
@@ -119,6 +125,7 @@ final class ShopDetailViewModel {
                 openingHour: page.openingHour,
                 closingHour: page.closingHour,
                 openingDays: page.openingDays,
+                openingSchedules: page.openingSchedules,
                 isShopAvailableForOrders: page.isShopAvailableForOrders,
                 isLoading: false,
                 errorMessage: nil

@@ -106,6 +106,12 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
         openingHour: p.openingHour,
         closingHour: p.closingHour,
         openingDays: p.openingDays ?? [],
+        openingSchedules: (p.openingSchedules ?? []).compactMap { w in
+            let open = (w.open ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let close = (w.close ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !open.isEmpty, !close.isEmpty else { return nil }
+            return ShopHourWindow(days: w.days ?? [], open: open, close: close)
+        },
         latitude: p.lat,
         longitude: p.lng,
         shopStatus: isService ? nil : p.status
@@ -243,6 +249,12 @@ final class PlacesRepositoryImpl: PlacesRepository, @unchecked Sendable {
                     openingHour: response.shop.openingHour,
                     closingHour: response.shop.closingHour,
                     openingDays: response.shop.openingDays ?? [],
+                    openingSchedules: (response.shop.openingSchedules ?? []).compactMap { w in
+                        let open = (w.open ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let close = (w.close ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !open.isEmpty, !close.isEmpty else { return nil }
+                        return ShopHourWindow(days: w.days ?? [], open: open, close: close)
+                    },
                     products: products,
                     shopName: response.shop.name,
                     shopType: response.shop.type,

@@ -304,9 +304,14 @@ struct HomeFeaturedPlaceCard: View {
         let isOpen = HomeShopHours.isPlaceOpenNow(
             openingHour: place.openingHour,
             closingHour: place.closingHour,
-            openingDays: place.openingDays
+            openingDays: place.openingDays,
+            openingSchedules: place.openingSchedules
         )
-        let hoursLabel = HomeShopHours.formatPlaceHoursRange(openingHour: place.openingHour, closingHour: place.closingHour)
+        let hoursLabel = HomeShopHours.formatPlaceHoursRange(
+            openingHour: place.openingHour,
+            closingHour: place.closingHour,
+            openingSchedules: place.openingSchedules
+        )
 
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 0) {

@@ -101,9 +101,19 @@ enum DobbyOrderRealtime {
         let result = await api.fetchFirebaseCustomToken(bearerToken: bearer)
         guard case .success(let token) = result, !token.isEmpty else { return }
         do {
-            _ = try await Auth.auth().signIn(withCustomToken: token)
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    _ = try await Auth.auth().signIn(withCustomToken: token)
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 8_000_000_000)
+                    throw CancellationError()
+                }
+                try await group.next()
+                group.cancelAll()
+            }
         } catch {
-            // Firebase not configured or token invalid.
+            // Firebase not configured, token invalid, or sign-in exceeded budget.
         }
     }
 }

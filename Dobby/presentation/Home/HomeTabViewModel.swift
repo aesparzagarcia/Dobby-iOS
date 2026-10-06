@@ -550,8 +550,9 @@ final class HomeTabViewModel {
     }
 
     func loadInitial() {
-        if let snapshot = HomeBootstrapCache.shared.consume() {
+        if let snapshot = HomeBootstrapCache.shared.latest() {
             applyBootstrap(snapshot)
+            Task { await refreshOnForeground() }
             return
         }
         isLoading = true
@@ -559,10 +560,10 @@ final class HomeTabViewModel {
         warningMessage = nil
         loadAddresses()
         Task {
+            async let homeTask = placesRepository.getHome()
             async let pricingTask: Void = refreshDeliveryPricing()
-            await refreshShopCoords()
-            await pricingTask
-            switch await placesRepository.getHome() {
+            async let coordsTask: Void = refreshShopCoords()
+            switch await homeTask {
             case .success(let data):
                 applyHomeData(data)
                 isLoading = false
@@ -572,6 +573,7 @@ final class HomeTabViewModel {
                     errorMessage = message(for: e)
                 }
             }
+            _ = await (pricingTask, coordsTask)
             await loadAds()
             await loadActiveOrder()
         }

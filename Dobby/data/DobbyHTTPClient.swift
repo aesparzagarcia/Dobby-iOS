@@ -87,13 +87,9 @@ struct DobbyHTTPClient: Sendable {
         return sessionStore.accessToken() ?? provided
     }
 
-    /// After session was cleared elsewhere, in-flight requests often fail with `URLError.cancelled` — treat like auth failure and navigate to login.
+    /// Cancelled in-flight calls (leaving Home, remount, pull-to-refresh) are not a session expiry.
     private func mapTransportError(_ error: Error) -> HTTPClientError {
-        if let u = error as? URLError, u.code == .cancelled, let sessionStore, !sessionStore.isLoggedIn {
-            NotificationCenter.default.post(name: .dobbySessionExpired, object: nil)
-            return .statusCode(401, nil)
-        }
-        return .transport(error)
+        .transport(error)
     }
 
     func post<Body: Encodable, Response: Decodable>(_ path: String, body: Body) async -> Result<Response, HTTPClientError> {

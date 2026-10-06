@@ -45,13 +45,17 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
                     return .error("Respuesta de verificación inválida")
                 }
                 pendingRegistrationToken = regToken
+                if sessionStore.isLoggedIn {
+                    sessionStore.clearSession()
+                }
                 return .success(.requiresRegistration)
             }
             guard let access = r.token, let refresh = r.refreshToken, !access.isEmpty, !refresh.isEmpty else {
                 return .error("Respuesta de sesión inválida")
             }
             sessionStore.saveSession(accessToken: access, refreshToken: refresh, userId: r.user?.id)
-            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
+            AuthSessionNavigation.resetExpiredGate()
+            schedulePushSync()
             return .success(.loggedIn)
         case .failure(let e):
             return .error(api.userFacingMessage(from: e))
@@ -80,7 +84,8 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
                 return .error("Respuesta de sesión inválida")
             }
             sessionStore.saveSession(accessToken: r.token, refreshToken: refresh, userId: r.user?.id)
-            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
+            AuthSessionNavigation.resetExpiredGate()
+            schedulePushSync()
             return .success(())
         case .failure(let e):
             return .error(api.userFacingMessage(from: e))
@@ -121,8 +126,17 @@ final class AuthRepositoryImpl: AuthRepository, @unchecked Sendable {
         case .sessionDead:
             return false
         case .skipped, .refreshed, .unchanged:
-            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
+            schedulePushSync()
             return true
+        }
+    }
+
+    /// Android fires realtime/FCM off the auth path. Awaiting FCM `token()` here left OTP/register on a spinner.
+    private func schedulePushSync() {
+        let api = api
+        let sessionStore = sessionStore
+        Task {
+            await DobbyPushSync.sync(api: api, sessionStore: sessionStore)
         }
     }
 }

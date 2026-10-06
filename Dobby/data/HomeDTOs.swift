@@ -10,6 +10,12 @@ struct HomeResponseDTO: Decodable {
     let bestSellerProducts: [BestSellerProductDTO]
 }
 
+struct ShopHourWindowDTO: Decodable {
+    let days: [String]?
+    let open: String?
+    let close: String?
+}
+
 struct FeaturedPlaceDTO: Decodable {
     let id: String
     let name: String
@@ -23,6 +29,7 @@ struct FeaturedPlaceDTO: Decodable {
     let openingHour: String?
     let closingHour: String?
     let openingDays: [String]?
+    let openingSchedules: [ShopHourWindowDTO]?
     let status: String?
 
     enum CodingKeys: String, CodingKey {
@@ -30,6 +37,7 @@ struct FeaturedPlaceDTO: Decodable {
         case openingHour = "opening_hour"
         case closingHour = "closing_hour"
         case openingDays = "opening_days"
+        case openingSchedules = "opening_schedules"
     }
 }
 
@@ -66,6 +74,7 @@ struct ShopInfoDTO: Decodable {
     let openingHour: String?
     let closingHour: String?
     let openingDays: [String]?
+    let openingSchedules: [ShopHourWindowDTO]?
 
     enum CodingKeys: String, CodingKey {
         case id, name, type, status, rate
@@ -75,6 +84,7 @@ struct ShopInfoDTO: Decodable {
         case openingHour = "opening_hour"
         case closingHour = "closing_hour"
         case openingDays = "opening_days"
+        case openingSchedules = "opening_schedules"
     }
 }
 

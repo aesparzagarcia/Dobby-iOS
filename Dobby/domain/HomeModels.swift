@@ -19,6 +19,12 @@ enum HomeProductCardLayout {
     static let shopGridHorizontalPadding: CGFloat = 18
 }
 
+struct ShopHourWindow: Hashable, Sendable {
+    let days: [String]
+    let open: String
+    let close: String
+}
+
 struct FeaturedPlace: Identifiable, Hashable {
     let id: String
     let name: String
@@ -31,6 +37,7 @@ struct FeaturedPlace: Identifiable, Hashable {
     let openingHour: String?
     let closingHour: String?
     let openingDays: [String]
+    let openingSchedules: [ShopHourWindow]
     let latitude: Double?
     let longitude: Double?
     /// Shop operational status: AVAILABLE / SLOW / HIGH_DEMAND. Nil for services.
@@ -68,6 +75,7 @@ struct ShopProductsPage: Sendable {
     let openingHour: String?
     let closingHour: String?
     let openingDays: [String]
+    let openingSchedules: [ShopHourWindow]
     let products: [ShopProduct]
     let shopName: String?
     let shopType: String?
@@ -81,7 +89,8 @@ struct ShopProductsPage: Sendable {
             shopStatus: shopStatus,
             openingHour: openingHour,
             closingHour: closingHour,
-            openingDays: openingDays
+            openingDays: openingDays,
+            openingSchedules: openingSchedules
         )
     }
 }

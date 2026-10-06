@@ -34,14 +34,15 @@ final class PhoneViewModel {
     }
 
     func sendCode(onResult: @escaping (String, Bool) -> Void) {
+        if isLoading { return }
+        let phone = nationalDigits
+        if phone.count < PhoneNationalInput.maxDigits {
+            errorMessage = "Introduce un número de 10 dígitos"
+            return
+        }
+        isLoading = true
+        errorMessage = nil
         Task { @MainActor in
-            let phone = nationalDigits
-            if phone.count < PhoneNationalInput.maxDigits {
-                errorMessage = "Introduce un número de 10 dígitos"
-                return
-            }
-            isLoading = true
-            errorMessage = nil
             let result = await authRepository.requestOtp(phone: phone)
             isLoading = false
             switch result {

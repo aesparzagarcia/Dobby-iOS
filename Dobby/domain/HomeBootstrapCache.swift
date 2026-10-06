@@ -17,8 +17,7 @@ final class HomeBootstrapCache {
         pending = snapshot
     }
 
-    func consume() -> HomeBootstrapSnapshot? {
-        defer { pending = nil }
-        return pending
+    func latest() -> HomeBootstrapSnapshot? {
+        pending
     }
 }

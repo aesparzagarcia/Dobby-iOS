@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var route: AppRoute = .splash
     @State private var phoneViewModel: PhoneViewModel
     @State private var otpViewModel: OtpViewModel?
+    @State private var registerViewModel: RegisterUserViewModel?
     /// Bumps to remount `MainTabView` after login / logout / session expiry.
     @State private var homeEpoch = 0
 
@@ -43,25 +44,39 @@ struct RootView: View {
                         viewModel: otpViewModel,
                         onLoggedIn: {
                             self.otpViewModel = nil
+                            self.registerViewModel = nil
                             homeEpoch += 1
                             route = .home
                         },
-                        onRequiresRegistration: { route = .register(phone: $0) },
+                        onRequiresRegistration: { phone in
+                            registerViewModel = RegisterUserViewModel(
+                                authRepository: deps.authRepository,
+                                phone: phone
+                            )
+                            route = .register(phone: phone)
+                        },
                         onBack: {
                             self.otpViewModel = nil
                             route = .phone
                         }
                     )
                 }
-            case .register(let phone):
-                RegisterUserScreen(
-                    viewModel: RegisterUserViewModel(authRepository: deps.authRepository, phone: phone),
-                    onComplete: {
-                        homeEpoch += 1
-                        route = .home
-                    },
-                    onBack: { route = .phone }
-                )
+            case .register(_):
+                if let registerViewModel {
+                    RegisterUserScreen(
+                        viewModel: registerViewModel,
+                        onComplete: {
+                            self.otpViewModel = nil
+                            self.registerViewModel = nil
+                            homeEpoch += 1
+                            route = .home
+                        },
+                        onBack: {
+                            self.registerViewModel = nil
+                            route = .phone
+                        }
+                    )
+                }
             case .home:
                 MainTabView(
                     deps: deps,
@@ -73,6 +88,7 @@ struct RootView: View {
                             await MainActor.run {
                                 phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
                                 otpViewModel = nil
+                                registerViewModel = nil
                                 homeEpoch += 1
                                 route = .home
                             }
@@ -81,6 +97,7 @@ struct RootView: View {
                     onRequireLogin: {
                         phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
                         otpViewModel = nil
+                        registerViewModel = nil
                         route = .phone
                     }
                 )
@@ -100,10 +117,17 @@ struct RootView: View {
             CrashlyticsJourney.setScreen(newRoute.crashlyticsScreen)
         }
         .onReceive(NotificationCenter.default.publisher(for: .dobbySessionExpired)) { _ in
-            phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
-            otpViewModel = nil
-            homeEpoch += 1
-            route = .home
+            switch route {
+            case .splash, .phone, .otp, .register:
+                // Stay on the auth flow — cancelled Home requests used to yank guests back to a spinner.
+                return
+            case .home:
+                phoneViewModel = PhoneViewModel(authRepository: deps.authRepository)
+                otpViewModel = nil
+                registerViewModel = nil
+                homeEpoch += 1
+                route = .home
+            }
         }
     }
 }

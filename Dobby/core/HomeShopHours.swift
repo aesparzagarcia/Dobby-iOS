@@ -12,16 +12,42 @@ enum HomeShopHours {
     static func isPlaceOpenNow(
         openingHour: String?,
         closingHour: String?,
-        openingDays: [String] = []
+        openingDays: [String] = [],
+        openingSchedules: [ShopHourWindow] = []
     ) -> Bool? {
-        let days = normalizedDays(openingDays)
-        let today = weekdayCode(from: Date())
-        let hoursKnown = parseHour(openingHour) != nil && parseHour(closingHour) != nil
-        if !hoursKnown {
+        let windows = resolvedWindows(
+            openingHour: openingHour,
+            closingHour: closingHour,
+            openingDays: openingDays,
+            openingSchedules: openingSchedules
+        )
+        if windows.isEmpty {
+            let days = normalizedDays(openingDays)
+            let today = weekdayCode(from: Date())
             if days.count < 7, !days.contains(today) { return false }
             return nil
         }
-        guard let open = parseHour(openingHour), let close = parseHour(closingHour) else { return nil }
+        var knownClosed = false
+        for window in windows {
+            switch isWindowOpenNow(window) {
+            case true?:
+                return true
+            case false?:
+                knownClosed = true
+            case nil:
+                break
+            }
+        }
+        return knownClosed ? false : nil
+    }
+
+    private static func isWindowOpenNow(_ window: ShopHourWindow) -> Bool? {
+        let days = normalizedDays(window.days)
+        let today = weekdayCode(from: Date())
+        guard let open = parseHour(window.open), let close = parseHour(window.close) else {
+            if days.count < 7, !days.contains(today) { return false }
+            return nil
+        }
         let now = Date()
         let cal = Calendar.current
         let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
@@ -39,9 +65,24 @@ enum HomeShopHours {
         return nowMinutes >= openMinutes && nowMinutes < closeMinutes
     }
 
-    static func formatPlaceHoursRange(openingHour: String?, closingHour: String?) -> String? {
-        let open = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let close = closingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    static func formatPlaceHoursRange(
+        openingHour: String?,
+        closingHour: String?,
+        openingSchedules: [ShopHourWindow] = []
+    ) -> String? {
+        let windows = resolvedWindows(
+            openingHour: openingHour,
+            closingHour: closingHour,
+            openingDays: [],
+            openingSchedules: openingSchedules
+        )
+        if windows.count > 1 {
+            return windows.map { w in
+                "\(formatDaysLabel(w.days)) \(formatHour12(w.open)) - \(formatHour12(w.close))"
+            }.joined(separator: " · ")
+        }
+        let open = (windows.first?.open ?? openingHour)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let close = (windows.first?.close ?? closingHour)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if open.isEmpty || close.isEmpty { return nil }
         return "\(formatHour12(open)) - \(formatHour12(close))"
     }
@@ -77,13 +118,15 @@ enum HomeShopHours {
         shopStatus: String?,
         openingHour: String?,
         closingHour: String?,
-        openingDays: [String] = []
+        openingDays: [String] = [],
+        openingSchedules: [ShopHourWindow] = []
     ) -> Bool {
         if !isOrderableOpsStatus(shopStatus) { return false }
         return isPlaceOpenNow(
             openingHour: openingHour,
             closingHour: closingHour,
-            openingDays: openingDays
+            openingDays: openingDays,
+            openingSchedules: openingSchedules
         ) != false
     }
 
@@ -91,34 +134,74 @@ enum HomeShopHours {
     static func formatShopReopensLabel(
         shopStatus: String?,
         openingHour: String?,
-        openingDays: [String] = []
+        openingDays: [String] = [],
+        closingHour: String? = nil,
+        openingSchedules: [ShopHourWindow] = []
     ) -> String? {
         if !isOrderableOpsStatus(shopStatus) { return nil }
-        let openRaw = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if openRaw.isEmpty { return nil }
-        guard parseHour(openRaw) != nil else { return nil }
-        let days = normalizedDays(openingDays)
-        let today = weekdayCode(from: Date())
+        let windows = resolvedWindows(
+            openingHour: openingHour,
+            closingHour: closingHour,
+            openingDays: openingDays,
+            openingSchedules: openingSchedules
+        )
         let cal = Calendar.current
         let now = Date()
-        let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
-        if let open = parseHour(openRaw) {
-            let openMinutes = open.hour * 60 + open.minute
-            if days.contains(today), nowMinutes < openMinutes {
-                return "Abre hoy a las \(formatHour12(openRaw))"
+        if windows.isEmpty {
+            let openRaw = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if openRaw.isEmpty { return nil }
+            guard parseHour(openRaw) != nil else { return nil }
+            let days = normalizedDays(openingDays)
+            let today = weekdayCode(from: now)
+            let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+            if let open = parseHour(openRaw) {
+                let openMinutes = open.hour * 60 + open.minute
+                if days.contains(today), nowMinutes < openMinutes {
+                    return "Abre hoy a las \(formatHour12(openRaw))"
+                }
             }
+            for offset in 1 ... 7 {
+                guard let date = cal.date(byAdding: .day, value: offset, to: now) else { continue }
+                let code = weekdayCode(from: date)
+                if days.contains(code) {
+                    if offset == 1 {
+                        return "Abre mañana a las \(formatHour12(openRaw))"
+                    }
+                    return "Abre el \(weekdayNameEs(code)) a las \(formatHour12(openRaw))"
+                }
+            }
+            return "Abre a las \(formatHour12(openRaw))"
+        }
+        let today = weekdayCode(from: now)
+        let nowMinutes = cal.component(.hour, from: now) * 60 + cal.component(.minute, from: now)
+        let todayShifts = windows
+            .filter { normalizedDays($0.days).contains(today) }
+            .compactMap { w in parseHour(w.open).map { open in (open, w) } }
+            .sorted { lhs, rhs in
+                lhs.0.hour * 60 + lhs.0.minute < rhs.0.hour * 60 + rhs.0.minute
+            }
+        if let next = todayShifts.first(where: { $0.0.hour * 60 + $0.0.minute > nowMinutes }) {
+            return "Abre hoy a las \(formatHour12(next.1.open))"
         }
         for offset in 1 ... 7 {
             guard let date = cal.date(byAdding: .day, value: offset, to: now) else { continue }
             let code = weekdayCode(from: date)
-            if days.contains(code) {
-                if offset == 1 {
-                    return "Abre mañana a las \(formatHour12(openRaw))"
+            let dayShifts = windows
+                .filter { normalizedDays($0.days).contains(code) }
+                .compactMap { w in parseHour(w.open).map { open in (open, w) } }
+                .sorted { lhs, rhs in
+                    lhs.0.hour * 60 + lhs.0.minute < rhs.0.hour * 60 + rhs.0.minute
                 }
-                return "Abre el \(weekdayNameEs(code)) a las \(formatHour12(openRaw))"
+            guard let earliest = dayShifts.first else { continue }
+            if offset == 1 {
+                return "Abre mañana a las \(formatHour12(earliest.1.open))"
             }
+            return "Abre el \(weekdayNameEs(code)) a las \(formatHour12(earliest.1.open))"
         }
-        return "Abre a las \(formatHour12(openRaw))"
+        if let first = windows.first {
+            return "Abre a las \(formatHour12(first.open))"
+        }
+        return nil
     }
 
     /// Home/promotions list items: match shop hours from featured places (ACTIVE shops on `/home`).
@@ -135,7 +218,8 @@ enum HomeShopHours {
             shopStatus: shop.shopStatus,
             openingHour: shop.openingHour,
             closingHour: shop.closingHour,
-            openingDays: shop.openingDays
+            openingDays: shop.openingDays,
+            openingSchedules: shop.openingSchedules
         )
     }
 
@@ -146,7 +230,8 @@ enum HomeShopHours {
             return isPlaceOpenNow(
                 openingHour: place.openingHour,
                 closingHour: place.closingHour,
-                openingDays: place.openingDays
+                openingDays: place.openingDays,
+                openingSchedules: place.openingSchedules
             ) != false
         }
         return isOrderableOpsStatus(place.shopStatus)
@@ -194,6 +279,45 @@ enum HomeShopHours {
             return lhs.offset < rhs.offset
         }
         .map(\.element)
+    }
+
+    private static func resolvedWindows(
+        openingHour: String?,
+        closingHour: String?,
+        openingDays: [String],
+        openingSchedules: [ShopHourWindow]
+    ) -> [ShopHourWindow] {
+        let fromApi = openingSchedules.compactMap { w -> ShopHourWindow? in
+            let open = w.open.trimmingCharacters(in: .whitespacesAndNewlines)
+            let close = w.close.trimmingCharacters(in: .whitespacesAndNewlines)
+            if open.isEmpty || close.isEmpty { return nil }
+            return ShopHourWindow(days: w.days, open: open, close: close)
+        }
+        if !fromApi.isEmpty { return fromApi }
+        let open = openingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let close = closingHour?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if open.isEmpty || close.isEmpty { return [] }
+        return [ShopHourWindow(days: openingDays, open: open, close: close)]
+    }
+
+    private static func formatDaysLabel(_ days: [String]) -> String {
+        let selected = weekdayCodes.filter { normalizedDays(days).contains($0) }
+        if selected.count == 7 { return "Todos los días" }
+        if selected.count == 5, !selected.contains("SAT"), !selected.contains("SUN") {
+            return "Lun–Vie"
+        }
+        return selected.map { code in
+            switch code {
+            case "MON": return "Lun"
+            case "TUE": return "Mar"
+            case "WED": return "Mié"
+            case "THU": return "Jue"
+            case "FRI": return "Vie"
+            case "SAT": return "Sáb"
+            case "SUN": return "Dom"
+            default: return code
+            }
+        }.joined(separator: ", ")
     }
 
     private static func normalizedDays(_ raw: [String]) -> Set<String> {

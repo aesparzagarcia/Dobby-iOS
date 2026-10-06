@@ -24,7 +24,6 @@
 		4CF8A200000100000000000A /* AppGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000100000000000A /* AppGraph.swift */; };
 		4CF8A200000200000000000A /* DobbyAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000200000000000A /* DobbyAppDelegate.swift */; };
 		4CF8A200000300000000000A /* DobbyPushSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000300000000000A /* DobbyPushSync.swift */; };
-		4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000400000000000A /* GoogleService-Info.plist */; };
 		4CF8A200000500000000000A /* service_area.kml in Resources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000500000000000A /* service_area.kml */; };
 		4CF8A200000600000000000A /* DeliveryServiceArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000600000000000A /* DeliveryServiceArea.swift */; };
 		4CF8A200000700000000000A /* DeliveryEtaEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CF8A100000700000000000A /* DeliveryEtaEstimator.swift */; };
@@ -242,6 +241,7 @@
 		G2G2G2G2G2G2G443893848902 /* ProfileRepositories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileRepositories.swift; sourceTree = "<group>"; };
 		G3G3G3G3G3G3G443893848902 /* ProfileTabViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabViewModel.swift; sourceTree = "<group>"; };
 		G4G4G4G4G4G4G443893848902 /* ProfileTabScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTabScreen.swift; sourceTree = "<group>"; };
+		GSIDEV000000000000000001 /* GoogleService-Info-Dev.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info-Dev.plist"; sourceTree = "<group>"; };
 		H1H1H1H1H1H1H443893848902 /* AccessTokenJwtParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessTokenJwtParser.swift; sourceTree = "<group>"; };
 		HB02HB02HB0244389384902 /* HomeBootstrapSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBootstrapSnapshot.swift; sourceTree = "<group>"; };
 		HB04HB04HB0444389384902 /* HomeBootstrapCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeBootstrapCache.swift; sourceTree = "<group>"; };
@@ -599,6 +599,7 @@
 				222222222222222222222222 /* Assets.xcassets */,
 				444444444444444444444444 /* Info.plist */,
 				4CF8A100000400000000000A /* GoogleService-Info.plist */,
+				GSIDEV000000000000000001 /* GoogleService-Info-Dev.plist */,
 				4CF8A100000500000000000A /* service_area.kml */,
 				SP02SP02SP0244389384902 /* dobby_splash.json */,
 			);
@@ -615,6 +616,7 @@
 				E63673852F7F0C7300140ABA /* Sources */,
 				E63673862F7F0C7300140ABA /* Frameworks */,
 				E63673872F7F0C7300140ABA /* Resources */,
+				GSICOPY00000000000000001 /* Copy GoogleService-Info */,
 				CRJRUNCRJRUN44389384901 /* Crashlytics Upload Symbols */,
 			);
 			buildRules = (
@@ -734,7 +736,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				333333333333333333333333 /* Assets.xcassets in Resources */,
-				4CF8A200000400000000000A /* GoogleService-Info.plist in Resources */,
 				4CF8A200000500000000000A /* service_area.kml in Resources */,
 				SP01SP01SP0144389384901 /* dobby_splash.json in Resources */,
 			);
@@ -780,6 +781,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+		GSICOPY00000000000000001 /* Copy GoogleService-Info */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${SRCROOT}/${TARGET_NAME}/GoogleService-Info.plist",
+				"${SRCROOT}/${TARGET_NAME}/GoogleService-Info-Dev.plist",
+			);
+			name = "Copy GoogleService-Info";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../scripts/copy-google-service-info.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1059,7 +1082,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Dobby/Dobby.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = K7XK7A4TT3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1077,7 +1100,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -1092,7 +1115,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Dobby/Dobby.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = K7XK7A4TT3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1110,7 +1133,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
