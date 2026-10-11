@@ -10,8 +10,10 @@ import SwiftData
 
 @Model
 final class CartPersistedEntity {
-    /// Primary key — matches Android `productId`.
-    @Attribute(.unique) var productId: String
+    /// Product id (not unique alone when variants coexist).
+    var productId: String
+    var variantId: String = ""
+    var variantName: String?
     var name: String
     /// Unit price the customer pays (after discount when applicable) — Android `price`.
     var price: Double
@@ -31,6 +33,8 @@ final class CartPersistedEntity {
 
     init(
         productId: String,
+        variantId: String = "",
+        variantName: String? = nil,
         name: String,
         price: Double,
         quantity: Int,
@@ -46,6 +50,8 @@ final class CartPersistedEntity {
         serviceNumber: String? = nil
     ) {
         self.productId = productId
+        self.variantId = variantId
+        self.variantName = variantName
         self.name = name
         self.price = price
         self.quantity = quantity
@@ -64,6 +70,8 @@ final class CartPersistedEntity {
     convenience init(from line: CartLineItem) {
         self.init(
             productId: line.productId,
+            variantId: line.variantId,
+            variantName: line.variantName,
             name: line.name,
             price: line.unitPrice,
             quantity: line.quantity,
@@ -83,6 +91,8 @@ final class CartPersistedEntity {
     func toCartLineItem() -> CartLineItem {
         CartLineItem(
             productId: productId,
+            variantId: variantId,
+            variantName: variantName,
             name: name,
             imageUrl: imageUrl,
             quantity: quantity,

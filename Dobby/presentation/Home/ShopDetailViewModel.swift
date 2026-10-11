@@ -115,12 +115,15 @@ final class ShopDetailViewModel {
         case .success(let page):
             let isCarWash = page.shopType?.trimmingCharacters(in: .whitespacesAndNewlines)
                 .caseInsensitiveCompare("CAR_WASH") == .orderedSame
+            let chips = ProductCategory.filterChips(forShopType: page.shopType)
+            let selected = uiState.selectedCategoryId
+            let keepSelected = selected == nil || chips.contains { $0.filterId == selected }
             uiState = ShopDetailUiState(
                 shopName: uiState.shopName,
                 shopType: page.shopType,
                 products: page.products,
                 searchQuery: uiState.searchQuery,
-                selectedCategoryId: isCarWash ? nil : uiState.selectedCategoryId,
+                selectedCategoryId: isCarWash ? nil : (keepSelected ? selected : nil),
                 shopStatus: page.shopStatus,
                 openingHour: page.openingHour,
                 closingHour: page.closingHour,

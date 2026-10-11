@@ -14,7 +14,6 @@ private enum ProductDetailPalette {
     static let divider = Color(red: 0.91, green: 0.91, blue: 0.93)
 }
 
-private let heroImagePadding: CGFloat = 24
 private let cardOverlap: CGFloat = 24
 
 struct ProductDetailScreen: View {
@@ -27,16 +26,21 @@ struct ProductDetailScreen: View {
     let userLongitude: Double?
     let onBack: () -> Void
     let onCartClick: () -> Void
-    let onAddToCart: (Int, ProductDetail?) -> AddToCartResult
+    let onAddToCart: (Int, ProductDetail?, ProductVariant?) -> AddToCartResult
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
 
     @State private var quantity = 1
+    @State private var selectedVariantId = ""
     @State private var loadedDetail: ProductDetail?
     @State private var detailFetchFinished = false
     @State private var imagePage = 0
     @State private var showCarWashSingleProductAlert = false
     @State private var showAddressRequiredForCartAlert = false
+    @State private var shopAvailableOverride: Bool?
+    @State private var shopStatusOverride: String?
+    @State private var shopReopensOverride: String?
+    @State private var showClosedTopBanner = false
 
     init(
         product: ProductDetailRoute,
@@ -48,7 +52,7 @@ struct ProductDetailScreen: View {
         userLongitude: Double? = nil,
         onBack: @escaping () -> Void,
         onCartClick: @escaping () -> Void,
-        onAddToCart: @escaping (Int, ProductDetail?) -> AddToCartResult,
+        onAddToCart: @escaping (Int, ProductDetail?, ProductVariant?) -> AddToCartResult,
         onNeedsAddress: @escaping () -> Void = {},
         onCancelNeedsAddress: @escaping () -> Void = {}
     ) {
@@ -72,10 +76,25 @@ struct ProductDetailScreen: View {
                 detail: detail,
                 pickupLatitude: product.pickupLatitude,
                 pickupLongitude: product.pickupLongitude,
-                shopId: product.shopId
+                shopId: product.shopId,
+                isShopAvailableForOrders: effectiveShopAvailable,
+                shopStatus: effectiveShopStatus,
+                shopReopensLabel: effectiveShopReopens
             )
         }
         return product
+    }
+
+    private var effectiveShopAvailable: Bool {
+        shopAvailableOverride ?? product.isShopAvailableForOrders
+    }
+
+    private var effectiveShopStatus: String? {
+        shopStatusOverride ?? product.shopStatus
+    }
+
+    private var effectiveShopReopens: String? {
+        shopReopensOverride ?? product.shopReopensLabel
     }
 
     private var displayRatingCount: Int {
@@ -102,8 +121,26 @@ struct ProductDetailScreen: View {
         displayProduct.hasPromotion && validDiscount > 0
     }
 
+    private var displayVariants: [ProductVariant] {
+        loadedDetail?.variants ?? []
+    }
+
+    private var showVariants: Bool {
+        displayVariants.count > 1 && !CartCarWashSingleProductPolicy.isCarWash(loadedDetail?.shopType)
+    }
+
+    private var selectedVariant: ProductVariant? {
+        guard showVariants else { return nil }
+        return displayVariants.first(where: { $0.id == selectedVariantId })
+            ?? displayVariants.min(by: { $0.price < $1.price })
+    }
+
+    private var listPrice: Double {
+        selectedVariant?.price ?? displayProduct.price
+    }
+
     private var discountedPrice: Double {
-        showPromotion ? displayProduct.price * (1 - Double(validDiscount) / 100) : displayProduct.price
+        showPromotion ? listPrice * (1 - Double(validDiscount) / 100) : listPrice
     }
 
     private var lineTotal: Double {
@@ -128,7 +165,7 @@ struct ProductDetailScreen: View {
     }
 
     private var canAddToCart: Bool {
-        quantity > 0 && product.isShopAvailableForOrders && (loadedDetail != nil || !product.isPromotionPushStub)
+        quantity > 0 && effectiveShopAvailable && (loadedDetail != nil || !product.isPromotionPushStub)
     }
 
     private var isFavorite: Bool {
@@ -155,9 +192,32 @@ struct ProductDetailScreen: View {
 
             bottomActionBar
         }
+        .overlay(alignment: .top) {
+            ShopClosedTopBanner(
+                reopensLabel: effectiveShopReopens,
+                shopStatus: effectiveShopStatus,
+                isPresented: $showClosedTopBanner
+            )
+        }
         .navigationBarHidden(true)
         .task(id: product.id) {
+            shopAvailableOverride = nil
+            shopStatusOverride = nil
+            shopReopensOverride = nil
+            showClosedTopBanner = false
+            selectedVariantId = ""
             await loadProductDetail()
+            await refreshShopClosedMeta()
+            if !effectiveShopAvailable {
+                showClosedTopBanner = true
+            }
+        }
+        .onChange(of: effectiveShopAvailable) { wasAvailable, available in
+            if available {
+                showClosedTopBanner = false
+            } else if wasAvailable {
+                showClosedTopBanner = true
+            }
         }
         .alert("Un solo producto", isPresented: $showCarWashSingleProductAlert) {
             Button("Entendido", role: .cancel) {}
@@ -213,6 +273,7 @@ struct ProductDetailScreen: View {
             }
             .padding(.horizontal, 8)
             .padding(.top, 8)
+            .safeAreaPadding(.top)
 
             overlayIconButton(
                 systemName: isFavorite ? "heart.fill" : "heart",
@@ -225,20 +286,24 @@ struct ProductDetailScreen: View {
         }
         .aspectRatio(1, contentMode: .fit)
         .frame(maxWidth: .infinity)
+        .ignoresSafeArea(edges: .top)
     }
 
     private func heroImagePage(urlString: String?) -> some View {
-        ZStack {
-            Color.white
-            LoadingRemoteImage(
-                urlString: urlString,
-                contentMode: .fit,
-                placeholderBackground: .white
-            ) {
-                heroImageMonogram
+        Color.clear
+            .overlay {
+                ZStack {
+                    Color.white
+                    LoadingRemoteImage(
+                        urlString: urlString,
+                        contentMode: .fill,
+                        placeholderBackground: .white
+                    ) {
+                        heroImageMonogram
+                    }
+                }
+                .clipped()
             }
-            .padding(heroImagePadding)
-        }
     }
 
     private var heroImageMonogram: some View {
@@ -269,8 +334,19 @@ struct ProductDetailScreen: View {
                     .padding(.top, 10)
             }
 
-            priceBlock
+            if showVariants {
+                ProductVariantPicker(
+                    variants: displayVariants,
+                    selectedId: selectedVariantId,
+                    hasPromotion: displayProduct.hasPromotion,
+                    discount: displayProduct.discount,
+                    onSelect: { selectedVariantId = $0.id }
+                )
                 .padding(.top, 14)
+            } else {
+                priceBlock
+                    .padding(.top, 14)
+            }
 
             Divider()
                 .overlay(ProductDetailPalette.divider)
@@ -304,7 +380,7 @@ struct ProductDetailScreen: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
             } else {
-                Text(String(format: "$%.2f", displayProduct.price))
+                Text(String(format: "$%.2f", listPrice))
                     .font(.title3.weight(.bold))
             }
         }
@@ -312,7 +388,7 @@ struct ProductDetailScreen: View {
     }
 
     private var statusRow: some View {
-        let statusColor = product.isShopAvailableForOrders ? DobbyBrandColor.primary : ProductDetailPalette.closedGray
+        let statusColor = effectiveShopAvailable ? DobbyBrandColor.primary : ProductDetailPalette.closedGray
         return HStack(spacing: 0) {
             HStack(spacing: 6) {
                 Image(systemName: "clock")
@@ -330,7 +406,7 @@ struct ProductDetailScreen: View {
             HStack(spacing: 6) {
                 Image(systemName: "takeoutbag.and.cup.and.straw.fill")
                     .font(.system(size: 14))
-                Text(product.isShopAvailableForOrders ? "Disponible" : "No disponible")
+                Text(effectiveShopAvailable ? "Disponible" : "No disponible")
                     .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(statusColor)
@@ -379,7 +455,7 @@ struct ProductDetailScreen: View {
                 .clipShape(Capsule())
 
                 Button {
-                    switch onAddToCart(quantity, loadedDetail) {
+                    switch onAddToCart(quantity, loadedDetail, selectedVariant) {
                     case .success:
                         quantity = 1
                     case .blockedCarWash:
@@ -441,6 +517,9 @@ struct ProductDetailScreen: View {
             switch await placesRepository.getProduct(id: product.id) {
             case .success(let detail):
                 loadedDetail = detail
+                if selectedVariantId.isEmpty {
+                    selectedVariantId = detail.variants.min(by: { $0.price < $1.price })?.id ?? ""
+                }
                 detailFetchFinished = true
                 return
             case .failure:
@@ -453,5 +532,25 @@ struct ProductDetailScreen: View {
             }
         }
         detailFetchFinished = true
+    }
+
+    private func refreshShopClosedMeta() async {
+        let shopId = CartShopSwitchPolicy.normalized(loadedDetail?.shopId)
+            ?? CartShopSwitchPolicy.normalized(product.shopId)
+        guard let shopId, !shopId.isEmpty else { return }
+        switch await placesRepository.getShopProducts(shopId: shopId) {
+        case .success(let page):
+            shopAvailableOverride = page.isShopAvailableForOrders
+            shopStatusOverride = page.shopStatus
+            shopReopensOverride = HomeShopHours.formatShopReopensLabel(
+                shopStatus: page.shopStatus,
+                openingHour: page.openingHour,
+                openingDays: page.openingDays,
+                closingHour: page.closingHour,
+                openingSchedules: page.openingSchedules
+            )
+        case .failure:
+            break
+        }
     }
 }

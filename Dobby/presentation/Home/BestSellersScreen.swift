@@ -13,7 +13,7 @@ struct BestSellersScreen: View {
     let cartItemCount: Int
     let onBack: () -> Void
     let onProductTap: (ShopProduct, Bool) -> Void
-    let onAddToCart: (ShopProduct) -> AddToCartResult
+    let onAddToCart: (ShopProduct, ProductVariant?, Int) -> AddToCartResult
     let onCartClick: () -> Void
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
@@ -28,7 +28,7 @@ struct BestSellersScreen: View {
         initialFeaturedPlaces: [FeaturedPlace] = [],
         onBack: @escaping () -> Void = {},
         onProductTap: @escaping (ShopProduct, Bool) -> Void = { _, _ in },
-        onAddToCart: @escaping (ShopProduct) -> AddToCartResult = { _ in .success },
+        onAddToCart: @escaping (ShopProduct, ProductVariant?, Int) -> AddToCartResult = { _, _, _ in .success },
         onCartClick: @escaping () -> Void = {},
         onNeedsAddress: @escaping () -> Void = {},
         onCancelNeedsAddress: @escaping () -> Void = {}
@@ -79,6 +79,7 @@ struct BestSellersScreen: View {
 
                     ShopDetailCategoryRow(
                         selectedCategoryId: viewModel.uiState.selectedCategoryId,
+                        showAllCategories: true,
                         onCategorySelected: { viewModel.onCategorySelected($0) }
                     )
 
@@ -94,22 +95,21 @@ struct BestSellersScreen: View {
                         ScrollView {
                             LazyVStack(spacing: 20) {
                                 ForEach(viewModel.uiState.filteredProducts) { product in
+                                    let shopAvailable = viewModel.isProductAvailable(product)
+                                    let shopId = product.shopId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                                    let place = viewModel.uiState.featuredPlaces.first {
+                                        $0.id == shopId && !$0.isService
+                                    }
+                                    let isCarWash = CartCarWashSingleProductPolicy.isCarWash(place?.shopType)
                                     ShopDetailProductCard(
                                         product: product,
-                                        isProductAvailable: viewModel.isProductAvailable(product),
+                                        isProductAvailable: shopAvailable,
+                                        isCarWash: isCarWash,
                                         onTap: {
-                                            onProductTap(product, viewModel.isProductAvailable(product))
+                                            onProductTap(product, shopAvailable)
                                         },
                                         onAddTap: {
-                                            guard viewModel.isProductAvailable(product) else { return }
-                                            switch onAddToCart(product) {
-                                            case .blockedCarWash:
-                                                showCarWashSingleProductAlert = true
-                                            case .needsAddress:
-                                                showAddressRequiredForCartAlert = true
-                                            case .success:
-                                                break
-                                            }
+                                            addProductToCart(product)
                                         }
                                     )
                                     .id(product.id)
@@ -151,6 +151,22 @@ struct BestSellersScreen: View {
             }
         } message: {
             Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
+        }
+    }
+
+    private func addProductToCart(
+        _ product: ShopProduct,
+        variant: ProductVariant? = nil,
+        quantity: Int = 1
+    ) {
+        guard viewModel.isProductAvailable(product) else { return }
+        switch onAddToCart(product, variant, quantity) {
+        case .blockedCarWash:
+            showCarWashSingleProductAlert = true
+        case .needsAddress:
+            showAddressRequiredForCartAlert = true
+        case .success:
+            break
         }
     }
 

@@ -231,6 +231,13 @@ struct CartScreen: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
 
+                if let variant = line.variantName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !variant.isEmpty {
+                    Text(variant)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 if line.isServicePayment {
                     if let number = line.serviceNumber?.trimmingCharacters(in: .whitespacesAndNewlines),
                        !number.isEmpty {
@@ -266,7 +273,7 @@ struct CartScreen: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Button {
-                viewModel.removeCartLine(productId: line.productId)
+                viewModel.removeCartLine(productId: line.productId, variantId: line.variantId)
             } label: {
                 Image(systemName: "trash")
                     .font(.body)

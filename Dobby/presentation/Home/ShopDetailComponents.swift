@@ -42,9 +42,14 @@ struct ShopDetailSearchBar: View {
     }
 }
 
-struct ShopClosedBanner: View {
+/// Overlay that drops from the top; swipe/drag up to dismiss. Does not push layout.
+struct ShopClosedTopBanner: View {
     let reopensLabel: String?
     var shopStatus: String? = nil
+    @Binding var isPresented: Bool
+
+    @State private var dragOffset: CGFloat = 0
+    @State private var hasAppeared = false
 
     private var isHighDemand: Bool {
         HomeShopHours.normalizedOpsStatus(shopStatus) == "HIGH_DEMAND"
@@ -52,45 +57,103 @@ struct ShopClosedBanner: View {
 
     private let closedRed = Color(red: 0.94, green: 0.27, blue: 0.27)
     private let bannerBg = Color(red: 1, green: 0.95, blue: 0.96)
+    private let dismissThreshold: CGFloat = -48
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(closedRed)
-                    .frame(width: 40, height: 40)
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.white)
-            }
+        if isPresented {
+            bannerCard
+                .offset(y: (hasAppeared ? 0 : -220) + min(0, dragOffset))
+                .gesture(dismissDrag)
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+                .frame(maxWidth: .infinity, alignment: .top)
+                .onAppear {
+                    dragOffset = 0
+                    hasAppeared = false
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                        hasAppeared = true
+                    }
+                }
+                .onChange(of: isPresented) { _, presented in
+                    if presented {
+                        dragOffset = 0
+                        hasAppeared = false
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                            hasAppeared = true
+                        }
+                    }
+                }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(isHighDemand ? "Alta demanda" : "Tienda cerrada")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(closedRed)
-
-                if !isHighDemand, let reopensLabel {
-                    reopensLabelText(reopensLabel)
+    private var bannerCard: some View {
+        VStack(spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(closedRed)
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.white)
                 }
 
-                Text(
-                    isHighDemand
-                        ? "La tienda no puede recibir pedidos ahora."
-                        : "Los productos estarán disponibles cuando la tienda abra."
-                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(isHighDemand ? "Alta demanda" : "Tienda cerrada")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(closedRed)
+
+                    if !isHighDemand, let reopensLabel {
+                        reopensLabelText(reopensLabel)
+                    }
+
+                    Text(
+                        isHighDemand
+                            ? "La tienda no puede recibir pedidos ahora."
+                            : "Los productos estarán disponibles cuando la tienda abra."
+                    )
                     .font(.caption)
                     .foregroundStyle(ShopDetailPalette.mutedText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            
+            Capsule()
+                .fill(Color.black.opacity(0.18))
+                .frame(width: 36, height: 4)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
         .background(bannerBg)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.14), radius: 14, x: 0, y: 6)
+    }
+
+    private var dismissDrag: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                dragOffset = min(12, value.translation.height)
+            }
+            .onEnded { value in
+                let shouldDismiss =
+                    value.translation.height <= dismissThreshold
+                    || value.predictedEndTranslation.height <= dismissThreshold * 1.4
+                if shouldDismiss {
+                    withAnimation(.easeIn(duration: 0.2)) {
+                        dragOffset = -240
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        isPresented = false
+                        dragOffset = 0
+                        hasAppeared = false
+                    }
+                } else {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        dragOffset = 0
+                    }
+                }
+            }
     }
 
     @ViewBuilder
@@ -144,12 +207,19 @@ private struct ShopClosedStoreIllustration: View {
 
 struct ShopDetailCategoryRow: View {
     let selectedCategoryId: String?
+    var shopType: String? = nil
+    /// When true (e.g. Más vendidos), show every category chip including restaurant- and shop-only ones.
+    var showAllCategories: Bool = false
     let onCategorySelected: (String?) -> Void
+
+    private var chips: [ProductCategory.Chip] {
+        showAllCategories ? ProductCategory.allFilterChips : ProductCategory.filterChips(forShopType: shopType)
+    }
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(ProductCategory.filterChips) { chip in
+                ForEach(chips) { chip in
                     let selected = selectedCategoryId == chip.filterId
                     Button {
                         onCategorySelected(chip.filterId)
@@ -198,8 +268,20 @@ struct ShopDetailProductCard: View {
         product.hasPromotion && validDiscount > 0
     }
 
+    private var showOptions: Bool {
+        product.hasMultiplePresentations && !isCarWash
+    }
+
+    private var listPrice: Double {
+        product.displayListPrice
+    }
+
     private var discountedPrice: Double {
-        showPromotion ? product.price * (1 - Double(validDiscount) / 100) : product.price
+        showPromotion ? listPrice * (1 - Double(validDiscount) / 100) : listPrice
+    }
+
+    private func handleCardTap() {
+        onTap()
     }
 
     var body: some View {
@@ -212,11 +294,11 @@ struct ShopDetailProductCard: View {
         VStack(spacing: 0) {
             productImage(corner: corner)
                 .contentShape(Rectangle())
-                .onTapGesture(perform: onTap)
+                .onTapGesture(perform: handleCardTap)
 
             productInfoSection(scale: scale, discountedPrice: discountedPrice)
                 .contentShape(Rectangle())
-                .onTapGesture(perform: onTap)
+                .onTapGesture(perform: handleCardTap)
 
             productFooter(scale: scale, statusColor: statusColor, footerBg: footerBg)
         }
@@ -252,7 +334,11 @@ struct ShopDetailProductCard: View {
 
             HStack(alignment: .center) {
                 HStack(spacing: 8 * scale) {
-                    Text(String(format: "$%.2f", discountedPrice))
+                    Text(
+                        showOptions
+                            ? String(format: "Desde $%.2f", discountedPrice)
+                            : String(format: "$%.2f", discountedPrice)
+                    )
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.primary)
 
@@ -260,7 +346,7 @@ struct ShopDetailProductCard: View {
                         HStack(spacing: 4) {
                             Text("-\(validDiscount)%")
                                 .font(.caption2.weight(.bold))
-                            Text(String(format: "$%.2f", product.price))
+                            Text(String(format: "$%.2f", listPrice))
                                 .font(.caption2)
                                 .strikethrough()
                         }
@@ -300,7 +386,7 @@ struct ShopDetailProductCard: View {
                 .allowsHitTesting(false)
 
             if isProductAvailable {
-                Button(action: onAddTap) {
+                Button(action: { if showOptions { onTap() } else { onAddTap() } }) {
                     addRowLabel(scale: scale, color: statusColor)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .contentShape(Rectangle())
@@ -318,9 +404,11 @@ struct ShopDetailProductCard: View {
 
     private func addRowLabel(scale: CGFloat, color: Color) -> some View {
         HStack(spacing: 6 * scale) {
-            Image(systemName: "plus")
-                .font(.system(size: 14 * scale, weight: .semibold))
-            Text("Agregar")
+            if !showOptions {
+                Image(systemName: "plus")
+                    .font(.system(size: 14 * scale, weight: .semibold))
+            }
+            Text(showOptions ? "Ver opciones" : "Agregar")
                 .font(.caption.weight(.semibold))
         }
         .foregroundStyle(color)
@@ -328,29 +416,31 @@ struct ShopDetailProductCard: View {
 
     @ViewBuilder
     private func productImage(corner: CGFloat) -> some View {
-        let imagePadding = 8 * shopDetailProductCardScale
-        ZStack {
-            Color.white
-            LoadingRemoteImage(
-                urlString: product.imageUrl,
-                contentMode: .fit,
-                placeholderBackground: .white
-            ) {
-                placeholderMonogram
+        Color.clear
+            .aspectRatio(shopDetailProductImageAspectRatio, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                ZStack {
+                    Color.white
+                    LoadingRemoteImage(
+                        urlString: product.imageUrl,
+                        contentMode: .fill,
+                        placeholderBackground: .white
+                    ) {
+                        placeholderMonogram
+                    }
+                }
+                .clipped()
             }
-            .padding(imagePadding)
-        }
-        .aspectRatio(shopDetailProductImageAspectRatio, contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: corner,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: corner,
-                style: .continuous
+            .clipShape(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: corner,
+                    bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: corner,
+                    style: .continuous
+                )
             )
-        )
     }
 
     private var placeholderMonogram: some View {
@@ -368,5 +458,98 @@ private struct ShopDetailAddButtonStyle: ButtonStyle {
             .background(tint.opacity(configuration.isPressed ? 0.22 : 0))
             .opacity(configuration.isPressed ? 0.78 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+struct ProductVariantPicker: View {
+    let variants: [ProductVariant]
+    let selectedId: String
+    var hasPromotion: Bool = false
+    var discount: Int = 0
+    let onSelect: (ProductVariant) -> Void
+
+    private var validDiscount: Int {
+        max(0, min(100, discount))
+    }
+
+    private var showPromotion: Bool {
+        hasPromotion && validDiscount > 0
+    }
+
+    private func unitPrice(for variant: ProductVariant) -> Double {
+        showPromotion ? variant.price * (1 - Double(validDiscount) / 100) : variant.price
+    }
+
+    var body: some View {
+        if variants.count > 1 {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Elige una presentación")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(DobbyBrandColor.textPrimary)
+                        Text("Selecciona una opción")
+                            .font(.caption)
+                            .foregroundStyle(ShopDetailPalette.mutedText)
+                    }
+                    Spacer(minLength: 12)
+                    Text("Obligatorio")
+                        .font(.caption)
+                        .foregroundStyle(ShopDetailPalette.mutedText)
+                        .padding(.top, 2)
+                }
+                .padding(.bottom, 12)
+                VStack(spacing: 10) {
+                    ForEach(variants) { variant in
+                        let isSelected = selectedId == variant.id
+                        Button {
+                            onSelect(variant)
+                        } label: {
+                            HStack(spacing: 12) {
+                                VariantRadioIndicator(selected: isSelected)
+                                Text(variant.name)
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(DobbyBrandColor.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(String(format: "$%.2f", unitPrice(for: variant)))
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(DobbyBrandColor.textPrimary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(
+                                        isSelected ? DobbyBrandColor.primary : ShopDetailPalette.cardBorder,
+                                        lineWidth: isSelected ? 2 : 1
+                                    )
+                            )
+                            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct VariantRadioIndicator: View {
+    let selected: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    selected ? DobbyBrandColor.primary : ShopDetailPalette.mutedText,
+                    lineWidth: 2
+                )
+            if selected {
+                Circle()
+                    .fill(DobbyBrandColor.primary)
+                    .padding(5)
+            }
+        }
+        .frame(width: 22, height: 22)
     }
 }

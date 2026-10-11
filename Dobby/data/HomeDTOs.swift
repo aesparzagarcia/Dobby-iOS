@@ -41,6 +41,12 @@ struct FeaturedPlaceDTO: Decodable {
     }
 }
 
+struct ProductVariantDTO: Decodable, Sendable {
+    let id: String?
+    let name: String
+    let price: Double
+}
+
 struct ShopProductDTO: Decodable {
     let id: String
     let shopId: String?
@@ -53,9 +59,10 @@ struct ShopProductDTO: Decodable {
     let hasPromotion: Bool
     let discount: Int
     let category: String?
+    let variants: [ProductVariantDTO]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, price, imageUrl, rate, discount, category
+        case id, name, description, price, imageUrl, rate, discount, category, variants
         case shopId = "shop_id"
         case ratingCount = "rating_count"
         case hasPromotion = "has_promotion"
@@ -122,9 +129,10 @@ struct ProductDetailDTO: Decodable {
     let ratingCount: Int?
     let hasPromotion: Bool
     let discount: Int
+    let variants: [ProductVariantDTO]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, price, imageUrls, rate, discount
+        case id, name, description, price, imageUrls, rate, discount, variants
         case shopId = "shop_id"
         case shopType = "shop_type"
         case ratingCount = "rating_count"

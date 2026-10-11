@@ -144,7 +144,8 @@ private func mapShopProduct(_ p: ShopProductDTO, fallbackShopId: String) -> Shop
         discount: p.discount,
         shopId: CartShopSwitchPolicy.normalized(p.shopId)
             ?? CartShopSwitchPolicy.normalized(fallbackShopId),
-        category: p.category
+        category: p.category,
+        variants: mapProductVariants(p.variants)
     )
 }
 
@@ -161,8 +162,18 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         hasPromotion: dto.hasPromotion,
         discount: dto.discount,
         shopId: CartShopSwitchPolicy.normalized(dto.shopId),
-        shopType: CartShopSwitchPolicy.normalized(dto.shopType)
+        shopType: CartShopSwitchPolicy.normalized(dto.shopType),
+        variants: mapProductVariants(dto.variants)
     )
+}
+
+private func mapProductVariants(_ variants: [ProductVariantDTO]?) -> [ProductVariant] {
+    (variants ?? []).compactMap { v in
+        let id = v.id?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = v.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty, !name.isEmpty else { return nil }
+        return ProductVariant(id: id, name: name, price: v.price)
+    }
 }
 
 private func mapServiceDetail(_ dto: ServiceDetailDTO) -> ServiceDetail {

@@ -49,7 +49,12 @@ final class OrderRepositoryImpl: OrderRepository, @unchecked Sendable {
             return .failure(.notAuthenticated)
         }
         let bodyItems = items.map {
-            CreateOrderItemRequestDTO(productId: $0.productId, quantity: $0.quantity, price: $0.unitPrice)
+            CreateOrderItemRequestDTO(
+                productId: $0.productId,
+                quantity: $0.quantity,
+                price: $0.unitPrice,
+                variantId: $0.variantId.isEmpty ? nil : $0.variantId
+            )
         }
         let body = CreateOrderRequestDTO(
             addressId: addressId,

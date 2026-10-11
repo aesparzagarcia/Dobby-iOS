@@ -11,6 +11,7 @@ struct CreateOrderItemRequestDTO: Encodable, Sendable {
     let productId: String
     let quantity: Int
     let price: Double
+    let variantId: String?
 }
 
 struct CreateServicePaymentItemRequestDTO: Encodable, Sendable {

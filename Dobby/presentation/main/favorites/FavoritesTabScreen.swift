@@ -54,11 +54,12 @@ struct FavoritesTabScreen: View {
                             onCartClick: {
                                 pushCartIfNeeded()
                             },
-                            onAddToCart: { quantity, detail in
+                            onAddToCart: { quantity, detail, variant in
                                 let result = homeViewModel.addProductToCart(
                                     r,
                                     quantity: quantity,
                                     detail: detail,
+                                    variant: variant,
                                     isLoggedIn: isLoggedIn
                                 )
                                 if result == .success {

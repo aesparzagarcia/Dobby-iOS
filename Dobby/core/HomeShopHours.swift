@@ -65,26 +65,69 @@ enum HomeShopHours {
         return nowMinutes >= openMinutes && nowMinutes < closeMinutes
     }
 
+    /// Hours for today (e.g. "10:00 AM - 1:00 PM"). If closed today with no window,
+    /// falls back to the next opening day ("Mañana …" / "Lun …").
     static func formatPlaceHoursRange(
         openingHour: String?,
         closingHour: String?,
+        openingDays: [String] = [],
         openingSchedules: [ShopHourWindow] = []
     ) -> String? {
         let windows = resolvedWindows(
             openingHour: openingHour,
             closingHour: closingHour,
-            openingDays: [],
+            openingDays: openingDays,
             openingSchedules: openingSchedules
         )
-        if windows.count > 1 {
-            return windows.map { w in
-                "\(formatDaysLabel(w.days)) \(formatHour12(w.open)) - \(formatHour12(w.close))"
-            }.joined(separator: " · ")
+        if windows.isEmpty { return nil }
+        let cal = Calendar.current
+        let now = Date()
+        let today = weekdayCode(from: now)
+        let todayWindows = windowsForDay(today, in: windows)
+        if !todayWindows.isEmpty {
+            return formatWindowsRange(todayWindows)
         }
-        let open = (windows.first?.open ?? openingHour)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let close = (windows.first?.close ?? closingHour)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if open.isEmpty || close.isEmpty { return nil }
-        return "\(formatHour12(open)) - \(formatHour12(close))"
+        for offset in 1 ... 7 {
+            guard let date = cal.date(byAdding: .day, value: offset, to: now) else { continue }
+            let code = weekdayCode(from: date)
+            let dayWindows = windowsForDay(code, in: windows)
+            guard !dayWindows.isEmpty else { continue }
+            let range = formatWindowsRange(dayWindows)
+            if offset == 1 {
+                return "Mañana \(range)"
+            }
+            return "\(weekdayShortEs(code)) \(range)"
+        }
+        return nil
+    }
+
+    private static func windowsForDay(_ code: String, in windows: [ShopHourWindow]) -> [ShopHourWindow] {
+        windows
+            .filter { normalizedDays($0.days).contains(code) }
+            .sorted { lhs, rhs in
+                let lo = parseHour(lhs.open).map { $0.hour * 60 + $0.minute } ?? 0
+                let ro = parseHour(rhs.open).map { $0.hour * 60 + $0.minute } ?? 0
+                return lo < ro
+            }
+    }
+
+    private static func formatWindowsRange(_ windows: [ShopHourWindow]) -> String {
+        windows
+            .map { "\(formatHour12($0.open)) - \(formatHour12($0.close))" }
+            .joined(separator: " · ")
+    }
+
+    private static func weekdayShortEs(_ code: String) -> String {
+        switch code {
+        case "MON": return "Lun"
+        case "TUE": return "Mar"
+        case "WED": return "Mié"
+        case "THU": return "Jue"
+        case "FRI": return "Vie"
+        case "SAT": return "Sáb"
+        case "SUN": return "Dom"
+        default: return code
+        }
     }
 
     /// AVAILABLE / SLOW can receive orders; HIGH_DEMAND is listed but blocked.
@@ -234,7 +277,13 @@ enum HomeShopHours {
                 openingSchedules: place.openingSchedules
             ) != false
         }
-        return isOrderableOpsStatus(place.shopStatus)
+        return isShopAvailableForOrders(
+            shopStatus: place.shopStatus,
+            openingHour: place.openingHour,
+            closingHour: place.closingHour,
+            openingDays: place.openingDays,
+            openingSchedules: place.openingSchedules
+        )
     }
 
     static func sortFeaturedPlacesByAvailability(places: [FeaturedPlace]) -> [FeaturedPlace] {

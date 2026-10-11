@@ -25,14 +25,16 @@ struct ShopDetailScreen: View {
 
     let cartItemCount: Int
     let onBack: () -> Void
-    let onProductTap: (ShopProduct, Bool) -> Void
-    let onAddToCart: (ShopProduct, String?) -> AddToCartResult
+    /// product, isAvailable, shopStatus, shopReopensLabel
+    let onProductTap: (ShopProduct, Bool, String?, String?) -> Void
+    let onAddToCart: (ShopProduct, String?, ProductVariant?, Int) -> AddToCartResult
     let onCartClick: () -> Void
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
 
     @State private var showCarWashSingleProductAlert = false
     @State private var showAddressRequiredForCartAlert = false
+    @State private var showClosedTopBanner = false
 
     init(
         shopId: String,
@@ -41,8 +43,8 @@ struct ShopDetailScreen: View {
         httpClient: DobbyHTTPClient,
         cartItemCount: Int,
         onBack: @escaping () -> Void = {},
-        onProductTap: @escaping (ShopProduct, Bool) -> Void = { _, _ in },
-        onAddToCart: @escaping (ShopProduct, String?) -> AddToCartResult = { _, _ in .success },
+        onProductTap: @escaping (ShopProduct, Bool, String?, String?) -> Void = { _, _, _, _ in },
+        onAddToCart: @escaping (ShopProduct, String?, ProductVariant?, Int) -> AddToCartResult = { _, _, _, _ in .success },
         onCartClick: @escaping () -> Void = {},
         onNeedsAddress: @escaping () -> Void = {},
         onCancelNeedsAddress: @escaping () -> Void = {},
@@ -103,16 +105,10 @@ struct ShopDetailScreen: View {
                     )
                     .padding(.bottom, viewModel.uiState.isCarWash ? 12 : 0)
 
-                    if viewModel.uiState.showShopClosedBanner {
-                        ShopClosedBanner(
-                            reopensLabel: viewModel.uiState.shopReopensLabel,
-                            shopStatus: viewModel.uiState.shopStatus
-                        )
-                    }
-
                     if !viewModel.uiState.isCarWash {
                         ShopDetailCategoryRow(
                             selectedCategoryId: viewModel.uiState.selectedCategoryId,
+                            shopType: viewModel.uiState.shopType,
                             onCategorySelected: { viewModel.onCategorySelected($0) }
                         )
                     }
@@ -138,17 +134,16 @@ struct ShopDetailScreen: View {
                                         product: product,
                                         isProductAvailable: viewModel.uiState.isShopAvailableForOrders,
                                         isCarWash: viewModel.uiState.isCarWash,
-                                        onTap: { onProductTap(product, viewModel.uiState.isShopAvailableForOrders) },
+                                        onTap: {
+                                            onProductTap(
+                                                product,
+                                                viewModel.uiState.isShopAvailableForOrders,
+                                                viewModel.uiState.shopStatus,
+                                                viewModel.uiState.shopReopensLabel
+                                            )
+                                        },
                                         onAddTap: {
-                                            guard viewModel.uiState.isShopAvailableForOrders else { return }
-                                            switch onAddToCart(product, viewModel.uiState.shopType) {
-                                            case .blockedCarWash:
-                                                showCarWashSingleProductAlert = true
-                                            case .needsAddress:
-                                                showAddressRequiredForCartAlert = true
-                                            case .success:
-                                                break
-                                            }
+                                            addProductToCart(product)
                                         }
                                     )
                                     .id(product.id)
@@ -159,6 +154,25 @@ struct ShopDetailScreen: View {
                         }
                     }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ShopClosedTopBanner(
+                reopensLabel: viewModel.uiState.shopReopensLabel,
+                shopStatus: viewModel.uiState.shopStatus,
+                isPresented: $showClosedTopBanner
+            )
+        }
+        .onChange(of: viewModel.uiState.showShopClosedBanner) { _, show in
+            if show {
+                showClosedTopBanner = true
+            } else {
+                showClosedTopBanner = false
+            }
+        }
+        .onAppear {
+            if viewModel.uiState.showShopClosedBanner {
+                showClosedTopBanner = true
             }
         }
         .navigationTitle(viewModel.uiState.shopName.isEmpty ? "Productos" : viewModel.uiState.shopName)
@@ -190,6 +204,22 @@ struct ShopDetailScreen: View {
             }
         } message: {
             Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
+        }
+    }
+
+    private func addProductToCart(
+        _ product: ShopProduct,
+        variant: ProductVariant? = nil,
+        quantity: Int = 1
+    ) {
+        guard viewModel.uiState.isShopAvailableForOrders else { return }
+        switch onAddToCart(product, viewModel.uiState.shopType, variant, quantity) {
+        case .blockedCarWash:
+            showCarWashSingleProductAlert = true
+        case .needsAddress:
+            showAddressRequiredForCartAlert = true
+        case .success:
+            break
         }
     }
 

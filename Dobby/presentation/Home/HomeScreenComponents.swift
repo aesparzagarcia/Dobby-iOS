@@ -310,6 +310,7 @@ struct HomeFeaturedPlaceCard: View {
         let hoursLabel = HomeShopHours.formatPlaceHoursRange(
             openingHour: place.openingHour,
             closingHour: place.closingHour,
+            openingDays: place.openingDays,
             openingSchedules: place.openingSchedules
         )
 
@@ -335,7 +336,17 @@ struct HomeFeaturedPlaceCard: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 6 * scale, style: .continuous))
                                 .padding(6 * scale)
                         }
+                    } else if isOpen == false {
+                        Text("Cerrado")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6 * scale)
+                            .padding(.vertical, 2 * scale)
+                            .background(HomeScreenPalette.closedGray)
+                            .clipShape(RoundedRectangle(cornerRadius: 6 * scale, style: .continuous))
+                            .padding(6 * scale)
                     } else {
+                        // Ops status (Disponible / Lento / Alta demanda) only while open.
                         let pill = HomeShopHours.shopOpsLabel(place.shopStatus)
                         let color: Color = {
                             switch HomeShopHours.normalizedOpsStatus(place.shopStatus) {

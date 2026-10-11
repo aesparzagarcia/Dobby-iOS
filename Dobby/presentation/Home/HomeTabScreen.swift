@@ -91,7 +91,7 @@ struct HomeTabScreen: View {
                             httpClient: httpClient,
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
-                            onProductTap: { product, isAvailable in
+                            onProductTap: { product, isAvailable, shopStatus, shopReopensLabel in
                                 navigationPath.append(
                                     .product(
                                         ProductDetailRoute(
@@ -99,19 +99,23 @@ struct HomeTabScreen: View {
                                             pickupLatitude: r.pickupLatitude,
                                             pickupLongitude: r.pickupLongitude,
                                             isShopAvailableForOrders: isAvailable,
-                                            shopIdFallback: r.shopId
+                                            shopIdFallback: r.shopId,
+                                            shopStatus: shopStatus,
+                                            shopReopensLabel: shopReopensLabel
                                         )
                                     )
                                 )
                             },
-                            onAddToCart: { product, shopType in
+                            onAddToCart: { product, shopType, variant, quantity in
                                 return viewModel.addShopProductToCart(
                                     product,
                                     pickupLatitude: r.pickupLatitude,
                                     pickupLongitude: r.pickupLongitude,
                                     shopId: r.shopId,
                                     shopType: shopType,
-                                    isLoggedIn: isLoggedIn
+                                    isLoggedIn: isLoggedIn,
+                                    variant: variant,
+                                    quantity: quantity
                                 )
                             },
                             onCartClick: {
@@ -155,12 +159,20 @@ struct HomeTabScreen: View {
                                             pickupLatitude: place?.latitude,
                                             pickupLongitude: place?.longitude,
                                             isShopAvailableForOrders: isAvailable,
-                                            shopIdFallback: product.shopId
+                                            shopIdFallback: product.shopId,
+                                            shopStatus: place?.shopStatus,
+                                            shopReopensLabel: HomeShopHours.formatShopReopensLabel(
+                                                shopStatus: place?.shopStatus,
+                                                openingHour: place?.openingHour,
+                                                openingDays: place?.openingDays ?? [],
+                                                closingHour: place?.closingHour,
+                                                openingSchedules: place?.openingSchedules ?? []
+                                            )
                                         )
                                     )
                                 )
                             },
-                            onAddToCart: { product in
+                            onAddToCart: { product, variant, quantity in
                                 let shopId = CartShopSwitchPolicy.normalized(product.shopId) ?? ""
                                 let place = viewModel.featuredPlaces.first { $0.id == shopId && !$0.isService }
                                 return viewModel.addShopProductToCart(
@@ -169,7 +181,9 @@ struct HomeTabScreen: View {
                                     pickupLongitude: place?.longitude,
                                     shopId: shopId,
                                     shopType: place?.shopType,
-                                    isLoggedIn: isLoggedIn
+                                    isLoggedIn: isLoggedIn,
+                                    variant: variant,
+                                    quantity: quantity
                                 )
                             },
                             onCartClick: {
@@ -237,11 +251,12 @@ struct HomeTabScreen: View {
                             onCartClick: {
                                 pushCartIfNeeded()
                             },
-                            onAddToCart: { quantity, detail in
+                            onAddToCart: { quantity, detail, variant in
                                 let result = viewModel.addProductToCart(
                                     r,
                                     quantity: quantity,
                                     detail: detail,
+                                    variant: variant,
                                     isLoggedIn: isLoggedIn
                                 )
                                 if result == .success {
@@ -403,7 +418,8 @@ struct HomeTabScreen: View {
                 isShopAvailableForOrders: HomeShopHours.isProductShopAvailableForOrders(
                     shopId: resolvedShop,
                     featuredPlaces: viewModel.featuredPlaces
-                )
+                ),
+                featuredPlaces: viewModel.featuredPlaces
             )
             navigationPath.append(.product(route))
         }

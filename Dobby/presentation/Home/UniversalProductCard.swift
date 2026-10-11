@@ -15,9 +15,8 @@ struct UniversalProductCard: View {
     let width: CGFloat
 
     private var corner: CGFloat { 16 * productCardScale }
-    /// Square image area so tall products (bottles, etc.) use more of the card.
+    /// Square image area so the photo fills the top and the card corners clip it.
     private var imageHeight: CGFloat { width }
-    private var imagePadding: CGFloat { 4 * productCardScale }
 
     private var validDiscount: Int {
         max(0, min(100, product.discount))
@@ -37,6 +36,7 @@ struct UniversalProductCard: View {
                 imageBlock
                     .frame(width: width, height: imageHeight)
                     .clipped()
+                    .contentShape(Rectangle())
 
                 if showPromotion {
                     productCardDiscountLabel(
@@ -80,12 +80,13 @@ struct UniversalProductCard: View {
             LoadingRemoteImage(
                 urlString: product.imageUrl,
                 resolveAgainstApiBase: true,
-                contentMode: .fit,
+                contentMode: .fill,
                 placeholderBackground: .white
             ) {
                 placeholderMonogram
             }
-            .padding(imagePadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
         }
     }
 

@@ -55,6 +55,12 @@ struct BestSellerProduct: Identifiable, Hashable {
     let shopId: String?
 }
 
+struct ProductVariant: Identifiable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let price: Double
+}
+
 /// Parity with Android `com.ares.ewe.domain.model.ShopProduct` (`app/shops/{id}/products`).
 struct ShopProduct: Identifiable, Hashable, Sendable {
     let id: String
@@ -68,6 +74,21 @@ struct ShopProduct: Identifiable, Hashable, Sendable {
     let discount: Int
     let shopId: String?
     let category: String?
+    var variants: [ProductVariant] = []
+
+    var hasMultiplePresentations: Bool { variants.count > 1 }
+
+    var displayListPrice: Double {
+        hasMultiplePresentations ? (variants.map(\.price).min() ?? price) : price
+    }
+
+    func unitPrice(for base: Double) -> Double {
+        let validDiscount = max(0, min(100, discount))
+        if hasPromotion && validDiscount > 0 {
+            return base * (1 - Double(validDiscount) / 100)
+        }
+        return base
+    }
 }
 
 struct ShopProductsPage: Sendable {
@@ -134,6 +155,9 @@ struct ProductDetail: Sendable {
     let discount: Int
     let shopId: String?
     let shopType: String?
+    var variants: [ProductVariant] = []
+
+    var hasMultiplePresentations: Bool { variants.count > 1 }
 }
 
 /// Parity with Android `ServiceDetail` (`GET app/services/:id`).
@@ -175,6 +199,22 @@ struct ProductDetailRoute: Hashable, Sendable {
     let shopId: String?
     let ratingCount: Int
     let isShopAvailableForOrders: Bool
+    let shopStatus: String?
+    let shopReopensLabel: String?
+
+    private static func closedMeta(from place: FeaturedPlace?) -> (status: String?, reopens: String?) {
+        guard let place, !place.isService else { return (nil, nil) }
+        return (
+            place.shopStatus,
+            HomeShopHours.formatShopReopensLabel(
+                shopStatus: place.shopStatus,
+                openingHour: place.openingHour,
+                openingDays: place.openingDays,
+                closingHour: place.closingHour,
+                openingSchedules: place.openingSchedules
+            )
+        )
+    }
 
     init(bestSeller: BestSellerProduct, featuredPlaces: [FeaturedPlace] = []) {
         id = bestSeller.id
@@ -193,6 +233,12 @@ struct ProductDetailRoute: Hashable, Sendable {
             shopId: bestSeller.shopId,
             featuredPlaces: featuredPlaces
         )
+        let place = featuredPlaces.first {
+            $0.id == CartShopSwitchPolicy.normalized(bestSeller.shopId) && !$0.isService
+        }
+        let meta = Self.closedMeta(from: place)
+        shopStatus = meta.status
+        shopReopensLabel = meta.reopens
     }
 
     init(
@@ -200,7 +246,9 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude: Double? = nil,
         pickupLongitude: Double? = nil,
         isShopAvailableForOrders: Bool = true,
-        shopIdFallback: String? = nil
+        shopIdFallback: String? = nil,
+        shopStatus: String? = nil,
+        shopReopensLabel: String? = nil
     ) {
         id = shopProduct.id
         name = shopProduct.name
@@ -216,9 +264,19 @@ struct ProductDetailRoute: Hashable, Sendable {
             ?? CartShopSwitchPolicy.normalized(shopIdFallback)
         ratingCount = shopProduct.ratingCount
         self.isShopAvailableForOrders = isShopAvailableForOrders
+        self.shopStatus = shopStatus
+        self.shopReopensLabel = shopReopensLabel
     }
 
-    init(detail: ProductDetail, pickupLatitude: Double? = nil, pickupLongitude: Double? = nil, shopId: String? = nil) {
+    init(
+        detail: ProductDetail,
+        pickupLatitude: Double? = nil,
+        pickupLongitude: Double? = nil,
+        shopId: String? = nil,
+        isShopAvailableForOrders: Bool = true,
+        shopStatus: String? = nil,
+        shopReopensLabel: String? = nil
+    ) {
         id = detail.id
         name = detail.name
         description = detail.description
@@ -232,7 +290,9 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.shopId = CartShopSwitchPolicy.normalized(shopId)
             ?? CartShopSwitchPolicy.normalized(detail.shopId)
         ratingCount = detail.ratingCount
-        isShopAvailableForOrders = true
+        self.isShopAvailableForOrders = isShopAvailableForOrders
+        self.shopStatus = shopStatus
+        self.shopReopensLabel = shopReopensLabel
     }
 
     /// Deep link from promotion push; list fields may come from FCM `data` until `GET app/products/:id` completes.
@@ -241,7 +301,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         shopId: String?,
         productName: String? = nil,
         discountPercent: Int? = nil,
-        isShopAvailableForOrders: Bool = true
+        isShopAvailableForOrders: Bool = true,
+        featuredPlaces: [FeaturedPlace] = []
     ) {
         id = productId
         let trimmedName = productName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -258,6 +319,12 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.shopId = CartShopSwitchPolicy.normalized(shopId)
         ratingCount = 0
         self.isShopAvailableForOrders = isShopAvailableForOrders
+        let place = featuredPlaces.first {
+            $0.id == CartShopSwitchPolicy.normalized(shopId) && !$0.isService
+        }
+        let meta = Self.closedMeta(from: place)
+        shopStatus = meta.status
+        shopReopensLabel = meta.reopens
     }
 
     /// Route from push before API returns full product (price still loads from server).
@@ -279,6 +346,8 @@ struct ProductDetailRoute: Hashable, Sendable {
         shopId = nil
         ratingCount = 0
         isShopAvailableForOrders = true
+        shopStatus = nil
+        shopReopensLabel = nil
     }
 
     /// Single-unit price after promotion discount (matches product detail screen).
@@ -294,6 +363,8 @@ struct ProductDetailRoute: Hashable, Sendable {
 /// One row in the local shopping cart (until a cart API exists).
 struct CartLineItem: Identifiable, Hashable, Sendable {
     let productId: String
+    var variantId: String = ""
+    var variantName: String? = nil
     var name: String
     var imageUrl: String?
     var quantity: Int
@@ -312,7 +383,7 @@ struct CartLineItem: Identifiable, Hashable, Sendable {
     var serviceId: String? = nil
     var serviceNumber: String? = nil
 
-    var id: String { productId }
+    var id: String { "\(productId)|\(variantId)" }
 
     var isServicePayment: Bool {
         lineKind.caseInsensitiveCompare(CartLineKinds.service) == .orderedSame

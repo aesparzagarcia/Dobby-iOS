@@ -28,9 +28,11 @@ final class HomeTabViewModel {
             pickupLatitude: Double?,
             pickupLongitude: Double?,
             shopId: String,
-            shopType: String?
+            shopType: String?,
+            variant: ProductVariant?,
+            quantity: Int
         )
-        case productDetail(route: ProductDetailRoute, quantity: Int, detail: ProductDetail?)
+        case productDetail(route: ProductDetailRoute, quantity: Int, detail: ProductDetail?, variant: ProductVariant?)
         case servicePayment(
             service: ServiceDetail,
             serviceNumber: String,
@@ -158,14 +160,15 @@ final class HomeTabViewModel {
         _ product: ProductDetailRoute,
         quantity: Int,
         detail: ProductDetail? = nil,
+        variant: ProductVariant? = nil,
         isLoggedIn: Bool = true
     ) -> AddToCartResult {
         guard quantity > 0 else { return .success }
         if isLoggedIn && !hasValidDeliveryAddress {
-            pendingCartAdd = .productDetail(route: product, quantity: quantity, detail: detail)
+            pendingCartAdd = .productDetail(route: product, quantity: quantity, detail: detail, variant: variant)
             return .needsAddress
         }
-        return performAddProductToCart(product, quantity: quantity, detail: detail)
+        return performAddProductToCart(product, quantity: quantity, detail: detail, variant: variant)
     }
 
     /// Adds a SERVICE_PAYMENT line (parity with Android `CartRepository.addServiceItem`).
@@ -193,7 +196,9 @@ final class HomeTabViewModel {
         pickupLongitude: Double?,
         shopId: String,
         shopType: String? = nil,
-        isLoggedIn: Bool = true
+        isLoggedIn: Bool = true,
+        variant: ProductVariant? = nil,
+        quantity: Int = 1
     ) -> AddToCartResult {
         if isLoggedIn && !hasValidDeliveryAddress {
             pendingCartAdd = .shopProduct(
@@ -201,7 +206,9 @@ final class HomeTabViewModel {
                 pickupLatitude: pickupLatitude,
                 pickupLongitude: pickupLongitude,
                 shopId: shopId,
-                shopType: shopType
+                shopType: shopType,
+                variant: variant,
+                quantity: quantity
             )
             return .needsAddress
         }
@@ -210,7 +217,9 @@ final class HomeTabViewModel {
             pickupLatitude: pickupLatitude,
             pickupLongitude: pickupLongitude,
             shopId: shopId,
-            shopType: shopType
+            shopType: shopType,
+            variant: variant,
+            quantity: quantity
         )
     }
 
@@ -228,16 +237,18 @@ final class HomeTabViewModel {
         }
         pendingCartAdd = nil
         switch pending {
-        case let .shopProduct(product, pickupLatitude, pickupLongitude, shopId, shopType):
+        case let .shopProduct(product, pickupLatitude, pickupLongitude, shopId, shopType, variant, quantity):
             return performAddShopProductToCart(
                 product,
                 pickupLatitude: pickupLatitude,
                 pickupLongitude: pickupLongitude,
                 shopId: shopId,
-                shopType: shopType
+                shopType: shopType,
+                variant: variant,
+                quantity: quantity
             )
-        case let .productDetail(route, quantity, detail):
-            return performAddProductToCart(route, quantity: quantity, detail: detail)
+        case let .productDetail(route, quantity, detail, variant):
+            return performAddProductToCart(route, quantity: quantity, detail: detail, variant: variant)
         case let .servicePayment(service, serviceNumber, amount):
             return performAddServiceToCart(service: service, serviceNumber: serviceNumber, amount: amount)
         }
@@ -246,7 +257,8 @@ final class HomeTabViewModel {
     private func performAddProductToCart(
         _ product: ProductDetailRoute,
         quantity: Int,
-        detail: ProductDetail? = nil
+        detail: ProductDetail? = nil,
+        variant: ProductVariant? = nil
     ) -> AddToCartResult {
         let route: ProductDetailRoute
         if let detail {
@@ -261,13 +273,14 @@ final class HomeTabViewModel {
         }
         let validDiscount = max(0, min(100, route.discount))
         let showPromotion = route.hasPromotion && validDiscount > 0
-        let unitAfterDiscount = route.unitPriceAfterDiscount
-        let list = route.price
+        let list = variant?.price ?? route.price
+        let unitAfterDiscount = showPromotion ? list * (1 - Double(validDiscount) / 100) : list
         let resolvedShopId = CartShopSwitchPolicy.normalized(route.shopId)
             ?? CartShopSwitchPolicy.normalized(detail?.shopId)
             ?? CartShopSwitchPolicy.normalized(product.shopId)
         let shopType = detail?.shopType
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+        let lineVariantId = variant?.id ?? ""
 
         clearServiceLinesFromCart()
 
@@ -281,7 +294,7 @@ final class HomeTabViewModel {
             return .blockedCarWash
         }
 
-        if let i = cartLines.firstIndex(where: { $0.productId == route.id }) {
+        if let i = cartLines.firstIndex(where: { $0.productId == route.id && $0.variantId == lineVariantId }) {
             cartLines[i].quantity += quantity
             if cartLines[i].pickupLatitude == nil, let p = route.pickupLatitude { cartLines[i].pickupLatitude = p }
             if cartLines[i].pickupLongitude == nil, let p = route.pickupLongitude { cartLines[i].pickupLongitude = p }
@@ -292,6 +305,8 @@ final class HomeTabViewModel {
             cartLines.append(
                 CartLineItem(
                     productId: route.id,
+                    variantId: lineVariantId,
+                    variantName: variant?.name,
                     name: route.name,
                     imageUrl: route.imageUrl,
                     quantity: quantity,
@@ -315,17 +330,20 @@ final class HomeTabViewModel {
         pickupLatitude: Double?,
         pickupLongitude: Double?,
         shopId: String,
-        shopType: String? = nil
+        shopType: String? = nil,
+        variant: ProductVariant? = nil,
+        quantity: Int = 1
     ) -> AddToCartResult {
+        let qty = max(1, quantity)
         let validDiscount = max(0, min(100, product.discount))
         let showPromotion = product.hasPromotion && validDiscount > 0
-        let unitAfterDiscount = showPromotion
-            ? product.price * (1 - Double(validDiscount) / 100)
-            : product.price
+        let listPrice = variant?.price ?? product.price
+        let unitAfterDiscount = product.unitPrice(for: listPrice)
         let resolvedShopId = CartShopSwitchPolicy.normalized(product.shopId)
             ?? CartShopSwitchPolicy.normalized(shopId)
         let resolvedType = shopType
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
+        let lineVariantId = variant?.id ?? ""
 
         clearServiceLinesFromCart()
 
@@ -334,13 +352,13 @@ final class HomeTabViewModel {
             lines: cartLines,
             productId: product.id,
             shopId: resolvedShopId,
-            quantityToAdd: 1
+            quantityToAdd: qty
         ) {
             return .blockedCarWash
         }
 
-        if let i = cartLines.firstIndex(where: { $0.productId == product.id }) {
-            cartLines[i].quantity += 1
+        if let i = cartLines.firstIndex(where: { $0.productId == product.id && $0.variantId == lineVariantId }) {
+            cartLines[i].quantity += qty
             if cartLines[i].pickupLatitude == nil, let lat = pickupLatitude { cartLines[i].pickupLatitude = lat }
             if cartLines[i].pickupLongitude == nil, let lng = pickupLongitude { cartLines[i].pickupLongitude = lng }
             if CartShopSwitchPolicy.normalized(cartLines[i].shopId) == nil, let s = resolvedShopId {
@@ -350,11 +368,13 @@ final class HomeTabViewModel {
             cartLines.append(
                 CartLineItem(
                     productId: product.id,
+                    variantId: lineVariantId,
+                    variantName: variant?.name,
                     name: product.name,
                     imageUrl: product.imageUrl,
-                    quantity: 1,
+                    quantity: qty,
                     unitPrice: unitAfterDiscount,
-                    listUnitPrice: product.price,
+                    listUnitPrice: listPrice,
                     hasPromotion: showPromotion,
                     discount: validDiscount,
                     pickupLatitude: pickupLatitude,
@@ -410,8 +430,8 @@ final class HomeTabViewModel {
         cartLines.removeAll { !$0.isServicePayment }
     }
 
-    func removeCartLine(productId: String) {
-        cartLines.removeAll { $0.productId == productId }
+    func removeCartLine(productId: String, variantId: String = "") {
+        cartLines.removeAll { $0.productId == productId && $0.variantId == variantId }
         cartLocalStore.persist(lines: cartLines)
     }
 
