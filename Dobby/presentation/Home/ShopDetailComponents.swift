@@ -427,7 +427,7 @@ struct ShopDetailProductCard: View {
                         contentMode: .fill,
                         placeholderBackground: .white
                     ) {
-                        placeholderMonogram
+                        ProductImagePlaceholder()
                     }
                 }
                 .clipped()
@@ -443,11 +443,6 @@ struct ShopDetailProductCard: View {
             )
     }
 
-    private var placeholderMonogram: some View {
-        Text(String(product.name.prefix(1)).uppercased())
-            .font(.title2.weight(.medium))
-            .foregroundStyle(.secondary)
-    }
 }
 
 private struct ShopDetailAddButtonStyle: ButtonStyle {

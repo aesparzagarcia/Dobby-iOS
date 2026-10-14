@@ -162,15 +162,17 @@ struct CartScreen: View {
                 amount: pricing.productsSubtotal
             )
             pricingLine(label: "Tarifa de servicio", amount: pricing.serviceFee)
-            pricingLine(label: "Envío", amount: pricing.delivery.finalDeliveryFee)
-            if pricing.delivery.dynamicMultiplier > 1 {
-                Text(
-                    "Incluye tarifa dinámica (×\(String(format: "%.2f", pricing.delivery.dynamicMultiplier)))"
-                )
-                .font(.caption)
-                .foregroundStyle(CartPalette.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
+            if !viewModel.isCarWashCart {
+                pricingLine(label: "Envío", amount: pricing.delivery.finalDeliveryFee)
+                if pricing.delivery.dynamicMultiplier > 1 {
+                    Text(
+                        "Incluye tarifa dinámica (×\(String(format: "%.2f", pricing.delivery.dynamicMultiplier)))"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(CartPalette.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
+                }
             }
             Divider()
                 .padding(.vertical, 8)
@@ -286,9 +288,7 @@ struct CartScreen: View {
 
     private func cartThumb(_ line: CartLineItem) -> some View {
         LoadingRemoteImage(urlString: line.imageUrl) {
-            Text(String(line.name.prefix(1)).uppercased())
-                .font(.title3.weight(.medium))
-                .foregroundStyle(.secondary)
+            ProductImagePlaceholder()
         }
     }
 

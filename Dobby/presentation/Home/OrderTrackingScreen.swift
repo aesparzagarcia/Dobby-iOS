@@ -725,8 +725,7 @@ struct OrderTrackingScreen: View {
                     .background(Color.white)
                     .frame(width: 52, height: 52)
                 LoadingRemoteImage(urlString: item.imageUrl) {
-                    Image(systemName: "shippingbox.fill")
-                        .foregroundStyle(OrderTrackingPalette.muted)
+                    ProductImagePlaceholder()
                 }
                 .frame(width: 52, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -859,8 +858,9 @@ struct OrderTrackingScreen: View {
 
     private func courierAvatar(dm: OrderTrackingCourier) -> some View {
         LoadingRemoteImage(urlString: dm.profilePhotoUrl, resolveAgainstApiBase: true) {
-            Image(systemName: "person.fill")
-                .foregroundStyle(.secondary)
+            Image("ImgDeliveryPlaceholder")
+                .resizable()
+                .scaledToFill()
         }
         .frame(width: 48, height: 48)
         .clipShape(Circle())

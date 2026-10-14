@@ -299,17 +299,11 @@ struct ProductDetailScreen: View {
                         contentMode: .fill,
                         placeholderBackground: .white
                     ) {
-                        heroImageMonogram
+                        ProductImagePlaceholder()
                     }
                 }
                 .clipped()
             }
-    }
-
-    private var heroImageMonogram: some View {
-        Text(String(displayProduct.name.prefix(1)).uppercased())
-            .font(.system(size: 72, weight: .medium))
-            .foregroundStyle(.secondary)
     }
 
     private var infoCard: some View {

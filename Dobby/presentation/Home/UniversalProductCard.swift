@@ -83,18 +83,13 @@ struct UniversalProductCard: View {
                 contentMode: .fill,
                 placeholderBackground: .white
             ) {
-                placeholderMonogram
+                ProductImagePlaceholder()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
         }
     }
 
-    private var placeholderMonogram: some View {
-        Text(String(product.name.prefix(1)).uppercased())
-            .font(.title2.weight(.medium))
-            .foregroundStyle(.secondary)
-    }
 }
 
 @ViewBuilder

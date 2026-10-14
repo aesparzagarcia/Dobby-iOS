@@ -87,7 +87,8 @@ final class HomeTabViewModel {
         roundMoney(cartLines.reduce(0) { $0 + $1.lineTotal })
     }
 
-    private var isCarWashCart: Bool {
+    /// Carrito solo de autolavado (no aplica línea de envío en UI).
+    var isCarWashCart: Bool {
         let shopIds = Set(
             cartLines
                 .filter { !$0.isServicePayment }

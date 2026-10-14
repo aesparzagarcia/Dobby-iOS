@@ -15,6 +15,26 @@ enum HomeQuickCategory: Hashable {
     case offers
 }
 
+struct ShopImagePlaceholder: View {
+    var body: some View {
+        Image("ShopImagePlaceholder")
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+    }
+}
+
+struct ProductImagePlaceholder: View {
+    var body: some View {
+        Image("ProductImagePlaceholder")
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+    }
+}
+
 enum HomeScreenPalette {
     static let primary = DobbyBrandColor.primary
     static let searchBackground = DobbyBrandColor.surfaceMuted
@@ -410,14 +430,8 @@ struct HomeFeaturedPlaceCard: View {
     @ViewBuilder
     private var featuredImage: some View {
         LoadingRemoteImage(urlString: place.imageUrl) {
-            placeholderMonogram
+            ShopImagePlaceholder()
         }
-    }
-
-    private var placeholderMonogram: some View {
-        Text(String(place.name.prefix(1)).uppercased())
-            .font(.title2.weight(.medium))
-            .foregroundStyle(.secondary)
     }
 }
 
@@ -558,9 +572,7 @@ struct HomeServicePlaceRow: View {
     @ViewBuilder
     private var serviceImage: some View {
         LoadingRemoteImage(urlString: place.imageUrl) {
-            Text(String(place.name.prefix(1)).uppercased())
-                .font(.headline)
-                .foregroundStyle(HomeScreenPalette.primary)
+            ShopImagePlaceholder()
         }
     }
 }
