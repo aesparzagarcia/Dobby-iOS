@@ -31,9 +31,12 @@ struct ShopDetailScreen: View {
     let onCartClick: () -> Void
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
+    var onClearCart: () -> Void = {}
 
     @State private var showCarWashSingleProductAlert = false
     @State private var showAddressRequiredForCartAlert = false
+    @State private var showShopSwitchAlert = false
+    @State private var pendingShopSwitchProduct: ShopProduct?
     @State private var showClosedTopBanner = false
 
     init(
@@ -48,6 +51,7 @@ struct ShopDetailScreen: View {
         onCartClick: @escaping () -> Void = {},
         onNeedsAddress: @escaping () -> Void = {},
         onCancelNeedsAddress: @escaping () -> Void = {},
+        onClearCart: @escaping () -> Void = {},
         shopType: String? = nil,
         openingHour: String? = nil,
         closingHour: String? = nil,
@@ -61,6 +65,7 @@ struct ShopDetailScreen: View {
         self.onCartClick = onCartClick
         self.onNeedsAddress = onNeedsAddress
         self.onCancelNeedsAddress = onCancelNeedsAddress
+        self.onClearCart = onClearCart
         _viewModel = State(
             initialValue: ShopDetailViewModel(
                 shopId: shopId,
@@ -205,6 +210,20 @@ struct ShopDetailScreen: View {
         } message: {
             Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
         }
+        .alert("¿Cambiar de tienda?", isPresented: $showShopSwitchAlert) {
+            Button("Cancelar", role: .cancel) {
+                pendingShopSwitchProduct = nil
+            }
+            Button("Continuar", role: .destructive) {
+                onClearCart()
+                if let product = pendingShopSwitchProduct {
+                    pendingShopSwitchProduct = nil
+                    addProductToCart(product)
+                }
+            }
+        } message: {
+            Text("Si agregas este producto perderás los productos de tu carrito actual.")
+        }
     }
 
     private func addProductToCart(
@@ -218,6 +237,9 @@ struct ShopDetailScreen: View {
             showCarWashSingleProductAlert = true
         case .needsAddress:
             showAddressRequiredForCartAlert = true
+        case .needsShopSwitch:
+            pendingShopSwitchProduct = product
+            showShopSwitchAlert = true
         case .success:
             break
         }

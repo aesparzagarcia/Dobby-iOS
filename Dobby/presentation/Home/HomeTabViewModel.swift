@@ -9,6 +9,7 @@ enum AddToCartResult: Equatable {
     case success
     case blockedCarWash
     case needsAddress
+    case needsShopSwitch
 }
 
 @MainActor
@@ -117,7 +118,8 @@ final class HomeTabViewModel {
         if isCarWashCart, !cartLines.isEmpty {
             return OrderPricing(
                 productsSubtotal: subtotal,
-                delivery: DeliveryPricingCalculator.waived(distanceKm: km ?? 0)
+                delivery: DeliveryPricingCalculator.waived(distanceKm: km ?? 0),
+                ivaRate: deliveryPricingSettings.ivaRate
             )
         }
         guard let km else { return nil }
@@ -129,7 +131,11 @@ final class HomeTabViewModel {
             ),
             config: deliveryPricingSettings
         )
-        return OrderPricing(productsSubtotal: subtotal, delivery: delivery)
+        return OrderPricing(
+            productsSubtotal: subtotal,
+            delivery: delivery,
+            ivaRate: deliveryPricingSettings.ivaRate
+        )
     }
 
     var grandTotal: Double {
@@ -283,6 +289,10 @@ final class HomeTabViewModel {
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
         let lineVariantId = variant?.id ?? ""
 
+        if CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: cartLines, targetShopId: resolvedShopId) {
+            return .needsShopSwitch
+        }
+
         clearServiceLinesFromCart()
 
         if CartCarWashSingleProductPolicy.blocksAdd(
@@ -345,6 +355,10 @@ final class HomeTabViewModel {
         let resolvedType = shopType
             ?? featuredPlaces.first(where: { $0.id == resolvedShopId && !$0.isService })?.shopType
         let lineVariantId = variant?.id ?? ""
+
+        if CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: cartLines, targetShopId: resolvedShopId) {
+            return .needsShopSwitch
+        }
 
         clearServiceLinesFromCart()
 
@@ -443,6 +457,10 @@ final class HomeTabViewModel {
 
     func needsShopSwitchConfirmation(for targetShopId: String) -> Bool {
         CartShopSwitchPolicy.needsConfirmation(lines: cartLines, targetShopId: targetShopId)
+    }
+
+    func needsShopSwitchConfirmationIfKnown(for targetShopId: String?) -> Bool {
+        CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: cartLines, targetShopId: targetShopId)
     }
 
     init(

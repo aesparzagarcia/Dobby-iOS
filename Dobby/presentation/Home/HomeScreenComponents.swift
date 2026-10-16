@@ -12,7 +12,7 @@ enum HomeQuickCategory: Hashable {
     case restaurants
     case shops
     case services
-    case offers
+    case carWash
 }
 
 struct ShopImagePlaceholder: View {
@@ -46,6 +46,72 @@ enum HomeScreenPalette {
     static let highDemandRed = Color(red: 0.94, green: 0.27, blue: 0.27)
     static let closedGray = DobbyBrandColor.textSecondary
     static let cardShadow = DobbyPureScale.onyx.opacity(0.08)
+    static let connectionErrorTitle = Color(red: 0.067, green: 0.094, blue: 0.153)
+    static let connectionErrorBody = Color(red: 0.612, green: 0.639, blue: 0.686)
+    static let connectionRetryButton = Color(red: 0.067, green: 0.067, blue: 0.067)
+}
+
+enum HomeConnectionErrorCopy {
+    static let title = "Sin conexión"
+    static let body =
+        "No se pudo conectar al servidor. Verifica tu conexión a internet e intenta de nuevo."
+}
+
+func isHomeConnectionErrorMessage(_ message: String) -> Bool {
+    let m = message.lowercased()
+    return m.contains("sin conexión")
+        || m.contains("conexion")
+        || m.contains("conexión")
+        || m.contains("no se pudo conectar")
+        || m.contains("timed out")
+        || m.contains("no respondió")
+        || m.contains("a internet")
+}
+
+struct HomeConnectionErrorState: View {
+    var title: String = HomeConnectionErrorCopy.title
+    var message: String = HomeConnectionErrorCopy.body
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Image("IcConnectionError")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 280)
+                .padding(.horizontal, 32)
+            Text(title)
+                .font(.system(size: 26, weight: .bold))
+                .foregroundStyle(HomeScreenPalette.connectionErrorTitle)
+                .multilineTextAlignment(.center)
+                .padding(.top, 28)
+                .padding(.horizontal, 32)
+            Text(message)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(HomeScreenPalette.connectionErrorBody)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .padding(.top, 10)
+                .padding(.horizontal, 36)
+            Button(action: onRetry) {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Reintentar")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(HomeScreenPalette.connectionRetryButton, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 28)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
 
 func filterPlacesByCategory(_ places: [FeaturedPlace], category: HomeQuickCategory) -> [FeaturedPlace] {
@@ -55,11 +121,28 @@ func filterPlacesByCategory(_ places: [FeaturedPlace], category: HomeQuickCatego
     case .restaurants:
         return places.filter { !$0.isService && $0.shopType != "SHOP" && $0.shopType != "CAR_WASH" }
     case .shops:
-        return places.filter { !$0.isService && ($0.shopType == "SHOP" || $0.shopType == "CAR_WASH") }
+        return places.filter { !$0.isService && $0.shopType == "SHOP" }
     case .services:
         return places.filter(\.isService)
-    case .offers:
-        return places
+    case .carWash:
+        return places.filter { !$0.isService && $0.shopType == "CAR_WASH" }
+    }
+}
+
+func filterProductsByCategory(
+    _ products: [BestSellerProduct],
+    places: [FeaturedPlace],
+    category: HomeQuickCategory
+) -> [BestSellerProduct] {
+    switch category {
+    case .carWash:
+        let ids = Set(places.filter { $0.shopType == "CAR_WASH" }.map(\.id))
+        return products.filter { product in
+            guard let shopId = product.shopId else { return false }
+            return ids.contains(shopId)
+        }
+    default:
+        return products
     }
 }
 
@@ -177,27 +260,24 @@ struct HomeAddressSearchHeader: View {
 struct HomeCategoryRow: View {
     let selected: HomeQuickCategory
     let onCategorySelected: (HomeQuickCategory) -> Void
-    var includeOffers: Bool = true
     var scale: CGFloat = HomeLayoutConstants.categoryRowScale
     var spreadToEdges: Bool = false
 
     private struct Item {
         let category: HomeQuickCategory
         let label: String
-        let systemImage: String
+        var systemImage: String? = nil
+        var assetImage: String? = nil
     }
 
     private var items: [Item] {
-        var list: [Item] = [
+        [
             Item(category: .restaurants, label: "Restaurantes", systemImage: "fork.knife"),
             Item(category: .shops, label: "Tiendas", systemImage: "bag.fill"),
             Item(category: .services, label: "Servicios", systemImage: "wrench.and.screwdriver.fill"),
+            Item(category: .carWash, label: "Autolavado", assetImage: "IcHomeCarWash"),
+            Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill"),
         ]
-        if includeOffers {
-            list.append(Item(category: .offers, label: "Ofertas", systemImage: "tag.fill"))
-        }
-        list.append(Item(category: .all, label: "Ver todos", systemImage: "square.grid.2x2.fill"))
-        return list
     }
 
     var body: some View {
@@ -252,9 +332,20 @@ struct HomeCategoryRow: View {
                                     .stroke(DobbyPureScale.onyx, lineWidth: 2 * s)
                             }
                         }
-                    Image(systemName: item.systemImage)
-                        .font(.system(size: 26 * s))
-                        .foregroundStyle(iconColor)
+                    Group {
+                        if let assetImage = item.assetImage {
+                            Image(assetImage)
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 38 * s, height: 38 * s)
+                                .foregroundStyle(iconColor)
+                        } else if let systemImage = item.systemImage {
+                            Image(systemName: systemImage)
+                                .font(.system(size: 26 * s))
+                                .foregroundStyle(iconColor)
+                        }
+                    }
                 }
                 Text(item.label)
                     .font(.caption2)

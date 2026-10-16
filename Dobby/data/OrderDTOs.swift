@@ -115,6 +115,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
     let shopType: String?
     let total: Double
     let serviceFee: Double
+    let serviceFeeNet: Double
+    let serviceFeeIva: Double
+    let ivaRate: Double
     let deliveryFee: Double
     let productsSubtotal: Double
     let deliveryAddress: String?
@@ -141,6 +144,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
         case orderType = "order_type"
         case shopType = "shop_type"
         case serviceFee = "service_fee"
+        case serviceFeeNet = "service_fee_net"
+        case serviceFeeIva = "service_fee_iva"
+        case ivaRate = "iva_rate"
         case deliveryFee = "delivery_fee"
         case productsSubtotal = "products_subtotal"
         case deliveryAddress = "delivery_address"
@@ -168,6 +174,9 @@ struct OrderTrackingDTO: Decodable, Sendable {
         shopType = try c.decodeIfPresent(String.self, forKey: .shopType)
         total = try c.decodeIfPresent(Double.self, forKey: .total) ?? 0
         serviceFee = try c.decodeIfPresent(Double.self, forKey: .serviceFee) ?? 0
+        serviceFeeNet = try c.decodeIfPresent(Double.self, forKey: .serviceFeeNet) ?? 0
+        serviceFeeIva = try c.decodeIfPresent(Double.self, forKey: .serviceFeeIva) ?? 0
+        ivaRate = try c.decodeIfPresent(Double.self, forKey: .ivaRate) ?? defaultIvaRate
         deliveryFee = try c.decodeIfPresent(Double.self, forKey: .deliveryFee) ?? 0
         productsSubtotal = try c.decodeIfPresent(Double.self, forKey: .productsSubtotal) ?? 0
         deliveryAddress = try c.decodeIfPresent(String.self, forKey: .deliveryAddress)

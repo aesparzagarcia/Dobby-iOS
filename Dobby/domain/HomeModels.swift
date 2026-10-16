@@ -155,6 +155,10 @@ struct ProductDetail: Sendable {
     let discount: Int
     let shopId: String?
     let shopType: String?
+    let shopName: String?
+    let shopLogoUrl: String?
+    let shopRate: Float
+    let shopRatingCount: Int
     var variants: [ProductVariant] = []
 
     var hasMultiplePresentations: Bool { variants.count > 1 }
@@ -197,6 +201,11 @@ struct ProductDetailRoute: Hashable, Sendable {
     let pickupLatitude: Double?
     let pickupLongitude: Double?
     let shopId: String?
+    let shopName: String?
+    let shopLogoUrl: String?
+    let shopType: String?
+    let shopRate: Float
+    let shopRatingCount: Int
     let ratingCount: Int
     let isShopAvailableForOrders: Bool
     let shopStatus: String?
@@ -228,14 +237,19 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         shopId = CartShopSwitchPolicy.normalized(bestSeller.shopId)
+        let place = featuredPlaces.first {
+            $0.id == CartShopSwitchPolicy.normalized(bestSeller.shopId) && !$0.isService
+        }
+        shopName = place?.name
+        shopLogoUrl = place?.imageUrl
+        shopType = place?.shopType
+        shopRate = place?.rate ?? 0
+        shopRatingCount = 0
         ratingCount = 0
         isShopAvailableForOrders = HomeShopHours.isProductShopAvailableForOrders(
             shopId: bestSeller.shopId,
             featuredPlaces: featuredPlaces
         )
-        let place = featuredPlaces.first {
-            $0.id == CartShopSwitchPolicy.normalized(bestSeller.shopId) && !$0.isService
-        }
         let meta = Self.closedMeta(from: place)
         shopStatus = meta.status
         shopReopensLabel = meta.reopens
@@ -248,7 +262,12 @@ struct ProductDetailRoute: Hashable, Sendable {
         isShopAvailableForOrders: Bool = true,
         shopIdFallback: String? = nil,
         shopStatus: String? = nil,
-        shopReopensLabel: String? = nil
+        shopReopensLabel: String? = nil,
+        shopName: String? = nil,
+        shopLogoUrl: String? = nil,
+        shopType: String? = nil,
+        shopRate: Float = 0,
+        shopRatingCount: Int = 0
     ) {
         id = shopProduct.id
         name = shopProduct.name
@@ -262,6 +281,11 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.pickupLongitude = pickupLongitude
         shopId = CartShopSwitchPolicy.normalized(shopProduct.shopId)
             ?? CartShopSwitchPolicy.normalized(shopIdFallback)
+        self.shopName = shopName
+        self.shopLogoUrl = shopLogoUrl
+        self.shopType = CartShopSwitchPolicy.normalized(shopType)
+        self.shopRate = shopRate
+        self.shopRatingCount = shopRatingCount
         ratingCount = shopProduct.ratingCount
         self.isShopAvailableForOrders = isShopAvailableForOrders
         self.shopStatus = shopStatus
@@ -289,6 +313,11 @@ struct ProductDetailRoute: Hashable, Sendable {
         self.pickupLongitude = pickupLongitude
         self.shopId = CartShopSwitchPolicy.normalized(shopId)
             ?? CartShopSwitchPolicy.normalized(detail.shopId)
+        shopName = detail.shopName
+        shopLogoUrl = detail.shopLogoUrl
+        shopType = CartShopSwitchPolicy.normalized(detail.shopType)
+        shopRate = detail.shopRate
+        shopRatingCount = detail.shopRatingCount
         ratingCount = detail.ratingCount
         self.isShopAvailableForOrders = isShopAvailableForOrders
         self.shopStatus = shopStatus
@@ -317,11 +346,16 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         self.shopId = CartShopSwitchPolicy.normalized(shopId)
-        ratingCount = 0
-        self.isShopAvailableForOrders = isShopAvailableForOrders
         let place = featuredPlaces.first {
             $0.id == CartShopSwitchPolicy.normalized(shopId) && !$0.isService
         }
+        shopName = place?.name
+        shopLogoUrl = place?.imageUrl
+        shopType = place?.shopType
+        shopRate = place?.rate ?? 0
+        shopRatingCount = 0
+        ratingCount = 0
+        self.isShopAvailableForOrders = isShopAvailableForOrders
         let meta = Self.closedMeta(from: place)
         shopStatus = meta.status
         shopReopensLabel = meta.reopens
@@ -344,6 +378,11 @@ struct ProductDetailRoute: Hashable, Sendable {
         pickupLatitude = nil
         pickupLongitude = nil
         shopId = nil
+        shopName = nil
+        shopLogoUrl = nil
+        shopType = nil
+        shopRate = 0
+        shopRatingCount = 0
         ratingCount = 0
         isShopAvailableForOrders = true
         shopStatus = nil

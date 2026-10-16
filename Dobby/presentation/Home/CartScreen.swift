@@ -25,10 +25,7 @@ struct CartScreen: View {
     var body: some View {
         Group {
             if viewModel.cartLines.isEmpty {
-                Text("Tu carrito está vacío.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyCartContent
             } else {
                 VStack(spacing: 0) {
                     cartProductsList
@@ -38,10 +35,12 @@ struct CartScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(CartPalette.screenBackground)
+        .background(viewModel.cartLines.isEmpty ? Color.white : CartPalette.screenBackground)
         .navigationTitle("Carrito")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .toolbarBackground(viewModel.cartLines.isEmpty ? Color.white : CartPalette.screenBackground, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 NavigationBackButton(action: onBack)
@@ -61,6 +60,55 @@ struct CartScreen: View {
         .task {
             await viewModel.refreshDeliveryPricing()
         }
+    }
+
+    private var emptyCartContent: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            ZStack {
+                Ellipse()
+                    .fill(Color(red: 253 / 255, green: 236 / 255, blue: 236 / 255))
+                    .frame(width: 268, height: 196)
+                    .offset(x: 10, y: 14)
+                Image("EmptyCart")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 214)
+            }
+            .padding(.bottom, 4)
+
+            Text("Tu carrito está vacío")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(DobbyBrandColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 22)
+                .padding(.horizontal, 32)
+
+            Text("Aún no has agregado productos.\nExplora nuestros restaurantes y encuentra\ntus platillos favoritos.")
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(DobbyBrandColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .padding(.top, 10)
+                .padding(.horizontal, 36)
+
+            Button(action: onBack) {
+                HStack(spacing: 8) {
+                    Image(systemName: "safari")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Explorar restaurantes")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .foregroundStyle(DobbyBrandColor.onPrimary)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 15)
+                .background(DobbyBrandColor.primary, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 28)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var cartProductsList: some View {
@@ -161,7 +209,11 @@ struct CartScreen: View {
                 label: isServicePaymentCart ? "Subtotal servicios" : "Subtotal productos",
                 amount: pricing.productsSubtotal
             )
-            pricingLine(label: "Tarifa de servicio", amount: pricing.serviceFee)
+            if pricing.serviceFee > 0 {
+                let ivaPct = Int((pricing.ivaRate * 100).rounded())
+                pricingLine(label: "Tarifa de uso de la app", amount: pricing.serviceFeeNet)
+                pricingLine(label: "IVA (\(ivaPct)%)", amount: pricing.serviceFeeIva)
+            }
             if !viewModel.isCarWashCart {
                 pricingLine(label: "Envío", amount: pricing.delivery.finalDeliveryFee)
                 if pricing.delivery.dynamicMultiplier > 1 {

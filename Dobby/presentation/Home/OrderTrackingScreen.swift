@@ -596,6 +596,9 @@ struct OrderTrackingScreen: View {
                 orderTrackingPricingSection(
                     productsSubtotal: productsSubtotal,
                     serviceFee: tracking.serviceFee,
+                    serviceFeeNet: tracking.serviceFeeNet,
+                    serviceFeeIva: tracking.serviceFeeIva,
+                    ivaRate: tracking.ivaRate,
                     deliveryFee: tracking.deliveryFee,
                     total: tracking.total
                 )
@@ -741,9 +744,46 @@ struct OrderTrackingScreen: View {
         }
     }
 
+    @ViewBuilder
+    private func serviceFeeIvaBreakdownRows(
+        serviceFee: Double,
+        serviceFeeNet: Double,
+        serviceFeeIva: Double,
+        ivaRate: Double
+    ) -> some View {
+        let feeSplit: ServiceFeeIvaSplit = {
+            if serviceFeeNet > 0 || serviceFeeIva > 0 {
+                return ServiceFeeIvaSplit(net: serviceFeeNet, iva: serviceFeeIva)
+            }
+            return splitServiceFeeIva(serviceFee, ivaRate: ivaRate)
+        }()
+        let ivaPct = Int((normalizeIvaRate(ivaRate) * 100).rounded())
+        HStack {
+            Text("Tarifa de uso de la app")
+                .font(.subheadline)
+                .foregroundStyle(OrderTrackingPalette.muted)
+            Spacer()
+            Text(String(format: "$%.2f", feeSplit.net))
+                .font(.subheadline)
+                .foregroundStyle(OrderTrackingPalette.muted)
+        }
+        HStack {
+            Text("IVA (\(ivaPct)%)")
+                .font(.subheadline)
+                .foregroundStyle(OrderTrackingPalette.muted)
+            Spacer()
+            Text(String(format: "$%.2f", feeSplit.iva))
+                .font(.subheadline)
+                .foregroundStyle(OrderTrackingPalette.muted)
+        }
+    }
+
     private func orderTrackingPricingSection(
         productsSubtotal: Double,
         serviceFee: Double,
+        serviceFeeNet: Double,
+        serviceFeeIva: Double,
+        ivaRate: Double,
         deliveryFee: Double,
         total: Double
     ) -> some View {
@@ -758,15 +798,12 @@ struct OrderTrackingScreen: View {
                     .foregroundStyle(OrderTrackingPalette.muted)
             }
             if serviceFee > 0 {
-                HStack {
-                    Text("Tarifa de servicio")
-                        .font(.subheadline)
-                        .foregroundStyle(OrderTrackingPalette.muted)
-                    Spacer()
-                    Text(String(format: "$%.2f", serviceFee))
-                        .font(.subheadline)
-                        .foregroundStyle(OrderTrackingPalette.muted)
-                }
+                serviceFeeIvaBreakdownRows(
+                    serviceFee: serviceFee,
+                    serviceFeeNet: serviceFeeNet,
+                    serviceFeeIva: serviceFeeIva,
+                    ivaRate: ivaRate
+                )
             }
             if deliveryFee > 0 {
                 HStack {

@@ -416,6 +416,18 @@ enum HomeShopHours {
 }
 
 enum PlaceLabels {
+    static func shopTypeLabelEs(_ type: String?) -> String {
+        switch type?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() {
+        case "RESTAURANT": return "Restaurante"
+        case "SHOP": return "Tienda"
+        case "SERVICE_PROVIDER": return "Servicio"
+        case "CAR_WASH": return "Autolavado"
+        default:
+            let trimmed = type?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? "Tienda" : trimmed
+        }
+    }
+
     static func serviceCategoryLabelEs(_ category: String?) -> String? {
         let c = category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if c.isEmpty { return nil }

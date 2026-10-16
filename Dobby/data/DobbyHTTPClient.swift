@@ -523,7 +523,7 @@ extension DobbyHTTPClient {
     func userFacingMessage(from error: HTTPClientError) -> String {
         switch error {
         case .invalidURL:
-            return "No se pudo conectar al servidor."
+            return "Sin conexión: No se pudo conectar al servidor. Verifica tu conexión a internet e intenta de nuevo."
         case let .statusCode(code, data):
             if let data, let message = Self.serverErrorMessage(from: data), !message.isEmpty {
                 return message
@@ -535,13 +535,13 @@ extension DobbyHTTPClient {
             if let urlError = e as? URLError {
                 switch urlError.code {
                 case .notConnectedToInternet, .networkConnectionLost:
-                    return "Sin conexión a internet."
+                    return "Sin conexión: No se pudo conectar al servidor. Verifica tu conexión a internet e intenta de nuevo."
                 case .timedOut:
-                    return "El servidor no respondió. Intenta de nuevo."
+                    return "Sin conexión: El servidor no respondió. Intenta de nuevo."
                 case .cannotConnectToHost, .cannotFindHost:
-                    return "No se pudo conectar al servidor. Intenta de nuevo."
+                    return "Sin conexión: No se pudo conectar al servidor. Verifica tu conexión a internet e intenta de nuevo."
                 case .unsupportedURL:
-                    return "No se pudo conectar al servidor."
+                    return "Sin conexión: No se pudo conectar al servidor."
                 default:
                     break
                 }

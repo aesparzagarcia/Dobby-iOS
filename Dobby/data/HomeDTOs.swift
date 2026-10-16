@@ -121,6 +121,10 @@ struct ProductDetailDTO: Decodable {
     let id: String
     let shopId: String?
     let shopType: String?
+    let shopName: String?
+    let shopLogoUrl: String?
+    let shopRate: Float?
+    let shopRatingCount: Int?
     let name: String
     let description: String?
     let price: Double
@@ -135,6 +139,10 @@ struct ProductDetailDTO: Decodable {
         case id, name, description, price, imageUrls, rate, discount, variants
         case shopId = "shop_id"
         case shopType = "shop_type"
+        case shopName = "shop_name"
+        case shopLogoUrl = "shop_logo_url"
+        case shopRate = "shop_rate"
+        case shopRatingCount = "shop_rating_count"
         case ratingCount = "rating_count"
         case hasPromotion = "has_promotion"
     }

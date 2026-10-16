@@ -17,6 +17,7 @@ struct DeliveryPricingConfigDTO: Decodable, Sendable {
     let zoneBFee: Double
     let zoneCFee: Double
     let zoneDFee: Double
+    let ivaRate: Double?
 
     func toSettings() -> DeliveryPricingSettings {
         DeliveryPricingSettings(
@@ -30,7 +31,8 @@ struct DeliveryPricingConfigDTO: Decodable, Sendable {
             zoneCMaxKm: zoneCMaxKm,
             zoneBFee: zoneBFee,
             zoneCFee: zoneCFee,
-            zoneDFee: zoneDFee
+            zoneDFee: zoneDFee,
+            ivaRate: normalizeIvaRate(ivaRate ?? defaultIvaRate)
         )
     }
 }

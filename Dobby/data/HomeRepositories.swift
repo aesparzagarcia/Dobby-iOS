@@ -85,10 +85,8 @@ private func mapFeaturedPlace(_ p: FeaturedPlaceDTO) -> FeaturedPlace {
     switch p.kind {
     case "shop":
         switch p.type {
-        case "RESTAURANT": typeLabel = "Restaurante"
-        case "SHOP": typeLabel = "Tienda"
-        case "SERVICE_PROVIDER": typeLabel = "Servicio"
-        case "CAR_WASH": typeLabel = "Autolavado"
+        case "RESTAURANT", "SHOP", "SERVICE_PROVIDER", "CAR_WASH":
+            typeLabel = PlaceLabels.shopTypeLabelEs(p.type)
         default: typeLabel = p.type ?? "Tienda"
         }
     case "service": typeLabel = "Servicio"
@@ -163,6 +161,13 @@ private func mapProductDetail(_ dto: ProductDetailDTO) -> ProductDetail {
         discount: dto.discount,
         shopId: CartShopSwitchPolicy.normalized(dto.shopId),
         shopType: CartShopSwitchPolicy.normalized(dto.shopType),
+        shopName: {
+            let name = dto.shopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return name.isEmpty ? nil : name
+        }(),
+        shopLogoUrl: AppConfiguration.fullImageURL(dto.shopLogoUrl),
+        shopRate: dto.shopRate ?? 0,
+        shopRatingCount: dto.shopRatingCount ?? 0,
         variants: mapProductVariants(dto.variants)
     )
 }

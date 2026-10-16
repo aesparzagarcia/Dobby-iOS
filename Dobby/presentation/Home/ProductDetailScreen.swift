@@ -29,6 +29,8 @@ struct ProductDetailScreen: View {
     let onAddToCart: (Int, ProductDetail?, ProductVariant?) -> AddToCartResult
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
+    var onClearCart: () -> Void = {}
+    var onShopTap: ((String, String, String?) -> Void)? = nil
 
     @State private var quantity = 1
     @State private var selectedVariantId = ""
@@ -37,9 +39,15 @@ struct ProductDetailScreen: View {
     @State private var imagePage = 0
     @State private var showCarWashSingleProductAlert = false
     @State private var showAddressRequiredForCartAlert = false
+    @State private var showShopSwitchAlert = false
     @State private var shopAvailableOverride: Bool?
     @State private var shopStatusOverride: String?
     @State private var shopReopensOverride: String?
+    @State private var shopNameOverride: String?
+    @State private var shopLogoOverride: String?
+    @State private var shopTypeOverride: String?
+    @State private var shopRateOverride: Float?
+    @State private var shopRatingCountOverride: Int?
     @State private var showClosedTopBanner = false
 
     init(
@@ -54,7 +62,9 @@ struct ProductDetailScreen: View {
         onCartClick: @escaping () -> Void,
         onAddToCart: @escaping (Int, ProductDetail?, ProductVariant?) -> AddToCartResult,
         onNeedsAddress: @escaping () -> Void = {},
-        onCancelNeedsAddress: @escaping () -> Void = {}
+        onCancelNeedsAddress: @escaping () -> Void = {},
+        onClearCart: @escaping () -> Void = {},
+        onShopTap: ((String, String, String?) -> Void)? = nil
     ) {
         self.product = product
         self.placesRepository = placesRepository
@@ -68,6 +78,8 @@ struct ProductDetailScreen: View {
         self.onAddToCart = onAddToCart
         self.onNeedsAddress = onNeedsAddress
         self.onCancelNeedsAddress = onCancelNeedsAddress
+        self.onClearCart = onClearCart
+        self.onShopTap = onShopTap
     }
 
     private var displayProduct: ProductDetailRoute {
@@ -95,10 +107,6 @@ struct ProductDetailScreen: View {
 
     private var effectiveShopReopens: String? {
         shopReopensOverride ?? product.shopReopensLabel
-    }
-
-    private var displayRatingCount: Int {
-        loadedDetail?.ratingCount ?? product.ratingCount
     }
 
     private var showInitialLoading: Bool {
@@ -172,6 +180,43 @@ struct ProductDetailScreen: View {
         favoritesStore.isFavorite(productId: product.id)
     }
 
+    private var effectiveShopId: String? {
+        CartShopSwitchPolicy.normalized(loadedDetail?.shopId)
+            ?? CartShopSwitchPolicy.normalized(product.shopId)
+    }
+
+    private var displayShopName: String? {
+        let raw = shopNameOverride ?? loadedDetail?.shopName ?? product.shopName
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var displayShopLogoUrl: String? {
+        shopLogoOverride ?? loadedDetail?.shopLogoUrl ?? product.shopLogoUrl
+    }
+
+    private var displayShopType: String? {
+        CartShopSwitchPolicy.normalized(shopTypeOverride)
+            ?? CartShopSwitchPolicy.normalized(loadedDetail?.shopType)
+            ?? CartShopSwitchPolicy.normalized(product.shopType)
+    }
+
+    private var displayShopRate: Float {
+        shopRateOverride ?? loadedDetail?.shopRate ?? product.shopRate
+    }
+
+    private var displayShopRatingCount: Int {
+        shopRatingCountOverride ?? loadedDetail?.shopRatingCount ?? product.shopRatingCount
+    }
+
+    private var shopTypeSubtitle: String {
+        PlaceLabels.shopTypeLabelEs(displayShopType)
+    }
+
+    private var canOpenShop: Bool {
+        onShopTap != nil && effectiveShopId != nil && displayShopName != nil
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.white.ignoresSafeArea()
@@ -204,6 +249,11 @@ struct ProductDetailScreen: View {
             shopAvailableOverride = nil
             shopStatusOverride = nil
             shopReopensOverride = nil
+            shopNameOverride = nil
+            shopLogoOverride = nil
+            shopTypeOverride = nil
+            shopRateOverride = nil
+            shopRatingCountOverride = nil
             showClosedTopBanner = false
             selectedVariantId = ""
             await loadProductDetail()
@@ -233,6 +283,24 @@ struct ProductDetailScreen: View {
             }
         } message: {
             Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
+        }
+        .alert("¿Cambiar de tienda?", isPresented: $showShopSwitchAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Continuar", role: .destructive) {
+                onClearCart()
+                switch onAddToCart(quantity, loadedDetail, selectedVariant) {
+                case .success:
+                    quantity = 1
+                case .blockedCarWash:
+                    showCarWashSingleProductAlert = true
+                case .needsAddress:
+                    showAddressRequiredForCartAlert = true
+                case .needsShopSwitch:
+                    break
+                }
+            }
+        } message: {
+            Text("Si agregas este producto perderás los productos de tu carrito actual.")
         }
     }
 
@@ -290,36 +358,33 @@ struct ProductDetailScreen: View {
     }
 
     private func heroImagePage(urlString: String?) -> some View {
-        Color.clear
+        Color.white
             .overlay {
-                ZStack {
-                    Color.white
-                    LoadingRemoteImage(
-                        urlString: urlString,
-                        contentMode: .fill,
-                        placeholderBackground: .white
-                    ) {
-                        ProductImagePlaceholder()
-                    }
+                LoadingRemoteImage(
+                    urlString: urlString,
+                    contentMode: .fit,
+                    placeholderBackground: .white
+                ) {
+                    ProductImagePlaceholder()
                 }
-                .clipped()
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, cardOverlap + 12)
+                .safeAreaPadding(.top)
             }
     }
 
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                Text(displayProduct.name)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                HomeRatingDisplay(rate: displayProduct.rate, ratingCount: displayRatingCount)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(ProductDetailPalette.ratingPillBg)
-                    .clipShape(Capsule())
+            if displayShopName != nil || displayShopLogoUrl != nil {
+                shopHeaderRow
+                    .padding(.bottom, 16)
             }
+
+            Text(displayProduct.name)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if let desc = displayDescription {
                 Text(desc)
@@ -352,6 +417,70 @@ struct ProductDetailScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private var shopHeaderRow: some View {
+        let content = HStack(alignment: .center, spacing: 12) {
+            shopLogoView
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(displayShopName ?? "Tienda")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if canOpenShop {
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(ProductDetailPalette.mutedText)
+                    }
+                }
+                Text(shopTypeSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(ProductDetailPalette.mutedText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HomeRatingDisplay(rate: displayShopRate, ratingCount: displayShopRatingCount)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+
+        return Group {
+            if canOpenShop, let shopId = effectiveShopId, let name = displayShopName {
+                Button {
+                    onShopTap?(shopId, name, displayShopType)
+                } label: {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(canOpenShop ? .isButton : [])
+        .accessibilityLabel(displayShopName ?? "Tienda")
+    }
+
+    private var shopLogoView: some View {
+        LoadingRemoteImage(
+            urlString: displayShopLogoUrl,
+            contentMode: .fill,
+            placeholderBackground: ProductDetailPalette.ratingPillBg
+        ) {
+            Image(systemName: "storefront.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(ProductDetailPalette.mutedText)
+        }
+        .frame(width: 44, height: 44)
+        .clipped()
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .stroke(ProductDetailPalette.divider, lineWidth: 1)
+        }
     }
 
     private var priceBlock: some View {
@@ -456,6 +585,8 @@ struct ProductDetailScreen: View {
                         showCarWashSingleProductAlert = true
                     case .needsAddress:
                         showAddressRequiredForCartAlert = true
+                    case .needsShopSwitch:
+                        showShopSwitchAlert = true
                     }
                 } label: {
                     HStack(spacing: 8) {
@@ -536,6 +667,12 @@ struct ProductDetailScreen: View {
         case .success(let page):
             shopAvailableOverride = page.isShopAvailableForOrders
             shopStatusOverride = page.shopStatus
+            let name = page.shopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !name.isEmpty { shopNameOverride = name }
+            if let logo = page.logoUrl, !logo.isEmpty { shopLogoOverride = logo }
+            if let type = CartShopSwitchPolicy.normalized(page.shopType) { shopTypeOverride = type }
+            shopRateOverride = page.rate
+            shopRatingCountOverride = page.ratingCount
             shopReopensOverride = HomeShopHours.formatShopReopensLabel(
                 shopStatus: page.shopStatus,
                 openingHour: page.openingHour,

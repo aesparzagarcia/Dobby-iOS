@@ -149,12 +149,10 @@ struct ServiceDetailScreen: View {
             return
         }
         switch onPay(payload.service, payload.serviceNumber, payload.amount) {
-        case .success:
+        case .success, .blockedCarWash, .needsShopSwitch:
             break
         case .needsAddress:
             showAddressRequiredForCartAlert = true
-        case .blockedCarWash:
-            break
         }
     }
 

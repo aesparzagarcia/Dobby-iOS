@@ -24,4 +24,10 @@ enum CartShopSwitchPolicy {
         if cartShopIds.isEmpty { return false }
         return !cartShopIds.allSatisfy { $0.caseInsensitiveCompare(target) == .orderedSame }
     }
+
+    /// Same rule, but skip when the product/shop id is still unknown (e.g. favoritos antes de cargar).
+    static func needsConfirmationIfShopKnown(lines: [CartLineItem], targetShopId: String?) -> Bool {
+        guard let target = normalized(targetShopId) else { return false }
+        return needsConfirmation(lines: lines, targetShopId: target)
+    }
 }

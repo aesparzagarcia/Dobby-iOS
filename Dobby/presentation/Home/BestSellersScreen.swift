@@ -17,9 +17,12 @@ struct BestSellersScreen: View {
     let onCartClick: () -> Void
     var onNeedsAddress: () -> Void = {}
     var onCancelNeedsAddress: () -> Void = {}
+    var onClearCart: () -> Void = {}
 
     @State private var showCarWashSingleProductAlert = false
     @State private var showAddressRequiredForCartAlert = false
+    @State private var showShopSwitchAlert = false
+    @State private var pendingShopSwitchProduct: ShopProduct?
 
     init(
         placesRepository: PlacesRepository,
@@ -31,7 +34,8 @@ struct BestSellersScreen: View {
         onAddToCart: @escaping (ShopProduct, ProductVariant?, Int) -> AddToCartResult = { _, _, _ in .success },
         onCartClick: @escaping () -> Void = {},
         onNeedsAddress: @escaping () -> Void = {},
-        onCancelNeedsAddress: @escaping () -> Void = {}
+        onCancelNeedsAddress: @escaping () -> Void = {},
+        onClearCart: @escaping () -> Void = {}
     ) {
         self.cartItemCount = cartItemCount
         self.onBack = onBack
@@ -40,6 +44,7 @@ struct BestSellersScreen: View {
         self.onCartClick = onCartClick
         self.onNeedsAddress = onNeedsAddress
         self.onCancelNeedsAddress = onCancelNeedsAddress
+        self.onClearCart = onClearCart
         _viewModel = State(
             initialValue: BestSellersViewModel(
                 placesRepository: placesRepository,
@@ -152,6 +157,20 @@ struct BestSellersScreen: View {
         } message: {
             Text("Agrega primero una dirección antes de comenzar a agregar productos al carrito.")
         }
+        .alert("¿Cambiar de tienda?", isPresented: $showShopSwitchAlert) {
+            Button("Cancelar", role: .cancel) {
+                pendingShopSwitchProduct = nil
+            }
+            Button("Continuar", role: .destructive) {
+                onClearCart()
+                if let product = pendingShopSwitchProduct {
+                    pendingShopSwitchProduct = nil
+                    addProductToCart(product)
+                }
+            }
+        } message: {
+            Text("Si agregas este producto perderás los productos de tu carrito actual.")
+        }
     }
 
     private func addProductToCart(
@@ -165,6 +184,9 @@ struct BestSellersScreen: View {
             showCarWashSingleProductAlert = true
         case .needsAddress:
             showAddressRequiredForCartAlert = true
+        case .needsShopSwitch:
+            pendingShopSwitchProduct = product
+            showShopSwitchAlert = true
         case .success:
             break
         }

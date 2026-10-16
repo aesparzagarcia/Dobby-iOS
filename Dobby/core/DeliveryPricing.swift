@@ -8,6 +8,8 @@
 import Foundation
 
 private let serviceFeeRate = 0.08
+/// IVA México por defecto; puede venir de `app/delivery-pricing-config`.
+let defaultIvaRate = 0.16
 
 struct DeliveryPricingSettings: Equatable, Sendable {
     var baseFee: Double
@@ -21,6 +23,8 @@ struct DeliveryPricingSettings: Equatable, Sendable {
     var zoneBFee: Double
     var zoneCFee: Double
     var zoneDFee: Double
+    /// IVA sobre tarifa de uso (fracción, ej. 0.16).
+    var ivaRate: Double
 
     static let `default` = DeliveryPricingSettings(
         baseFee: 25,
@@ -33,7 +37,8 @@ struct DeliveryPricingSettings: Equatable, Sendable {
         zoneCMaxKm: 12,
         zoneBFee: 10,
         zoneCFee: 25,
-        zoneDFee: 50
+        zoneDFee: 50,
+        ivaRate: defaultIvaRate
     )
 }
 
@@ -64,17 +69,51 @@ struct DeliveryPricingBreakdown: Equatable, Sendable {
     var finalDeliveryFee: Double
 }
 
+struct ServiceFeeIvaSplit: Equatable, Sendable {
+    var net: Double
+    var iva: Double
+}
+
 struct OrderPricing: Equatable, Sendable {
     var productsSubtotal: Double
     var delivery: DeliveryPricingBreakdown
+    var ivaRate: Double = defaultIvaRate
 
+    /// Tarifa de uso de la app con IVA incluido (8% del subtotal).
     var serviceFee: Double {
         roundMoney(productsSubtotal * serviceFeeRate)
+    }
+
+    /// Base de la tarifa (sin IVA).
+    var serviceFeeNet: Double {
+        splitServiceFeeIva(serviceFee, ivaRate: ivaRate).net
+    }
+
+    /// IVA sobre la tarifa de uso.
+    var serviceFeeIva: Double {
+        splitServiceFeeIva(serviceFee, ivaRate: ivaRate).iva
     }
 
     var grandTotal: Double {
         roundMoney(productsSubtotal + serviceFee + delivery.finalDeliveryFee)
     }
+}
+
+func normalizeIvaRate(_ raw: Double) -> Double {
+    guard raw.isFinite else { return defaultIvaRate }
+    let fraction = raw > 1 ? raw / 100 : raw
+    guard fraction >= 0, fraction <= 1 else { return defaultIvaRate }
+    return (fraction * 10_000).rounded() / 10_000
+}
+
+/// Desglosa una tarifa con IVA incluido en neto + IVA.
+func splitServiceFeeIva(_ serviceFeeWithIva: Double, ivaRate: Double = defaultIvaRate) -> ServiceFeeIvaSplit {
+    guard serviceFeeWithIva > 0 else { return ServiceFeeIvaSplit(net: 0, iva: 0) }
+    let rate = normalizeIvaRate(ivaRate)
+    guard rate > 0 else { return ServiceFeeIvaSplit(net: roundMoney(serviceFeeWithIva), iva: 0) }
+    let net = roundMoney(serviceFeeWithIva / (1 + rate))
+    let iva = roundMoney(serviceFeeWithIva - net)
+    return ServiceFeeIvaSplit(net: net, iva: iva)
 }
 
 func roundMoney(_ value: Double) -> Double {

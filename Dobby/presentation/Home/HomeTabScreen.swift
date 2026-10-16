@@ -71,6 +71,7 @@ struct HomeTabScreen: View {
     @State private var productPromotionDeepLinkTask: Task<Void, Never>?
     @State private var showShopSwitchAlert = false
     @State private var pendingShopPlace: FeaturedPlace?
+    @State private var pendingProductRoute: ProductDetailRoute?
     @State private var pendingOpenCartAfterAddress = false
 
     private func openAddressForPendingCart(openCartAfter: Bool = false) {
@@ -92,17 +93,17 @@ struct HomeTabScreen: View {
                             cartItemCount: viewModel.cartItemCount,
                             onBack: { popNavigation() },
                             onProductTap: { product, isAvailable, shopStatus, shopReopensLabel in
-                                navigationPath.append(
-                                    .product(
-                                        ProductDetailRoute(
-                                            shopProduct: product,
-                                            pickupLatitude: r.pickupLatitude,
-                                            pickupLongitude: r.pickupLongitude,
-                                            isShopAvailableForOrders: isAvailable,
-                                            shopIdFallback: r.shopId,
-                                            shopStatus: shopStatus,
-                                            shopReopensLabel: shopReopensLabel
-                                        )
+                                openProduct(
+                                    ProductDetailRoute(
+                                        shopProduct: product,
+                                        pickupLatitude: r.pickupLatitude,
+                                        pickupLongitude: r.pickupLongitude,
+                                        isShopAvailableForOrders: isAvailable,
+                                        shopIdFallback: r.shopId,
+                                        shopStatus: shopStatus,
+                                        shopReopensLabel: shopReopensLabel,
+                                        shopName: r.shopName,
+                                        shopType: r.shopType
                                     )
                                 )
                             },
@@ -127,6 +128,7 @@ struct HomeTabScreen: View {
                             onCancelNeedsAddress: {
                                 viewModel.clearPendingCartAdd()
                             },
+                            onClearCart: { viewModel.clearCart() },
                             shopType: r.shopType,
                             openingHour: r.openingHour,
                             closingHour: r.closingHour,
@@ -152,23 +154,25 @@ struct HomeTabScreen: View {
                                 let place = viewModel.featuredPlaces.first {
                                     $0.id == product.shopId && !$0.isService
                                 }
-                                navigationPath.append(
-                                    .product(
-                                        ProductDetailRoute(
-                                            shopProduct: product,
-                                            pickupLatitude: place?.latitude,
-                                            pickupLongitude: place?.longitude,
-                                            isShopAvailableForOrders: isAvailable,
-                                            shopIdFallback: product.shopId,
+                                openProduct(
+                                    ProductDetailRoute(
+                                        shopProduct: product,
+                                        pickupLatitude: place?.latitude,
+                                        pickupLongitude: place?.longitude,
+                                        isShopAvailableForOrders: isAvailable,
+                                        shopIdFallback: product.shopId,
+                                        shopStatus: place?.shopStatus,
+                                        shopReopensLabel: HomeShopHours.formatShopReopensLabel(
                                             shopStatus: place?.shopStatus,
-                                            shopReopensLabel: HomeShopHours.formatShopReopensLabel(
-                                                shopStatus: place?.shopStatus,
-                                                openingHour: place?.openingHour,
-                                                openingDays: place?.openingDays ?? [],
-                                                closingHour: place?.closingHour,
-                                                openingSchedules: place?.openingSchedules ?? []
-                                            )
-                                        )
+                                            openingHour: place?.openingHour,
+                                            openingDays: place?.openingDays ?? [],
+                                            closingHour: place?.closingHour,
+                                            openingSchedules: place?.openingSchedules ?? []
+                                        ),
+                                        shopName: place?.name,
+                                        shopLogoUrl: place?.imageUrl,
+                                        shopType: place?.shopType,
+                                        shopRate: place?.rate ?? 0
                                     )
                                 )
                             },
@@ -194,7 +198,8 @@ struct HomeTabScreen: View {
                             },
                             onCancelNeedsAddress: {
                                 viewModel.clearPendingCartAdd()
-                            }
+                            },
+                            onClearCart: { viewModel.clearCart() }
                         )
                     case .service(let serviceId):
                         ServiceDetailScreen(
@@ -270,6 +275,16 @@ struct HomeTabScreen: View {
                             onCancelNeedsAddress: {
                                 viewModel.clearPendingCartAdd()
                                 pendingOpenCartAfterAddress = false
+                            },
+                            onClearCart: { viewModel.clearCart() },
+                            onShopTap: { shopId, shopName, shopType in
+                                openShopFromProduct(
+                                    shopId: shopId,
+                                    shopName: shopName,
+                                    shopType: shopType,
+                                    pickupLatitude: r.pickupLatitude,
+                                    pickupLongitude: r.pickupLongitude
+                                )
                             }
                         )
                     case .cart:
@@ -421,23 +436,21 @@ struct HomeTabScreen: View {
                 ),
                 featuredPlaces: viewModel.featuredPlaces
             )
-            navigationPath.append(.product(route))
+            openProduct(route)
         }
     }
 
     private var homeContent: some View {
         Group {
             if let err = viewModel.errorMessage, viewModel.featuredPlaces.isEmpty, !viewModel.isLoading {
-                VStack(spacing: 16) {
-                    Text(err)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    Button("Reintentar") {
-                        viewModel.loadHome()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(HomePalette.primary)
+                if isHomeConnectionErrorMessage(err) {
+                    HomeConnectionErrorState(onRetry: { viewModel.loadHome() })
+                } else {
+                    HomeConnectionErrorState(
+                        title: "No se pudo cargar",
+                        message: err,
+                        onRetry: { viewModel.loadHome() }
+                    )
                 }
             } else if viewModel.isLoading && viewModel.featuredPlaces.isEmpty {
                 ProgressView()
@@ -522,13 +535,18 @@ struct HomeTabScreen: View {
         .alert("¿Cambiar de tienda?", isPresented: $showShopSwitchAlert) {
             Button("Cancelar", role: .cancel) {
                 pendingShopPlace = nil
+                pendingProductRoute = nil
             }
             Button("Continuar", role: .destructive) {
                 viewModel.clearCart()
                 if let place = pendingShopPlace {
                     navigateToShop(place)
                 }
+                if let route = pendingProductRoute {
+                    navigationPath.append(.product(route))
+                }
                 pendingShopPlace = nil
+                pendingProductRoute = nil
             }
         } message: {
             Text("Si entras a otra tienda perderás los productos de tu carrito actual.")
@@ -553,6 +571,48 @@ struct HomeTabScreen: View {
         )
     }
 
+    private func openShopFromProduct(
+        shopId: String,
+        shopName: String,
+        shopType: String?,
+        pickupLatitude: Double?,
+        pickupLongitude: Double?
+    ) {
+        let id = CartShopSwitchPolicy.normalized(shopId) ?? shopId
+        if let idx = navigationPath.lastIndex(where: {
+            if case .shop(let route) = $0 { return route.shopId == id }
+            return false
+        }) {
+            navigationPath = Array(navigationPath.prefix(idx + 1))
+            return
+        }
+        let place = viewModel.featuredPlaces.first { $0.id == id && !$0.isService }
+        navigationPath.append(
+            .shop(
+                ShopDetailRoute(
+                    shopId: id,
+                    shopName: shopName.isEmpty ? (place?.name ?? "Tienda") : shopName,
+                    pickupLatitude: pickupLatitude ?? place?.latitude,
+                    pickupLongitude: pickupLongitude ?? place?.longitude,
+                    shopType: shopType ?? place?.shopType,
+                    openingHour: place?.openingHour,
+                    closingHour: place?.closingHour,
+                    openingDays: place?.openingDays ?? [],
+                    openingSchedules: place?.openingSchedules ?? []
+                )
+            )
+        )
+    }
+
+    private func openProduct(_ route: ProductDetailRoute) {
+        if viewModel.needsShopSwitchConfirmationIfKnown(for: route.shopId) {
+            pendingProductRoute = route
+            showShopSwitchAlert = true
+            return
+        }
+        navigationPath.append(.product(route))
+    }
+
     private func onFeaturedPlaceTap(_ place: FeaturedPlace) {
         if place.isService {
             navigationPath.append(.service(serviceId: place.id))
@@ -574,12 +634,11 @@ struct HomeTabScreen: View {
         let query = viewModel.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let categoryPlaces = filterPlacesByCategory(viewModel.featuredPlaces, category: quickCategory)
         let filteredPlaces = categoryPlaces.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
-        let categoryProducts: [BestSellerProduct] = {
-            if quickCategory == .offers {
-                return viewModel.bestSellerProducts.filter { $0.hasPromotion && $0.discount > 0 }
-            }
-            return viewModel.bestSellerProducts
-        }()
+        let categoryProducts = filterProductsByCategory(
+            viewModel.bestSellerProducts,
+            places: viewModel.featuredPlaces,
+            category: quickCategory
+        )
         let filteredProducts = categoryProducts.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
         let destacadosPreview = Array(filteredPlaces.prefix(HomeLayoutConstants.destacadosPreviewLimit))
         let bestSellersPreview = Array(filteredProducts.prefix(HomeLayoutConstants.bestSellersPreviewLimit))
@@ -611,9 +670,6 @@ struct HomeTabScreen: View {
 
             HomeCategoryRow(selected: quickCategory) { category in
                 quickCategory = category
-                if category == .offers {
-                    onPromotionsTabClick()
-                }
             }
             .padding(.top, 4)
             .padding(.bottom, 8)
@@ -662,11 +718,11 @@ struct HomeTabScreen: View {
                             HStack(spacing: 12) {
                                 ForEach(bestSellersPreview) { product in
                                     Button {
-                                        navigationPath.append(
-                                            .product(ProductDetailRoute(
+                                        openProduct(
+                                            ProductDetailRoute(
                                                 bestSeller: product,
                                                 featuredPlaces: viewModel.featuredPlaces
-                                            ))
+                                            )
                                         )
                                     } label: {
                                         UniversalProductCard(product: product, width: productWidth)

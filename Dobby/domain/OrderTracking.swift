@@ -16,6 +16,9 @@ struct OrderTrackingDetail: Identifiable, Hashable, Sendable {
     let shopType: String?
     var total: Double
     let serviceFee: Double
+    let serviceFeeNet: Double
+    let serviceFeeIva: Double
+    let ivaRate: Double
     let deliveryFee: Double
     let productsSubtotal: Double
     let deliveryAddress: String?

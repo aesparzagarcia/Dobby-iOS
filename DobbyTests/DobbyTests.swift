@@ -69,4 +69,24 @@ struct DobbyTests {
         #expect(lines[0].isServicePayment)
     }
 
+    @Test func shopSwitchSkipsUnknownProductShop() {
+        let lines = [
+            CartLineItem(
+                productId: "p1",
+                name: "Taco",
+                imageUrl: nil,
+                quantity: 1,
+                unitPrice: 10,
+                listUnitPrice: 10,
+                hasPromotion: false,
+                discount: 0,
+                shopId: "shop-a"
+            )
+        ]
+        #expect(CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: lines, targetShopId: nil) == false)
+        #expect(CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: lines, targetShopId: "") == false)
+        #expect(CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: lines, targetShopId: "shop-b") == true)
+        #expect(CartShopSwitchPolicy.needsConfirmationIfShopKnown(lines: lines, targetShopId: "shop-a") == false)
+    }
+
 }
